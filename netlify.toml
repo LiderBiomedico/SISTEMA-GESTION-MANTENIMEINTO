@@ -1,0 +1,46 @@
+# netlify.toml
+# Configuración de Netlify para el sistema de gestión de mantenimiento
+
+[build]
+  command = "npm install"
+  functions = "netlify/functions"
+  publish = "."
+
+[context.production]
+  environment = { NODE_ENV = "production" }
+
+[context.deploy-preview]
+  environment = { NODE_ENV = "staging" }
+
+[context.branch-deploy]
+  environment = { NODE_ENV = "development" }
+
+# Configuración de headers
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    X-XSS-Protection = "1; mode=block"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains"
+
+# Redirecciones
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+# Configuración de funciones
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# Límites de recursos
+[build.environment]
+  NODE_ENV = "production"
+  SITE_NAME = "Hospital Maintenance Management"
+
+# Validación de deployments
+[build]
+  ignored = ["node_modules/**"]
