@@ -1,261 +1,214 @@
+// =============================================================================
 // netlify/functions/inventario.js
-// Inventario - Airtable CRUD (GET/POST/PUT) con:
-// - Sin Authorization desde el navegador
-// - debug=1 para validar ENV
-// - Mapeo de nombres de campos (ITEM -> Item, PLACA -> Numero de Placa, UBICACIÓN -> Ubicación, etc.)
-// - Reintento automático si Airtable responde 422 por campos desconocidos (guarda lo que sí existe)
-
+// Airtable proxy (GET list + POST create + PUT update) with field mapping + retry
+// Env:
+//   AIRTABLE_API_KEY (or AIRTABLE_TOKEN) : PAT (pat...)
+//   AIRTABLE_BASE_ID : app...
+//   AIRTABLE_INVENTARIO_TABLE (optional) default "Inventario"
+// =============================================================================
 const axios = require('axios');
 
-const AIRTABLE_API_KEY =
-  process.env.AIRTABLE_API_KEY ||
-  process.env.AIRTABLE_TOKEN ||
-  process.env.AIRTABLE_PAT ||
-  '';
+const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY || process.env.AIRTABLE_TOKEN || '';
+const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID || '';
+const TABLE_NAME = process.env.AIRTABLE_INVENTARIO_TABLE || 'Inventario';
 
-const AIRTABLE_BASE_ID =
-  process.env.AIRTABLE_BASE_ID ||
-  process.env.AIRTABLE_BASE ||
-  '';
+const AIRTABLE_API = 'https://api.airtable.com/v0';
 
-const INVENTARIO_TABLE = process.env.AIRTABLE_INVENTARIO_TABLE || 'Inventario';
-
-const AIRTABLE_API = AIRTABLE_BASE_ID ? `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}` : '';
-
-function json(statusCode, bodyObj) {
+function json(statusCode, body) {
   return {
     statusCode,
     headers: {
-      'Content-Type': 'application/json',
+      'Content-Type': 'application/json; charset=utf-8',
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Headers': 'Content-Type',
       'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS',
     },
-    body: JSON.stringify(bodyObj),
+    body: JSON.stringify(body),
   };
 }
 
-function escapeForFormula(str) {
-  return String(str).replaceAll('\\', '\\\\').replaceAll("'", "\\'");
+function isUrl(s) {
+  return typeof s === 'string' && /^https?:\/\/\S+/i.test(s.trim());
 }
 
-function maybeAttachmentFromUrl(value) {
-  if (!value) return value;
-  if (Array.isArray(value) && value[0] && value[0].url) return value;
-  const s = String(value).trim();
-  if (/^https?:\/\//i.test(s)) return [{ url: s }];
-  return value;
-}
-
-// Mapeo: tu Airtable tiene "Item", "Equipo", "Marca", "Modelo", "Serie", "Numero de Placa".
-// En el formulario web suelen enviarse como ITEM/EQUIPO/MARCA/MODELO/SERIE/PLACA.
-// Aquí normalizamos.
-const FIELD_ALIASES = {
+// Map UI field labels (uppercase / accents / typos) -> Airtable column names
+const FIELD_MAP = {
   'ITEM': 'Item',
-  'Item': 'Item',
   'EQUIPO': 'Equipo',
-  'Equipo': 'Equipo',
   'MARCA': 'Marca',
-  'Marca': 'Marca',
   'MODELO': 'Modelo',
-  'Modelo': 'Modelo',
   'SERIE': 'Serie',
-  'Serie': 'Serie',
-
   'PLACA': 'Numero de Placa',
-  'PLACA / NUMERO': 'Numero de Placa',
   'NÚMERO DE PLACA': 'Numero de Placa',
   'NUMERO DE PLACA': 'Numero de Placa',
-  'Numero de Placa': 'Numero de Placa',
-
-  'SERVICIO': 'Servicio',
-  'Servicio': 'Servicio',
-
   'UBICACIÓN': 'Ubicación',
   'UBICACION': 'Ubicación',
-  'Ubicación': 'Ubicación',
-
-  // Si luego creas estos campos en Airtable con el mismo nombre, quedarán bien:
+  'SERVICIO': 'Servicio',
   'VIDA UTIL': 'Vida Util',
   'VIDA ÚTIL': 'Vida Util',
-  'Vida Util': 'Vida Util',
+  // Si en Airtable los tienes igual, se guardan; si no existen, se omiten en retry:
+  'FECHA FABRICA': 'Fecha Fabrica',
+  'CERTIFICADO 2025': 'Certificado 2025',
+  'CODIGO ECRI': 'Codigo ECRI',
+  'REGISTRO INVIMA': 'Registro INVIMA',
+  'TIPO DE ADQUISICION': 'Tipo de Adquisicion',
+  'NO. DE CONTRATO': 'No. de Contrato',
+  'FECHA DE COMRPA': 'Fecha de Compra', // (typo del formulario)
+  'FECHA DE COMPRA': 'Fecha de Compra',
+  'VALOR EN PESOS': 'Valor en Pesos',
+  'FECHA DE RECEPCIÓN': 'Fecha de Recepción',
+  'FECHA DE RECEPCION': 'Fecha de Recepción',
+  'FECHA DE INSTALACIÓN': 'Fecha de Instalación',
+  'FECHA DE INSTALACION': 'Fecha de Instalación',
+  'INICIO DE GARANTIA': 'Inicio de Garantia',
+  'TERMINO DE GARANTIA': 'Termino de Garantia',
+  'CLASIFICACION BIOMEDICA': 'Clasificacion Biomedica',
+  'CLASIFICACION DE LA TECNOLOGIA': 'Clasificacion de la Tecnologia',
+  'CLASIFICACION DEL RIESGO': 'Clasificacion del Riesgo',
+  'MANUAL': 'Manual',
+  'TIPO DE MTTO': 'Tipo de MTTO',
+  'COSTO DE MANTENIMIENTO': 'Costo de Mantenimiento',
+  'CALIBRABLE': 'Calibrable',
+  'N. CERTIFICADO': 'N. Certificado',
+  'FRECUENCIA DE MTTO PREVENTIVO': 'Frecuencia de MTTO Preventivo',
+  'FECHA PROGRAMADA DE MANTENIMINETO': 'Fecha Programada de Mantenimiento',
+  'FRECUENCIA DE MANTENIMIENTO': 'Frecuencia de Mantenimiento',
+  'PROGRAMACION DE MANTENIMIENTO ANUAL': 'Programacion de Mantenimiento Anual',
+  'RESPONSABLE': 'Responsable',
+  'NOMBRE': 'Nombre',
+  'DIRECCION': 'Direccion',
+  'TELEFONO': 'Telefono',
+  'CIUDAD': 'Ciudad',
 };
 
-function normalizeFields(fields) {
+function mapFields(inputFields) {
   const out = {};
-  for (const [k, v] of Object.entries(fields || {})) {
-    const key = FIELD_ALIASES[k] || k; // si no está mapeado, lo deja tal cual
-    // NO enviar campos vacíos
-    if (v === null || typeof v === 'undefined' || (typeof v === 'string' && v.trim() === '')) continue;
-    out[key] = v;
+  for (const [k, v] of Object.entries(inputFields || {})) {
+    const key = String(k || '').trim();
+    const mapped = FIELD_MAP[key] || key; // if same name exists in Airtable, works
+    if (mapped === 'Manual' && isUrl(v)) {
+      // If Airtable field is Attachment, it accepts [{url:...}]
+      out[mapped] = [{ url: String(v).trim() }];
+    } else {
+      out[mapped] = v;
+    }
   }
-  if (out['MANUAL']) out['MANUAL'] = maybeAttachmentFromUrl(out['MANUAL']);
   return out;
 }
 
-// Si Airtable responde 422 por campos desconocidos, normalmente trae algo como:
-// { "error": { "type": "UNKNOWN_FIELD_NAME", "message": "Unknown field names: \"FOO\", \"BAR\"" } }
-// Quitamos esos campos y reintentamos.
-function stripUnknownFields(fields, errData) {
-  const msg = errData?.error?.message || '';
-  const unknown = [];
-  const m = msg.match(/Unknown field names:\s*(.*)$/i);
-  if (m && m[1]) {
-    // extrae comillas
-    const parts = m[1].split(',').map(s => s.trim().replace(/^"|"$/g, '').replace(/^'|'$/g, ''));
-    for (const p of parts) if (p) unknown.push(p);
+function removeUnknownFields(fields, errorText) {
+  // Airtable error can include unknown field names; try to remove them and retry.
+  // We remove any field that appears between quotes in the message.
+  const unknown = new Set();
+  const msg = (errorText && (errorText.message || errorText.error || errorText)) || '';
+  const s = typeof msg === 'string' ? msg : JSON.stringify(msg);
+  const matches = s.match(/"([^"]+)"/g) || [];
+  for (const m of matches) {
+    const name = m.replace(/"/g,'').trim();
+    if (name) unknown.add(name);
   }
-  if (!unknown.length) return fields;
-
+  if (unknown.size === 0) return { cleaned: fields, removed: [] };
   const cleaned = { ...fields };
-  for (const f of unknown) delete cleaned[f];
-  return cleaned;
+  const removed = [];
+  for (const u of unknown) {
+    if (u in cleaned) { delete cleaned[u]; removed.push(u); }
+  }
+  return { cleaned, removed };
+}
+
+async function airtableRequest(method, url, data) {
+  if (!AIRTABLE_API_KEY || !AIRTABLE_BASE_ID) {
+    throw { status: 500, data: { error: 'Missing AIRTABLE_API_KEY/TOKEN or AIRTABLE_BASE_ID' } };
+  }
+  const headers = { Authorization: `Bearer ${AIRTABLE_API_KEY}` };
+  return axios({ method, url, headers, data });
 }
 
 exports.handler = async (event) => {
-  if (event.httpMethod === 'OPTIONS') return json(200, { ok: true });
+  try {
+    if (event.httpMethod === 'OPTIONS') return json(204, { ok: true });
 
-  const qs = event.queryStringParameters || {};
-  if (qs.debug === '1') {
-    return json(200, {
-      ok: true,
-      config: {
+    const debug = (event.queryStringParameters && event.queryStringParameters.debug) ? true : false;
+
+    if (debug && event.httpMethod === 'GET') {
+      return json(200, {
+        ok: true,
+        table: TABLE_NAME,
         hasApiKey: !!AIRTABLE_API_KEY,
         hasBaseId: !!AIRTABLE_BASE_ID,
-        table: INVENTARIO_TABLE,
-      },
-    });
-  }
+      });
+    }
 
-  if (!AIRTABLE_API_KEY || !AIRTABLE_BASE_ID) {
-    return json(500, {
-      success: false,
-      error: 'Faltan variables de entorno AIRTABLE_API_KEY/AIRTABLE_BASE_ID en Netlify.',
-      hint: 'Netlify → Site settings → Environment variables (Production) → luego "Clear cache and deploy".',
-    });
-  }
+    const baseUrl = `${AIRTABLE_API}/${AIRTABLE_BASE_ID}/${encodeURIComponent(TABLE_NAME)}`;
 
-  const headers = { Authorization: `Bearer ${AIRTABLE_API_KEY}` };
-  const baseUrl = `${AIRTABLE_API}/${encodeURIComponent(INVENTARIO_TABLE)}`;
-
-  try {
-    // ---------------- GET ----------------
+    // ---------------- GET list ----------------
     if (event.httpMethod === 'GET') {
-      const pageSize = Math.min(Number(qs.pageSize || 20) || 20, 100);
-      const offset = qs.offset || undefined;
-      const q = (qs.q || '').trim();
+      const qs = event.queryStringParameters || {};
+      const pageSize = Math.min(parseInt(qs.pageSize || '20', 10) || 20, 100);
+      const offset = qs.offset ? String(qs.offset) : null;
 
-      let filterByFormula;
-      if (q) {
-        const qq = escapeForFormula(q.toLowerCase());
-        // soporta Item/ITEM y Numero de Placa/PLACA
-        filterByFormula = `OR(
-          FIND('${qq}', LOWER(IFERROR({Item}&'', ''))),
-          FIND('${qq}', LOWER(IFERROR({Equipo}&'', ''))),
-          FIND('${qq}', LOWER(IFERROR({Serie}&'', ''))),
-          FIND('${qq}', LOWER(IFERROR({Numero de Placa}&'', ''))),
-          FIND('${qq}', LOWER(IFERROR({Servicio}&'', ''))),
-          FIND('${qq}', LOWER(IFERROR({Ubicación}&'', ''))),
-          FIND('${qq}', LOWER(IFERROR({Ubicacion}&'', '')))
-        )`;
-      }
+      const params = new URLSearchParams();
+      params.set('pageSize', String(pageSize));
+      if (offset) params.set('offset', offset);
 
-      // Intento con sort por Item
-      try {
-        const resp = await axios.get(baseUrl, {
-          headers,
-          params: {
-            pageSize,
-            offset,
-            sort: [{ field: 'Item', direction: 'asc' }],
-            filterByFormula,
-          },
-        });
-
-        const records = (resp.data.records || []).map((r) => ({ id: r.id, fields: r.fields || {} }));
-        return json(200, { success: true, count: records.length, nextOffset: resp.data.offset || null, data: records });
-      } catch (err1) {
-        // Fallback: sin sort y sin filter
-        const status1 = err1?.response?.status;
-        if (status1 === 422) {
-          const resp2 = await axios.get(baseUrl, { headers, params: { pageSize, offset } });
-          const records2 = (resp2.data.records || []).map((r) => ({ id: r.id, fields: r.fields || {} }));
-          return json(200, {
-            success: true,
-            count: records2.length,
-            nextOffset: resp2.data.offset || null,
-            data: records2,
-            warning: 'Se cargó sin filtro/orden (Airtable 422 en fórmula o sort).',
-          });
-        }
-        throw err1;
-      }
+      const url = `${baseUrl}?${params.toString()}`;
+      const resp = await airtableRequest('GET', url);
+      const records = resp.data.records || [];
+      return json(200, {
+        ok: true,
+        data: records,
+        count: records.length,
+        offset: resp.data.offset || null,
+      });
     }
 
-    // --------------- POST ----------------
+    // parse body
+    let body = {};
+    try { body = JSON.parse(event.body || '{}'); } catch { body = {}; }
+
+    // ---------------- POST create ----------------
     if (event.httpMethod === 'POST') {
-      const body = JSON.parse(event.body || '{}');
-      const fields0 = normalizeFields(body.fields || {});
-      let payload = { fields: fields0 };
-
+      const mapped = mapFields(body.fields || {});
       try {
-        const resp = await axios.post(baseUrl, payload, { headers });
-        return json(200, { success: true, data: { id: resp.data.id, fields: resp.data.fields || {} } });
-      } catch (err) {
-        if (err?.response?.status === 422) {
-          const cleaned = stripUnknownFields(fields0, err.response.data);
-          const resp2 = await axios.post(baseUrl, { fields: cleaned }, { headers });
-          return json(200, {
-            success: true,
-            data: { id: resp2.data.id, fields: resp2.data.fields || {} },
-            warning: 'Se guardó sin algunos campos (Airtable marcó campos desconocidos). Revisa nombres de columnas en Airtable.',
-            removedFields: Object.keys(fields0).filter(k => !(k in cleaned)),
-          });
+        const resp = await airtableRequest('POST', baseUrl, { fields: mapped });
+        return json(200, { ok: true, record: resp.data });
+      } catch (e) {
+        // Retry removing unknown fields
+        const status = e.response?.status || 500;
+        const data = e.response?.data || e.data || { error: 'Unknown error' };
+
+        if (status === 422) {
+          const { cleaned, removed } = removeUnknownFields(mapped, data);
+          if (removed.length > 0) {
+            const resp2 = await airtableRequest('POST', baseUrl, { fields: cleaned });
+            return json(200, { ok: true, record: resp2.data, warning: { removedUnknownFields: removed } });
+          }
         }
-        throw err;
+        return json(status, { ok: false, error: data.error || 'Airtable error', details: data });
       }
     }
 
-    // --------------- PUT -----------------
+    // ---------------- PUT update ----------------
     if (event.httpMethod === 'PUT') {
-      const body = JSON.parse(event.body || '{}');
-      const recordId = body.id;
-      if (!recordId) return json(400, { success: false, error: 'Falta id del registro para actualizar.' });
-
-      const fields0 = normalizeFields(body.fields || {});
-      const url = `${baseUrl}/${recordId}`;
-
+      const id = body.id;
+      if (!id) return json(400, { ok: false, error: 'Missing record id' });
+      const mapped = mapFields(body.fields || {});
+      const url = `${baseUrl}/${encodeURIComponent(id)}`;
       try {
-        const resp = await axios.patch(url, { fields: fields0 }, { headers });
-        return json(200, { success: true, data: { id: resp.data.id, fields: resp.data.fields || {} } });
-      } catch (err) {
-        if (err?.response?.status === 422) {
-          const cleaned = stripUnknownFields(fields0, err.response.data);
-          const resp2 = await axios.patch(url, { fields: cleaned }, { headers });
-          return json(200, {
-            success: true,
-            data: { id: resp2.data.id, fields: resp2.data.fields || {} },
-            warning: 'Se actualizó sin algunos campos (Airtable marcó campos desconocidos).',
-            removedFields: Object.keys(fields0).filter(k => !(k in cleaned)),
-          });
-        }
-        throw err;
+        const resp = await airtableRequest('PATCH', url, { fields: mapped });
+        return json(200, { ok: true, record: resp.data });
+      } catch (e) {
+        const status = e.response?.status || 500;
+        const data = e.response?.data || { error: 'Airtable error' };
+        return json(status, { ok: false, error: data.error || 'Airtable error', details: data });
       }
     }
 
-    return json(405, { success: false, error: 'Método no permitido' });
-  } catch (err) {
-    const status = err?.response?.status;
-    const detail = err?.response?.data || { message: err.message };
-    const hint =
-      status === 401 || status === 403
-        ? 'Tu token de Airtable no tiene permisos (data.records:read/write) o no tiene acceso a la base.'
-        : status === 404
-        ? 'Base ID o tabla no encontrada. Verifica AIRTABLE_BASE_ID y el nombre de la tabla.'
-        : status === 422
-        ? 'Error 422: nombres de campos no coinciden. Revisa que en Airtable existan columnas con esos nombres.'
-        : 'Revisa Netlify → Functions → inventario → Logs';
+    return json(405, { ok: false, error: 'Method not allowed' });
 
-    return json(500, { success: false, error: 'Error Airtable', status, detail, hint });
+  } catch (err) {
+    const status = err.status || err.response?.status || 500;
+    const data = err.data || err.response?.data || { error: err.message || 'Server error' };
+    return json(status, { ok: false, error: data.error || 'Server error', details: data });
   }
 };
