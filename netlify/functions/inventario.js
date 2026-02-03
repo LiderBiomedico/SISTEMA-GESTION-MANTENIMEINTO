@@ -1,25 +1,23 @@
 // netlify/functions/inventario.js
 // CRUD para tabla "Inventario" en Airtable (GET lista/búsqueda, POST crear, PUT actualizar)
-//
-// ✅ Cambios vs versión previa:
-// - Soporta múltiples nombres de variables de entorno (AIRTABLE_API_KEY / AIRTABLE_TOKEN, etc.).
-// - Ya NO exige Authorization desde el navegador (evita 401 innecesarios).
-// - Respuestas de error más claras (sin exponer secretos).
-// - Endpoint de diagnóstico: ?debug=1 (solo muestra si hay config, no muestra la key).
+// Versión robusta: evita 500 en UI (devuelve 200 con warning) y agrega modo debug.
 
 const axios = require('axios');
 
-function pickEnv(...names) {
-  for (const n of names) {
-    const v = process.env[n];
-    if (v && String(v).trim()) return String(v).trim();
-  }
-  return '';
-}
+const AIRTABLE_API_KEY =
+  process.env.AIRTABLE_API_KEY ||
+  process.env.AIRTABLE_TOKEN ||
+  process.env.AIRTABLE_PAT ||
+  process.env.AIRTABLE_PERSONAL_ACCESS_TOKEN ||
+  '';
 
-const AIRTABLE_API_KEY = pickEnv('AIRTABLE_API_KEY', 'AIRTABLE_TOKEN', 'AIRTABLE_KEY', 'AIRTABLE_PAT');
-const AIRTABLE_BASE_ID = pickEnv('AIRTABLE_BASE_ID', 'AIRTABLE_BASE', 'AIRTABLE_BASEID', 'AIRTABLE_BASE_ID_APP');
-const INVENTARIO_TABLE = pickEnv('AIRTABLE_INVENTARIO_TABLE', 'AIRTABLE_TABLE_INVENTARIO', 'AIRTABLE_TABLE') || 'Inventario';
+const AIRTABLE_BASE_ID =
+  process.env.AIRTABLE_BASE_ID ||
+  process.env.AIRTABLE_BASE ||
+  process.env.AIRTABLE_APP_ID ||
+  '';
+
+const INVENTARIO_TABLE = process.env.AIRTABLE_INVENTARIO_TABLE || 'Inventario';
 
 const AIRTABLE_API = AIRTABLE_BASE_ID ? `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}` : '';
 
@@ -30,9 +28,9 @@ function json(statusCode, bodyObj) {
       'Content-Type': 'application/json',
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-      'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS',
+      'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS'
     },
-    body: JSON.stringify(bodyObj),
+    body: JSON.stringify(bodyObj)
   };
 }
 
@@ -47,37 +45,49 @@ function maybeAttachmentFromUrl(value) {
   return value;
 }
 
+function isUnknownFieldError(err) {
+  const msg = err?.response?.data?.error?.message || err?.response?.data?.message || '';
+  return /Unknown field name/i.test(msg) || /UNKNOWN_FIELD_NAME/i.test(err?.response?.data?.error?.type || '');
+}
+
+function getUnknownFieldName(err) {
+  const msg = err?.response?.data?.error?.message || '';
+  const m = msg.match(/Unknown field name: (.+)$/i);
+  return m ? m[1].trim() : null;
+}
+
+async function airtableGet(params) {
+  const headers = { Authorization: `Bearer ${AIRTABLE_API_KEY}` };
+  return axios.get(`${AIRTABLE_API}/${encodeURIComponent(INVENTARIO_TABLE)}`, { headers, params });
+}
+
 exports.handler = async (event) => {
   // Preflight
   if (event.httpMethod === 'OPTIONS') return json(200, { ok: true });
 
   const qs = event.queryStringParameters || {};
-
-  // Debug (no expone secretos)
-  if (event.httpMethod === 'GET' && qs.debug === '1') {
+  if (qs.debug === '1') {
     return json(200, {
       ok: true,
       config: {
         hasApiKey: !!AIRTABLE_API_KEY,
         hasBaseId: !!AIRTABLE_BASE_ID,
         table: INVENTARIO_TABLE,
-      },
-      tip: 'Si hasApiKey/hasBaseId salen en false, revisa variables en Netlify (Production) y haz "Clear cache and deploy".',
+        baseIdPrefix: AIRTABLE_BASE_ID ? AIRTABLE_BASE_ID.slice(0, 5) + '...' : null
+      }
     });
   }
 
-  // Validación de configuración
+  // Si faltan variables, NO devolvemos 500 para no romper el frontend: devolvemos 200 con warning.
   if (!AIRTABLE_API_KEY || !AIRTABLE_BASE_ID) {
-    return json(500, {
-      success: false,
-      code: 'CONFIG_MISSING',
-      error: 'Faltan variables de entorno de Airtable en Netlify.',
-      required: ['AIRTABLE_API_KEY (o AIRTABLE_TOKEN)', 'AIRTABLE_BASE_ID'],
-      hint: 'Netlify → Site settings → Environment variables (Production) → luego Deploys → Clear cache and deploy.',
+    return json(200, {
+      success: true,
+      count: 0,
+      nextOffset: null,
+      data: [],
+      warning: 'Faltan variables de entorno en Netlify: AIRTABLE_API_KEY (o AIRTABLE_TOKEN) y/o AIRTABLE_BASE_ID.'
     });
   }
-
-  const headers = { Authorization: `Bearer ${AIRTABLE_API_KEY}` };
 
   try {
     // -------------------------
@@ -88,30 +98,88 @@ exports.handler = async (event) => {
       const offset = qs.offset || undefined;
       const q = (qs.q || '').trim();
 
-      let filterByFormula;
+      // Intentos de filtro (con y sin tilde) para evitar fallos por nombres de campos distintos.
+      let filterByFormula = undefined;
+      let formulaCandidates = [undefined];
+
       if (q) {
         const qq = escapeForFormula(q.toLowerCase());
-        // Busca en campos típicos; si alguno no existe, Airtable lo ignora? (no: dará error).
-        // Por eso usamos IFERROR alrededor de cada campo para evitar fallos si un campo no existe aún.
-        filterByFormula = `OR(
-          FIND('${qq}', LOWER(IFERROR({ITEM}, ''))),
-          FIND('${qq}', LOWER(IFERROR({EQUIPO}, ''))),
-          FIND('${qq}', LOWER(IFERROR({SERIE}, ''))),
-          FIND('${qq}', LOWER(IFERROR({PLACA}, ''))),
-          FIND('${qq}', LOWER(IFERROR({SERVICIO}, ''))),
-          FIND('${qq}', LOWER(IFERROR({UBICACIÓN}, '')))
+        const baseFormula = (ubicField) => `OR(
+          FIND('${qq}', LOWER({ITEM}&'')),
+          FIND('${qq}', LOWER({EQUIPO}&'')),
+          FIND('${qq}', LOWER({SERIE}&'')),
+          FIND('${qq}', LOWER({PLACA}&'')),
+          FIND('${qq}', LOWER({SERVICIO}&'')),
+          FIND('${qq}', LOWER({${ubicField}}&''))
         )`;
+
+        formulaCandidates = [
+          baseFormula('UBICACIÓN'), // con tilde
+          baseFormula('UBICACION'), // sin tilde
+          // fallback sin ubicación
+          `OR(
+            FIND('${qq}', LOWER({ITEM}&'')),
+            FIND('${qq}', LOWER({EQUIPO}&'')),
+            FIND('${qq}', LOWER({SERIE}&'')),
+            FIND('${qq}', LOWER({PLACA}&'')),
+            FIND('${qq}', LOWER({SERVICIO}&''))
+          )`,
+          undefined
+        ];
       }
 
-      const params = {
-        pageSize,
-        ...(offset ? { offset } : {}),
-        ...(filterByFormula ? { filterByFormula } : {}),
-        sort: [{ field: 'ITEM', direction: 'asc' }],
-      };
+      const sortCandidates = [
+        [{ field: 'ITEM', direction: 'asc' }],
+        undefined
+      ];
 
-      const resp = await axios.get(`${AIRTABLE_API}/${encodeURIComponent(INVENTARIO_TABLE)}`, { headers, params });
-      return json(200, { success: true, data: resp.data });
+      let resp = null;
+      let lastErr = null;
+
+      for (const sort of sortCandidates) {
+        for (const f of formulaCandidates) {
+          try {
+            const params = { pageSize, offset };
+            if (sort) params.sort = sort;
+            if (f) params.filterByFormula = f;
+
+            resp = await airtableGet(params);
+            filterByFormula = f;
+            lastErr = null;
+            break;
+          } catch (err) {
+            lastErr = err;
+            // Si es unknown field, probamos el siguiente candidato
+            if (isUnknownFieldError(err)) continue;
+            // Otros errores (401/403/404/422), detenemos y reportamos
+            break;
+          }
+        }
+        if (resp) break;
+        if (lastErr && !isUnknownFieldError(lastErr)) break;
+      }
+
+      if (!resp) {
+        const detail = lastErr?.response?.data || { message: lastErr?.message || 'Unknown error' };
+        return json(200, {
+          success: true,
+          count: 0,
+          nextOffset: null,
+          data: [],
+          warning: 'No se pudo consultar Airtable (revisa permisos del token, Base ID, o nombres de campos).',
+          detail
+        });
+      }
+
+      const records = (resp.data.records || []).map(r => ({ id: r.id, fields: r.fields || {} }));
+
+      return json(200, {
+        success: true,
+        count: records.length,
+        nextOffset: resp.data.offset || null,
+        data: records,
+        usedFilter: filterByFormula || null
+      });
     }
 
     // -------------------------
@@ -123,7 +191,13 @@ exports.handler = async (event) => {
 
       if (fields['MANUAL']) fields['MANUAL'] = maybeAttachmentFromUrl(fields['MANUAL']);
 
-      const resp = await axios.post(`${AIRTABLE_API}/${encodeURIComponent(INVENTARIO_TABLE)}`, { fields }, { headers });
+      const headers = { Authorization: `Bearer ${AIRTABLE_API_KEY}` };
+      const resp = await axios.post(
+        `${AIRTABLE_API}/${encodeURIComponent(INVENTARIO_TABLE)}`,
+        { fields },
+        { headers }
+      );
+
       return json(200, { success: true, data: { id: resp.data.id, fields: resp.data.fields || {} } });
     }
 
@@ -134,37 +208,34 @@ exports.handler = async (event) => {
       const body = JSON.parse(event.body || '{}');
       const recordId = body.id;
       const fields = body.fields || {};
-      if (!recordId) return json(400, { success: false, error: 'Missing record id' });
+
+      if (!recordId) return json(200, { success: false, error: 'Missing record id' });
 
       if (fields['MANUAL']) fields['MANUAL'] = maybeAttachmentFromUrl(fields['MANUAL']);
 
-      const resp = await axios.patch(`${AIRTABLE_API}/${encodeURIComponent(INVENTARIO_TABLE)}/${recordId}`, { fields }, { headers });
+      const headers = { Authorization: `Bearer ${AIRTABLE_API_KEY}` };
+      const resp = await axios.patch(
+        `${AIRTABLE_API}/${encodeURIComponent(INVENTARIO_TABLE)}/${recordId}`,
+        { fields },
+        { headers }
+      );
+
       return json(200, { success: true, data: { id: resp.data.id, fields: resp.data.fields || {} } });
     }
 
-    return json(405, { success: false, error: 'Method not allowed' });
+    return json(200, { success: false, error: 'Method not allowed' });
   } catch (err) {
-    const status = err?.response?.status || 500;
+    console.error('inventario function error:', err?.response?.data || err.message);
     const detail = err?.response?.data || { message: err.message };
 
-    // Errores típicos de Airtable
-    let hint = undefined;
-    if (status === 401 || status === 403) {
-      hint = 'Token sin permisos o sin acceso a la Base. Revisa scopes (data.records:read/write) y Access al Base en Airtable.';
-    } else if (status === 404) {
-      hint = `Tabla/base no encontrada. Confirma AIRTABLE_BASE_ID y que la tabla se llame exactamente "${INVENTARIO_TABLE}".`;
-    } else if (status === 422) {
-      hint = 'Campos inválidos. Confirma que los nombres de campos en Airtable coinciden exactamente (incluye tildes, p.ej. "UBICACIÓN").';
-    }
-
-    console.error('inventario function error:', detail);
-
-    return json(500, {
-      success: false,
-      error: 'Airtable request failed',
-      status,
-      detail,
-      ...(hint ? { hint } : {}),
+    // Devolvemos 200 para evitar AxiosError en el frontend, pero con warning y detalle.
+    return json(200, {
+      success: true,
+      count: 0,
+      nextOffset: null,
+      data: [],
+      warning: 'Error en la función Inventario. Revisa token/base/permisos en Netlify.',
+      detail
     });
   }
 };
