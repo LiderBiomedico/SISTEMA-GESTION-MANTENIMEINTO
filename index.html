@@ -588,6 +588,59 @@
         .hidden {
             display: none;
         }
+
+        /* INVENTARIO */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+        @media (max-width: 900px) {
+            .form-grid { grid-template-columns: 1fr; }
+        }
+        details.section {
+            background: white;
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            margin-bottom: 14px;
+            overflow: hidden;
+            border: 1px solid rgba(144,164,174,0.35);
+        }
+        details.section > summary {
+            cursor: pointer;
+            padding: 14px 16px;
+            font-weight: 700;
+            color: var(--primary);
+            list-style: none;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+        details.section > summary::-webkit-details-marker { display: none; }
+        details.section[open] > summary {
+            border-bottom: 1px solid rgba(144,164,174,0.35);
+            background: rgba(13,71,161,0.04);
+        }
+        .summary-hint {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--border);
+        }
+        .section-body { padding: 16px; }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 700;
+            background: rgba(13,71,161,0.08);
+            color: var(--primary);
+        }
+        .btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+        .table-actions .btn { white-space: nowrap; }
     </style>
 </head>
 <body>
@@ -605,13 +658,22 @@
                     <span class="nav-item-icon">📊</span>
                     <span>Dashboard</span>
                 </div>
-            </div>
+            
+                <div class="nav-item" onclick="switchModule('inventario')">
+                    <span class="nav-item-icon">📦</span>
+                    <span>Inventario Maestro</span>
+                </div>
+</div>
 
             <div class="nav-section">
                 <div class="nav-title">Operaciones</div>
                 <div class="nav-item" onclick="switchModule('equipos')">
                     <span class="nav-item-icon">🔧</span>
                     <span>Equipos</span>
+                </div>
+                <div class="nav-item" onclick="switchModule('inventario')">
+                    <span class="nav-item-icon">🗃️</span>
+                    <span>Inventario</span>
                 </div>
                 <div class="nav-item" onclick="switchModule('mantenimientos')">
                     <span class="nav-item-icon">📋</span>
@@ -737,9 +799,58 @@
                 </div>
 
                 <!-- EQUIPOS MODULE -->
-                <div id="equipos" class="module">
+                
+                <div id="inventario" class="module">
+                    <div class="table-container">
+                        <div class="table-header">
+                            <h3>Inventario Maestro</h3>
+                            <div class="table-actions">
+                                <button class="btn btn-primary" onclick="openModal('newInventario')">+ Nuevo Registro</button>
+                                <button class="btn btn-secondary" onclick="loadInventario()">⟳ Actualizar</button>
+                                <button class="btn btn-secondary" onclick="exportInventarioCSV()">⬇ Exportar CSV</button>
+                            </div>
+                        </div>
+
+                        <div style="display:flex; gap:12px; align-items:center; margin: 10px 0 16px;">
+                            <input id="inventarioSearch" type="text" placeholder="Buscar por item, equipo, serie, placa, servicio..." 
+                                   style="flex:1; padding:10px 12px; border:1px solid #e0e0e0; border-radius:10px;"
+                                   oninput="debouncedInventarioSearch()"/>
+                            <div id="inventarioCount" style="font-weight:600; color:#0d47a1;">0 registros</div>
+                        </div>
+
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Equipo</th>
+                                    <th>Marca</th>
+                                    <th>Modelo</th>
+                                    <th>Serie</th>
+                                    <th>Placa</th>
+                                    <th>Servicio</th>
+                                    <th>Ubicación</th>
+                                    <th>Vida útil</th>
+                                    <th>Próx. mtto</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventarioTableBody">
+                                <tr><td colspan="11" style="text-align:center; padding:18px; color:#607d8b;">Cargando inventario...</td></tr>
+                            </tbody>
+                        </table>
+
+                        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:12px;">
+                            <button class="btn btn-secondary" onclick="inventarioPrevPage()">◀ Anterior</button>
+                            <button class="btn btn-secondary" onclick="inventarioNextPage()">Siguiente ▶</button>
+                        </div>
+                    </div>
+                </div>
+<div id="equipos" class="module">
                     <div class="mb-3">
-                        <button class="btn btn-primary" onclick="openModal('newEquipo')">+ Nuevo Equipo</button>
+                        <div class="btn-row">
+                            <button class="btn btn-primary" onclick="openModal('newEquipo')">+ Nuevo Equipo</button>
+                            <button class="btn btn-secondary" onclick="switchModule('inventario')">🗃️ Ir a Inventario</button>
+                        </div>
                     </div>
 
                     <div class="table-container">
@@ -801,6 +912,65 @@
                         </table>
                     </div>
                 </div>
+
+
+                <!-- INVENTARIO MODULE -->
+                <div id="inventario" class="module">
+                    <div class="mb-3" style="display:flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
+                        <div class="btn-row">
+                            <button class="btn btn-primary" onclick="openModal('newInventario')">+ Nuevo Registro</button>
+                            <button class="btn btn-secondary" onclick="loadInventario(true)">🔄 Actualizar</button>
+                            <span class="badge" id="inventarioCount">0 registros</span>
+                        </div>
+                        <div class="btn-row">
+                            <input id="inventarioSearch" type="text" placeholder="Buscar por ITEM, equipo, serie, placa, servicio..." style="width: 360px; max-width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px;">
+                            <button class="btn btn-small btn-secondary" onclick="exportInventarioCSV()">💾 Exportar CSV</button>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <div class="table-header">
+                            <div class="text-muted">Módulo de inventario maestro (vida útil, adquisición, garantía, calibración y mantenimiento).</div>
+                            <div class="table-actions">
+                                <button class="btn btn-small btn-secondary" onclick="toggleInventarioColumns()">Columnas</button>
+                            </div>
+                        </div>
+
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th data-col="ITEM">ITEM</th>
+                                    <th data-col="EQUIPO">EQUIPO</th>
+                                    <th data-col="MARCA">MARCA</th>
+                                    <th data-col="MODELO">MODELO</th>
+                                    <th data-col="SERIE">SERIE</th>
+                                    <th data-col="PLACA">PLACA</th>
+                                    <th data-col="SERVICIO">SERVICIO</th>
+                                    <th data-col="UBICACIÓN">UBICACIÓN</th>
+                                    <th data-col="VIDA UTIL">VIDA ÚTIL</th>
+                                    <th data-col="PROX_MTTO">PRÓX. MTTO</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventarioTbody">
+                                <tr>
+                                    <td colspan="11" class="text-muted" style="padding: 18px; text-align:center;">
+                                        Cargando inventario...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <div class="text-muted mt-3" id="inventarioPaging" style="display:flex; justify-content: space-between; align-items:center; gap: 10px; flex-wrap: wrap;">
+                            <span>Tip: usa búsqueda para filtrar rápidamente.</span>
+                            <div class="btn-row">
+                                <button class="btn btn-small btn-secondary" id="inventarioPrevBtn" onclick="inventarioPrevPage()" disabled>◀ Anterior</button>
+                                <button class="btn btn-small btn-secondary" id="inventarioNextBtn" onclick="inventarioNextPage()" disabled>Siguiente ▶</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
 
                 <!-- MANTENIMIENTOS MODULE -->
                 <div id="mantenimientos" class="module">
@@ -977,6 +1147,306 @@
         </div>
     </div>
 
-    <script src="/js/app.js"></script>
+
+    <div id="newInventario" class="modal">
+        <div class="modal-content" style="max-width: 980px;">
+            <button class="modal-close" onclick="closeModal('newInventario')">✕</button>
+            <div class="modal-header">Registro de Inventario</div>
+
+            <form id="inventarioForm">
+                <details class="section" open>
+                    <summary>1) Identificación del equipo <span class="summary-hint">ITEM, serie, placa, INVIMA</span></summary>
+                    <div class="section-body">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>ITEM</label>
+                                <input name="ITEM" type="text" placeholder="Ej: 00123" required>
+                            </div>
+                            <div class="form-group">
+                                <label>EQUIPO</label>
+                                <input name="EQUIPO" type="text" placeholder="Ej: Monitor de signos vitales" required>
+                            </div>
+                            <div class="form-group">
+                                <label>MARCA</label>
+                                <input name="MARCA" type="text" placeholder="Ej: Nihon Kohden">
+                            </div>
+                            <div class="form-group">
+                                <label>MODELO</label>
+                                <input name="MODELO" type="text" placeholder="Ej: BSM-3000">
+                            </div>
+                            <div class="form-group">
+                                <label>FECHA FABRICA</label>
+                                <input name="FECHA FABRICA" type="date">
+                            </div>
+                            <div class="form-group">
+                                <label>SERIE</label>
+                                <input name="SERIE" type="text" placeholder="Ej: SN123456">
+                            </div>
+                            <div class="form-group">
+                                <label>CERTIFICADO 2025</label>
+                                <input name="CERTIFICADO 2025" type="text" placeholder="Ej: Sí / No / Código">
+                            </div>
+                            <div class="form-group">
+                                <label>PLACA</label>
+                                <input name="PLACA" type="text" placeholder="Ej: HSLV-PL-0098">
+                            </div>
+                            <div class="form-group">
+                                <label>CODIGO ECRI</label>
+                                <input name="CODIGO ECRI" type="text" placeholder="Ej: ECRI-XXXX">
+                            </div>
+                            <div class="form-group">
+                                <label>REGISTRO INVIMA</label>
+                                <input name="REGISTRO INVIMA" type="text" placeholder="Ej: 2019DM-0012345">
+                            </div>
+                        </div>
+                    </div>
+                </details>
+
+                <details class="section">
+                    <summary>2) Ubicación y clasificación <span class="summary-hint">servicio, riesgo, vida útil</span></summary>
+                    <div class="section-body">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>SERVICIO</label>
+                                <input name="SERVICIO" type="text" placeholder="Ej: UCI Adultos">
+                            </div>
+                            <div class="form-group">
+                                <label>UBICACIÓN</label>
+                                <input name="UBICACIÓN" type="text" placeholder="Ej: Torre A - Piso 2 - Cubículo 4">
+                            </div>
+                            <div class="form-group">
+                                <label>CLASIFICACION BIOMEDICA</label>
+                                <input name="CLASIFICACION BIOMEDICA" type="text" placeholder="Ej: Diagnóstico / Terapéutico / Soporte">
+                            </div>
+                            <div class="form-group">
+                                <label>CLASIFICACION DE LA TECNOLOGIA</label>
+                                <input name="CLASIFICACION DE LA TECNOLOGIA" type="text" placeholder="Ej: Equipo biomédico / Dispositivo médico">
+                            </div>
+                            <div class="form-group">
+                                <label>CLASIFICACION DEL RIESGO</label>
+                                <input name="CLASIFICACION DEL RIESGO" type="text" placeholder="Ej: I / IIa / IIb / III">
+                            </div>
+                            <div class="form-group">
+                                <label>VIDA UTIL</label>
+                                <input name="VIDA UTIL" type="text" placeholder="Ej: 10 años">
+                            </div>
+                        </div>
+                    </div>
+                </details>
+
+                <details class="section">
+                    <summary>3) Adquisición, compra y garantía <span class="summary-hint">contrato, valor, fechas</span></summary>
+                    <div class="section-body">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>TIPO DE ADQUISICION</label>
+                                <input name="TIPO DE ADQUISICION" type="text" placeholder="Ej: Compra / Donación / Comodato">
+                            </div>
+                            <div class="form-group">
+                                <label>NO. DE CONTRATO</label>
+                                <input name="NO. DE CONTRATO" type="text" placeholder="Ej: 123-2025">
+                            </div>
+                            <div class="form-group">
+                                <label>FECHA DE COMRPA</label>
+                                <input name="FECHA DE COMRPA" type="date">
+                            </div>
+                            <div class="form-group">
+                                <label>VALOR EN PESOS</label>
+                                <input name="VALOR EN PESOS" type="number" step="1" placeholder="Ej: 15000000">
+                            </div>
+                            <div class="form-group">
+                                <label>FECHA DE RECEPCIÓN</label>
+                                <input name="FECHA DE RECEPCIÓN" type="date">
+                            </div>
+                            <div class="form-group">
+                                <label>FECHA DE INSTALACIÓN</label>
+                                <input name="FECHA DE INSTALACIÓN" type="date">
+                            </div>
+                            <div class="form-group">
+                                <label>INICIO DE GARANTIA</label>
+                                <input name="INICIO DE GARANTIA" type="date">
+                            </div>
+                            <div class="form-group">
+                                <label>TERMINO DE GARANTIA</label>
+                                <input name="TERMINO DE GARANTIA" type="date">
+                            </div>
+                        </div>
+                    </div>
+                </details>
+
+                <details class="section">
+                    <summary>4) Mantenimiento, calibración y programación <span class="summary-hint">frecuencia, costos, anual</span></summary>
+                    <div class="section-body">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>TIPO DE MTTO</label>
+                                <input name="TIPO DE MTTO" type="text" placeholder="Ej: Preventivo / Correctivo / Calibración">
+                            </div>
+                            <div class="form-group">
+                                <label>COSTO DE MANTENIMIENTO</label>
+                                <input name="COSTO DE MANTENIMIENTO" type="number" step="1" placeholder="Ej: 450000">
+                            </div>
+                            <div class="form-group">
+                                <label>CALIBRABLE</label>
+                                <select name="CALIBRABLE">
+                                    <option value="">(Seleccionar)</option>
+                                    <option>SI</option>
+                                    <option>NO</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>N. CERTIFICADO</label>
+                                <input name="N. CERTIFICADO" type="text" placeholder="Ej: CAL-2025-009">
+                            </div>
+                            <div class="form-group">
+                                <label>FRECUENCIA DE MTTO PREVENTIVO</label>
+                                <select name="FRECUENCIA DE MTTO PREVENTIVO" id="invFreqSelect">
+                                    <option value="">(Seleccionar)</option>
+                                    <option value="Mensual">Mensual</option>
+                                    <option value="Bimestral">Bimestral</option>
+                                    <option value="Trimestral">Trimestral</option>
+                                    <option value="Cuatrimestral">Cuatrimestral</option>
+                                    <option value="Semestral">Semestral</option>
+                                    <option value="Anual">Anual</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>FECHA PROGRAMADA DE MANTENIMINETO</label>
+                                <input name="FECHA PROGRAMADA DE MANTENIMINETO" id="invStartDate" type="date">
+                                <div class="text-muted mt-3" style="margin-top:8px;">Usada como fecha inicial para generar programación anual (opcional).</div>
+                            </div>
+                            <div class="form-group">
+                                <label>FRECUENCIA DE MANTENIMIENTO</label>
+                                <input name="FRECUENCIA DE MANTENIMIENTO" type="text" placeholder="Ej: Cada 3 meses">
+                            </div>
+                            <div class="form-group">
+                                <label>PROGRAMACION DE MANTENIMIENTO ANUAL</label>
+                                <textarea name="PROGRAMACION DE MANTENIMIENTO ANUAL" id="invScheduleAnnual" rows="4" placeholder="Ej: 2026-03-01, 2026-06-01, 2026-09-01, 2026-12-01"></textarea>
+                                <div class="btn-row" style="margin-top:10px;">
+                                    <button type="button" class="btn btn-small btn-secondary" onclick="generateAnnualSchedule()">⚙️ Generar programación</button>
+                                    <button type="button" class="btn btn-small btn-secondary" onclick="clearAnnualSchedule()">🧹 Limpiar</button>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>MANUAL</label>
+                                <input name="MANUAL" type="url" placeholder="Pega un link público (Drive/OneDrive) o URL del manual">
+                                <div class="text-muted mt-3" style="margin-top:8px;">Si deseas adjuntar en Airtable, pega un enlace público (Airtable lo guarda como adjunto por URL).</div>
+                            </div>
+                        </div>
+                    </div>
+                </details>
+
+                <details class="section">
+                    <summary>5) Responsable / proveedor <span class="summary-hint">contacto, ciudad</span></summary>
+                    <div class="section-body">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>RESPONSABLE</label>
+                                <input name="RESPONSABLE" type="text" placeholder="Ej: Ing. Biomédico / Proveedor">
+                            </div>
+                            <div class="form-group">
+                                <label>NOMBRE</label>
+                                <input name="NOMBRE" type="text" placeholder="Ej: Proveedor S.A.S.">
+                            </div>
+                            <div class="form-group">
+                                <label>DIRECCION</label>
+                                <input name="DIRECCION" type="text" placeholder="Ej: Calle 1 #2-3">
+                            </div>
+                            <div class="form-group">
+                                <label>TELEFONO</label>
+                                <input name="TELEFONO" type="tel" placeholder="Ej: +57 300 000 0000">
+                            </div>
+                            <div class="form-group">
+                                <label>CIUDAD</label>
+                                <input name="CIUDAD" type="text" placeholder="Ej: Popayán">
+                            </div>
+                        </div>
+                    </div>
+                </details>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('newInventario')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar en Inventario</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <script src="js/app.js"></script>
+
+    <!-- MODAL: NUEVO REGISTRO INVENTARIO -->
+    <div id="newInventario" class="modal">
+        <div class="modal-content" style="max-width: 980px;">
+            <div class="modal-header">
+                <h2>Registro de Inventario</h2>
+                <span class="close" onclick="closeModal('newInventario')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="inventarioForm">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Item</label>
+                            <input name="Item" required />
+                        </div>
+                        <div class="form-group">
+                            <label>Equipo</label>
+                            <input name="Equipo" required />
+                        </div>
+                        <div class="form-group">
+                            <label>Marca</label>
+                            <input name="Marca" />
+                        </div>
+                        <div class="form-group">
+                            <label>Modelo</label>
+                            <input name="Modelo" />
+                        </div>
+                        <div class="form-group">
+                            <label>Serie</label>
+                            <input name="Serie" />
+                        </div>
+                        <div class="form-group">
+                            <label>Número de Placa</label>
+                            <input name="Numero de Placa" />
+                        </div>
+                        <div class="form-group">
+                            <label>Servicio</label>
+                            <input name="Servicio" />
+                        </div>
+                        <div class="form-group">
+                            <label>Ubicación</label>
+                            <input name="Ubicación" />
+                        </div>
+                        <div class="form-group">
+                            <label>Vida útil (años)</label>
+                            <input name="Vida Util" type="number" min="0" step="1" />
+                        </div>
+                        <div class="form-group">
+                            <label>Próxima fecha programada de mantenimiento</label>
+                            <input name="Fecha Programada de Mantenimiento" type="date" />
+                        </div>
+                        <div class="form-group">
+                            <label>Valor en pesos</label>
+                            <input name="Valor en Pesos" type="number" min="0" step="1" />
+                        </div>
+                        <div class="form-group">
+                            <label>Calibrable</label>
+                            <select name="Calibrable">
+                                <option value="">--</option>
+                                <option value="true">Sí</option>
+                                <option value="false">No</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style="display:flex; justify-content:flex-end; gap:10px; margin-top: 14px;">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('newInventario')">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Guardar en Inventario</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>
