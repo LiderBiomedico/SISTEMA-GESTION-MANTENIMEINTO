@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test - Indicador Conexión Airtable</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .test-container {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            font-size: 32px;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #7f8c8d;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .status-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #e0e0e0;
+        }
+
+        .status-card.success {
+            border-left-color: #2e7d32;
+            background: #e8f5e9;
+        }
+
+        .status-card.error {
+            border-left-color: #c62828;
+            background: #ffebee;
+        }
+
+        .status-card.warning {
+            border-left-color: #f57f17;
+            background: #fff3e0;
+        }
+
+        .status-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            color: #7f8c8d;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .status-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #2c3e50;
+        }
+
+        .test-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #e0e0e0;
+            color: #2c3e50;
+        }
+
+        .btn-secondary:hover {
+            background: #d0d0d0;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .log-container {
+            margin-top: 30px;
+            background: #263238;
+            border-radius: 8px;
+            padding: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .log-title {
+            color: #78909c;
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .log-entry {
+            color: #eceff1;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            margin-bottom: 8px;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+        }
+
+        .log-entry.success {
+            border-left: 3px solid #4caf50;
+        }
+
+        .log-entry.error {
+            border-left: 3px solid #f44336;
+        }
+
+        .log-entry.info {
+            border-left: 3px solid #2196f3;
+        }
+
+        .log-entry.warning {
+            border-left: 3px solid #ff9800;
+        }
+
+        /* Indicador de conexión */
+        .connection-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            background: white;
+            padding: 12px 18px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 2px solid transparent;
+            min-width: 200px;
+        }
+
+        .connection-indicator:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .connection-indicator.connected {
+            border-color: #2e7d32;
+        }
+
+        .connection-indicator.disconnected {
+            border-color: #c62828;
+        }
+
+        .connection-indicator.checking {
+            border-color: #f57f17;
+        }
+
+        .connection-status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+            flex-shrink: 0;
+        }
+
+        .connection-status-dot.connected {
+            background: #2e7d32;
+        }
+
+        .connection-status-dot.disconnected {
+            background: #c62828;
+        }
+
+        .connection-status-dot.checking {
+            background: #f57f17;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.6;
+                transform: scale(1.2);
+            }
+        }
+
+        .connection-details {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .connection-label {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .connection-time {
+            font-size: 11px;
+            color: #78909c;
+        }
+
+        @media (max-width: 768px) {
+            .test-container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            .connection-indicator {
+                top: 10px;
+                right: 10px;
+                min-width: 150px;
+                padding: 8px 12px;
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- INDICADOR DE CONEXIÓN -->
+    <div id="connectionIndicator" class="connection-indicator checking">
+        <div class="connection-status-dot checking"></div>
+        <div class="connection-details">
+            <div class="connection-label">Verificando...</div>
+            <div class="connection-time" id="connectionTime">Iniciando...</div>
+        </div>
+    </div>
+
+    <div class="test-container">
+        <h1>🔬 Test del Indicador de Conexión</h1>
+        <p class="subtitle">Verifica la conexión con Airtable en tiempo real</p>
+
+        <div class="status-grid">
+            <div class="status-card" id="statusCard">
+                <div class="status-label">Estado General</div>
+                <div class="status-value" id="statusValue">Iniciando...</div>
+            </div>
+
+            <div class="status-card" id="apiKeyCard">
+                <div class="status-label">API Key</div>
+                <div class="status-value" id="apiKeyValue">—</div>
+            </div>
+
+            <div class="status-card" id="baseIdCard">
+                <div class="status-label">Base ID</div>
+                <div class="status-value" id="baseIdValue">—</div>
+            </div>
+
+            <div class="status-card" id="endpointCard">
+                <div class="status-label">Respuesta</div>
+                <div class="status-value" id="endpointValue">—</div>
+            </div>
+        </div>
+
+        <div class="test-actions">
+            <button class="btn btn-primary" onclick="testConnectionNow()" id="btnTest">
+                🔄 Probar Conexión
+            </button>
+            <button class="btn btn-secondary" onclick="clearLogs()">
+                🗑️ Limpiar Logs
+            </button>
+            <button class="btn btn-secondary" onclick="toggleAutoRefresh()" id="btnAutoRefresh">
+                ⏸️ Detener Auto-Refresh
+            </button>
+        </div>
+
+        <div class="log-container">
+            <div class="log-title">📋 Registro de Actividad</div>
+            <div id="logContent"></div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================================
+        // TEST DE CONEXIÓN AIRTABLE
+        // ============================================================================
+
+        let autoRefreshEnabled = true;
+        let autoRefreshInterval = null;
+
+        const API_BASE_URL = '/.netlify/functions';
+        const logs = [];
+
+        function addLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString('es-CO');
+            logs.push({ timestamp, message, type });
+            
+            const logContent = document.getElementById('logContent');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.innerHTML = `<strong>[${timestamp}]</strong> ${message}`;
+            logContent.appendChild(entry);
+            logContent.scrollTop = logContent.scrollHeight;
+
+            // Limitar a 50 logs
+            if (logs.length > 50) {
+                logs.shift();
+                logContent.removeChild(logContent.firstChild);
+            }
+        }
+
+        function updateUI(status, hasApiKey, hasBaseId, responseTime) {
+            // Indicador principal
+            const indicator = document.getElementById('connectionIndicator');
+            const dot = indicator.querySelector('.connection-status-dot');
+            const label = indicator.querySelector('.connection-label');
+            const time = document.getElementById('connectionTime');
+
+            indicator.className = `connection-indicator ${status}`;
+            dot.className = `connection-status-dot ${status}`;
+
+            const statusMessages = {
+                connected: '✓ Conectado',
+                disconnected: '✗ Sin conexión',
+                checking: '⏳ Verificando...'
+            };
+
+            label.textContent = statusMessages[status] || 'Desconocido';
+            
+            const now = new Date().toLocaleTimeString('es-CO');
+            time.textContent = `Última verificación: ${now}`;
+
+            // Cards de estado
+            const statusCard = document.getElementById('statusCard');
+            const statusValue = document.getElementById('statusValue');
+            statusCard.className = `status-card ${status === 'connected' ? 'success' : status === 'disconnected' ? 'error' : 'warning'}`;
+            statusValue.textContent = statusMessages[status];
+
+            // API Key card
+            const apiKeyCard = document.getElementById('apiKeyCard');
+            const apiKeyValue = document.getElementById('apiKeyValue');
+            apiKeyCard.className = `status-card ${hasApiKey ? 'success' : 'error'}`;
+            apiKeyValue.textContent = hasApiKey ? '✓ Configurada' : '✗ No encontrada';
+
+            // Base ID card
+            const baseIdCard = document.getElementById('baseIdCard');
+            const baseIdValue = document.getElementById('baseIdValue');
+            baseIdCard.className = `status-card ${hasBaseId ? 'success' : 'error'}`;
+            baseIdValue.textContent = hasBaseId ? '✓ Configurada' : '✗ No encontrada';
+
+            // Endpoint card
+            const endpointCard = document.getElementById('endpointCard');
+            const endpointValue = document.getElementById('endpointValue');
+            if (responseTime !== null) {
+                endpointCard.className = 'status-card success';
+                endpointValue.textContent = `${responseTime}ms`;
+            } else {
+                endpointCard.className = 'status-card error';
+                endpointValue.textContent = 'Sin respuesta';
+            }
+        }
+
+        async function testConnectionNow() {
+            const btn = document.getElementById('btnTest');
+            btn.disabled = true;
+            btn.textContent = '⏳ Probando...';
+
+            addLog('🔍 Iniciando prueba de conexión...', 'info');
+            updateUI('checking', false, false, null);
+
+            try {
+                const startTime = performance.now();
+                const url = `${API_BASE_URL}/inventario?debug=1`;
+                
+                addLog(`📡 Llamando a: ${url}`, 'info');
+
+                const response = await axios.get(url, {
+                    timeout: 10000,
+                    headers: { Authorization: 'Bearer test' }
+                });
+
+                const endTime = performance.now();
+                const responseTime = Math.round(endTime - startTime);
+
+                addLog(`✅ Respuesta recibida en ${responseTime}ms`, 'success');
+
+                if (response.data && response.data.ok) {
+                    const hasApiKey = response.data.hasApiKey || false;
+                    const hasBaseId = response.data.hasBaseId || false;
+
+                    addLog(`🔑 API Key: ${hasApiKey ? 'Configurada ✓' : 'No encontrada ✗'}`, hasApiKey ? 'success' : 'error');
+                    addLog(`🗂️ Base ID: ${hasBaseId ? 'Configurada ✓' : 'No encontrada ✗'}`, hasBaseId ? 'success' : 'error');
+
+                    if (hasApiKey && hasBaseId) {
+                        updateUI('connected', hasApiKey, hasBaseId, responseTime);
+                        addLog('🎉 Conexión exitosa con Airtable', 'success');
+                    } else {
+                        updateUI('disconnected', hasApiKey, hasBaseId, responseTime);
+                        const missing = [];
+                        if (!hasApiKey) missing.push('API Key');
+                        if (!hasBaseId) missing.push('Base ID');
+                        addLog(`⚠️ Configuración incompleta. Falta: ${missing.join(', ')}`, 'warning');
+                    }
+                } else {
+                    throw new Error('Respuesta inválida del servidor');
+                }
+
+            } catch (error) {
+                addLog(`❌ Error: ${error.message}`, 'error');
+                
+                if (error.response) {
+                    addLog(`📊 Status HTTP: ${error.response.status}`, 'error');
+                    addLog(`📝 Detalle: ${JSON.stringify(error.response.data)}`, 'error');
+                }
+
+                updateUI('disconnected', false, false, null);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔄 Probar Conexión';
+            }
+        }
+
+        function clearLogs() {
+            logs.length = 0;
+            document.getElementById('logContent').innerHTML = '';
+            addLog('🗑️ Logs limpiados', 'info');
+        }
+
+        function toggleAutoRefresh() {
+            autoRefreshEnabled = !autoRefreshEnabled;
+            const btn = document.getElementById('btnAutoRefresh');
+
+            if (autoRefreshEnabled) {
+                btn.textContent = '⏸️ Detener Auto-Refresh';
+                startAutoRefresh();
+                addLog('▶️ Auto-refresh activado (cada 30s)', 'info');
+            } else {
+                btn.textContent = '▶️ Iniciar Auto-Refresh';
+                stopAutoRefresh();
+                addLog('⏸️ Auto-refresh detenido', 'warning');
+            }
+        }
+
+        function startAutoRefresh() {
+            if (autoRefreshInterval) return;
+            
+            autoRefreshInterval = setInterval(() => {
+                if (autoRefreshEnabled) {
+                    addLog('🔄 Auto-refresh ejecutando...', 'info');
+                    testConnectionNow();
+                }
+            }, 30000);
+        }
+
+        function stopAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+            }
+        }
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', () => {
+            addLog('🚀 Test de conexión iniciado', 'success');
+            addLog('⚙️ Endpoint: /.netlify/functions/inventario?debug=1', 'info');
+            
+            setTimeout(() => {
+                testConnectionNow();
+                startAutoRefresh();
+            }, 500);
+        });
+
+        // Cleanup
+        window.addEventListener('beforeunload', () => {
+            stopAutoRefresh();
+        });
+    </script>
+</body>
+</html>
