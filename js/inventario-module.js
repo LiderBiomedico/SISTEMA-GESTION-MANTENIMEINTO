@@ -1,23 +1,57 @@
 // ============================================================================
-// MÓDULO DE INVENTARIO - JavaScript Logic
-// Sistema HSLV - Inventario Maestro
-// Nota: protegido contra carga duplicada (evita "Identifier ... already been declared")
+// MÓDULO DE INVENTARIO - JavaScript Logic (HSLV) - PATCH V4
+// - Evita doble carga del módulo (no redeclare)
+// - Estado persistente en window.__HSLV_INVENTARIO_STATE
+// - Headers auth unificados (getAuthHeader si existe)
+// - Manejo de error compatible sin optional chaining
 // ============================================================================
 
 (function () {
-  if (typeof window !== 'undefined' && window.__HSLV_INVENTARIO_MODULE_LOADED__) return;
-  if (typeof window !== 'undefined') window.__HSLV_INVENTARIO_MODULE_LOADED__ = true;
+  if (window.__HSLV_INVENTARIO_MODULE_LOADED) {
+    console.warn('Inventario module already loaded; skipping re-execution.');
+    return;
+  }
+  window.__HSLV_INVENTARIO_MODULE_LOADED = true;
 
+  const state = window.__HSLV_INVENTARIO_STATE || (window.__HSLV_INVENTARIO_STATE = {
+    currentPage: 0,
+    totalRecords: 0,
+    currentOffset: null,
+    searchQuery: '',
+    searchTimeout: null,
+    allRecords: [],
+    currentEditId: null,
+    pageSize: 50
+  });
+
+  function getHeaders() {
+    try {
+      if (typeof getAuthHeader === 'function') return getAuthHeader();
+    } catch (e) {}
+    // Fallback: sin auth
+    return {};
+  }
+
+  function safeErr(error) {
+    try {
+      if (error && error.response && error.response.data) {
+        return error.response.data.error || JSON.stringify(error.response.data);
+      }
+    } catch (e) {}
+    return (error && error.message) ? error.message : 'Error desconocido';
+  }
+
+
+// ============================================================================
+// MÓDULO DE INVENTARIO - JavaScript Logic
+// Sistema HSLV - Hospital San Luis de Valencia
+// Adaptado a los IDs reales del index.html
+// ============================================================================
+
+// API_BASE_URL ya definido en app.js
 if (typeof API_BASE_URL === 'undefined') {
   var API_BASE_URL = '/.netlify/functions';
 }
-
-let currentPage = 0;
-let totalRecords = 0;
-let searchQuery = '';
-let searchTimeout = null;
-let allRecords = [];
-let currentEditId = null;
 
 // ============================================================================
 // INICIALIZACIÓN
@@ -57,25 +91,24 @@ async function loadInventario() {
     try {
         const params = new URLSearchParams();
         params.set('pageSize', '50');
-        const offset = (typeof window !== 'undefined' && window.inventarioOffset) ? window.inventarioOffset : null;
-        if (offset) params.set('offset', offset);
-        if (searchQuery) params.set('q', searchQuery);
+        if (state.currentOffset) params.set('offset', state.currentOffset);
+        if (state.searchQuery) params.set('q', state.searchQuery);
 
         const url = `${API_BASE_URL}/inventario?${params.toString()}`;
         const response = await axios.get(url, {
-            headers: (typeof getAuthHeader === 'function' ? getAuthHeader() : { Authorization: 'Bearer ok' })
+            headers: getHeaders()
         });
 
         const data = response.data;
-        allRecords = data.data || [];
-        if (typeof window !== 'undefined') window.inventarioOffset = data.offset || null;
-        totalRecords = data.count || allRecords.length;
+        state.allRecords = data.data || [];
+        state.currentOffset = data.offset || null;
+        state.totalRecords = data.count || state.allRecords.length;
 
-        console.log('✅ Inventario cargado:', allRecords.length, 'registros');
+        console.log('✅ Inventario cargado:', state.allRecords.length, 'registros');
 
         // Actualizar contador
         const countEl = document.getElementById('inventarioCount');
-        if (countEl) countEl.textContent = `${totalRecords} registros`;
+        if (countEl) countEl.textContent = `${state.totalRecords} registros`;
 
         renderTable();
         updatePagination();
@@ -86,7 +119,7 @@ async function loadInventario() {
             <tr>
                 <td colspan="11" style="text-align:center; padding:18px; color:#c62828;">
                     ⚠️ Error al cargar el inventario<br>
-                    <small>${(error && error.response && error.response.data && (error.response.data.error || error.response.data.message)) || error.message || 'Error desconocido'}</small><br>
+                    <small>${safeErr(error) || error.message || 'Error desconocido'}</small><br>
                     <button class="btn btn-primary" onclick="loadInventario()" style="margin-top:10px">
                         🔄 Reintentar
                     </button>
@@ -106,7 +139,7 @@ function renderTable() {
                 || document.getElementById('inventarioTableBody');
     if (!tbody) return;
 
-    if (allRecords.length === 0) {
+    if (state.allRecords.length === 0) {
         tbody.innerHTML = `
             <tr>
                 <td colspan="11" style="text-align:center; padding:18px; color:#607d8b;">
@@ -118,7 +151,7 @@ function renderTable() {
         return;
     }
 
-    tbody.innerHTML = allRecords.map(record => {
+    tbody.innerHTML = state.allRecords.map(record => {
         const f = record.fields || {};
         const item = f['Item'] || f['ITEM'] || '';
         const equipo = f['Equipo'] || f['EQUIPO'] || '';
@@ -165,21 +198,21 @@ function updatePagination() {
     const prevBtn = document.getElementById('inventarioPrevBtn');
     const nextBtn = document.getElementById('inventarioNextBtn');
 
-    if (prevBtn) prevBtn.disabled = currentPage === 0;
-    if (nextBtn) nextBtn.disabled = !currentOffset;
+    if (prevBtn) prevBtn.disabled = state.currentPage === 0;
+    if (nextBtn) nextBtn.disabled = !state.currentOffset;
 }
 
 function inventarioNextPage() {
-    if (currentOffset) {
-        currentPage++;
+    if (state.currentOffset) {
+        state.currentPage++;
         loadInventario();
     }
 }
 
 function inventarioPrevPage() {
-    if (currentPage > 0) {
-        currentPage--;
-        currentOffset = null;
+    if (state.currentPage > 0) {
+        state.currentPage--;
+        state.currentOffset = null;
         loadInventario();
     }
 }
@@ -189,12 +222,12 @@ function inventarioPrevPage() {
 // ============================================================================
 
 function debouncedInventarioSearch() {
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => {
+    clearTimeout(state.searchTimeout);
+    state.searchTimeout = setTimeout(() => {
         const el = document.getElementById('inventarioSearch');
-        searchQuery = el ? el.value.trim() : '';
-        currentOffset = null;
-        currentPage = 0;
+        state.searchQuery = el ? el.value.trim() : '';
+        state.currentOffset = null;
+        state.currentPage = 0;
         loadInventario();
     }, 500);
 }
@@ -204,7 +237,7 @@ function debouncedInventarioSearch() {
 // ============================================================================
 
 async function editEquipo(recordId) {
-    const record = allRecords.find(r => r.id === recordId);
+    const record = state.allRecords.find(r => r.id === recordId);
     if (!record) { alert('Equipo no encontrado'); return; }
     // Abrir modal newInventario y llenar con datos
     openModal('newInventario');
@@ -223,7 +256,7 @@ async function editEquipo(recordId) {
             input.value = val || '';
         }
     }
-    currentEditId = recordId;
+    state.currentEditId = recordId;
 }
 
 // ============================================================================
@@ -235,15 +268,15 @@ async function deleteEquipo(recordId, equipoName) {
 
     try {
         await axios.delete(`${API_BASE_URL}/inventario/${recordId}`, {
-            headers: (typeof getAuthHeader === 'function' ? getAuthHeader() : { Authorization: 'Bearer ok' })
+            headers: getHeaders()
         });
         console.log('✅ Equipo eliminado');
-        currentOffset = null;
-        currentPage = 0;
+        state.currentOffset = null;
+        state.currentPage = 0;
         await loadInventario();
     } catch (error) {
         console.error('❌ Error eliminando:', error);
-        alert('Error al eliminar: ' + ((error && error.response && error.response.data && (error.response.data.error || error.response.data.message)) || error.message));
+        alert('Error al eliminar: ' + (safeErr(error) || error.message));
     }
 }
 
@@ -252,12 +285,12 @@ async function deleteEquipo(recordId, equipoName) {
 // ============================================================================
 
 function exportInventarioCSV() {
-    if (allRecords.length === 0) { alert('No hay datos para exportar'); return; }
+    if (state.allRecords.length === 0) { alert('No hay datos para exportar'); return; }
 
     const headers = ['Item','Equipo','Marca','Modelo','Serie','Numero de Placa','Servicio','Ubicacion','Vida Util','Fecha Programada de Mantenimiento'];
     const rows = [headers.join(',')];
 
-    allRecords.forEach(record => {
+    state.allRecords.forEach(record => {
         const f = record.fields || {};
         const row = headers.map(h => {
             const v = String(f[h] || '').replace(/"/g, '""');
@@ -297,23 +330,4 @@ window.exportInventarioCSV = exportInventarioCSV;
 window.editEquipo = editEquipo;
 window.deleteEquipo = deleteEquipo;
 
-  
-  // Fallback: si app.js no expuso switchModule por algún motivo, crear versión mínima
-  if (typeof window !== 'undefined' && typeof window.switchModule !== 'function') {
-    window.switchModule = function (moduleName, evt) {
-      document.querySelectorAll('.module').forEach(m => m.classList.remove('active'));
-      const mod = document.getElementById(moduleName);
-      if (mod) mod.classList.add('active');
-      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-      const e = evt || window.event;
-      if (e && e.target && e.target.closest) {
-        const closest = e.target.closest('.nav-item');
-        if (closest) closest.classList.add('active');
-      }
-    };
-  }
-// Exponer funciones requeridas por onclick en index.html
-  if (typeof window !== 'undefined') {
-    window.loadInventario = loadInventario;
-  }
 })();
