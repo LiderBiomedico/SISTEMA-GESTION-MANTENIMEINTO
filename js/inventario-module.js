@@ -1,45 +1,31 @@
 // ============================================================================
-// MODULO DE INVENTARIO - JavaScript Logic
-// Sistema HSLV - Hospital San Luis de Valencia
-// Adaptado a los IDs reales del index.html
+// MÓDULO DE INVENTARIO - JavaScript Logic
+// Sistema HSLV - Inventario Maestro
+// Nota: protegido contra carga duplicada (evita "Identifier ... already been declared")
 // ============================================================================
 
-// API_BASE_URL ya definido en app.js
+(function () {
+  if (typeof window !== 'undefined' && window.__HSLV_INVENTARIO_MODULE_LOADED__) return;
+  if (typeof window !== 'undefined') window.__HSLV_INVENTARIO_MODULE_LOADED__ = true;
+
 if (typeof API_BASE_URL === 'undefined') {
   var API_BASE_URL = '/.netlify/functions';
 }
 
-function getHeaders() {
-  if (typeof getAuthHeader === 'function') return getAuthHeader();
-  return { Authorization: 'Bearer ok' };
-}
-
-function escapeHtml(str) {
-  str = (str === null || typeof str === 'undefined') ? '' : String(str);
-  return str.replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#39;');
-}
-
-
-
 let currentPage = 0;
 let totalRecords = 0;
-let currentOffset = null;
 let searchQuery = '';
 let searchTimeout = null;
 let allRecords = [];
 let currentEditId = null;
 
 // ============================================================================
-// INICIALIZACION
+// INICIALIZACIÓN
 // ============================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    console.log(' Modulo de Inventario iniciado');
-    // Solo cargar si el modulo inventario esta activo
+    console.log('🚀 Módulo de Inventario iniciado');
+    // Solo cargar si el módulo inventario está activo
     const invMod = document.getElementById('inventario');
     if (invMod && invMod.classList.contains('active')) {
         loadInventario();
@@ -56,7 +42,7 @@ async function loadInventario() {
                 || document.getElementById('tableBody')
                 || document.getElementById('inventarioTableBody');
     if (!tbody) {
-        console.warn(' No se encontro tbody para inventario (inventarioTbody/tableBody/inventarioTableBody)');
+        console.warn('⚠️ No se encontró tbody para inventario (inventarioTbody/tableBody/inventarioTableBody)');
         return;
     }
 
@@ -71,20 +57,21 @@ async function loadInventario() {
     try {
         const params = new URLSearchParams();
         params.set('pageSize', '50');
-        if (currentOffset) params.set('offset', currentOffset);
+        const offset = (typeof window !== 'undefined' && window.inventarioOffset) ? window.inventarioOffset : null;
+        if (offset) params.set('offset', offset);
         if (searchQuery) params.set('q', searchQuery);
 
         const url = `${API_BASE_URL}/inventario?${params.toString()}`;
         const response = await axios.get(url, {
-            headers: getHeaders()
+            headers: (typeof getAuthHeader === 'function' ? getAuthHeader() : { Authorization: 'Bearer ok' })
         });
 
         const data = response.data;
         allRecords = data.data || [];
-        currentOffset = data.offset || null;
+        if (typeof window !== 'undefined') window.inventarioOffset = data.offset || null;
         totalRecords = data.count || allRecords.length;
 
-        console.log(' Inventario cargado:', allRecords.length, 'registros');
+        console.log('✅ Inventario cargado:', allRecords.length, 'registros');
 
         // Actualizar contador
         const countEl = document.getElementById('inventarioCount');
@@ -94,19 +81,18 @@ async function loadInventario() {
         updatePagination();
 
     } catch (error) {
-        console.error('Error cargando inventario:', error);
-        const serverErr = (error && error.response && error.response.data && error.response.data.error) ? error.response.data.error : null;
-        const msg = serverErr || (error && error.message) || 'Error desconocido';
-        const safeMsg = escapeHtml(msg);
-        tbody.innerHTML = (
-            '<tr>' +
-              '<td colspan="11" style="text-align:center; padding:18px; color:#c62828;">' +
-                'Error al cargar el inventario<br>' +
-                '<small>' + safeMsg + '</small><br>' +
-                '<button class="btn btn-primary" onclick="loadInventario()" style="margin-top:10px">Reintentar</button>' +
-              '</td>' +
-            '</tr>'
-        );
+        console.error('❌ Error cargando inventario:', error);
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="11" style="text-align:center; padding:18px; color:#c62828;">
+                    ⚠️ Error al cargar el inventario<br>
+                    <small>${(error && error.response && error.response.data && (error.response.data.error || error.response.data.message)) || error.message || 'Error desconocido'}</small><br>
+                    <button class="btn btn-primary" onclick="loadInventario()" style="margin-top:10px">
+                        🔄 Reintentar
+                    </button>
+                </td>
+            </tr>
+        `;
     }
 }
 
@@ -124,7 +110,7 @@ function renderTable() {
         tbody.innerHTML = `
             <tr>
                 <td colspan="11" style="text-align:center; padding:18px; color:#607d8b;">
-                     No hay equipos registrados.<br>
+                    📦 No hay equipos registrados.<br>
                     <small>Comienza agregando tu primer equipo al inventario.</small>
                 </td>
             </tr>
@@ -139,14 +125,14 @@ function renderTable() {
         const marca = f['Marca'] || f['MARCA'] || '';
         const modelo = f['Modelo'] || f['MODELO'] || '';
         const serie = f['Serie'] || f['SERIE'] || '';
-        const placa = f['Numero de Placa'] || f['PLACA'] || f['Numero de Placa'] || '';
+        const placa = f['Numero de Placa'] || f['PLACA'] || f['Número de Placa'] || '';
         const servicio = f['Servicio'] || f['SERVICIO'] || '';
-        const ubicacion = f['Ubicacion'] || f['Ubicacion'] || f['UBICACION'] || '';
+        const ubicacion = f['Ubicacion'] || f['Ubicación'] || f['UBICACIÓN'] || '';
         const vidaUtil = f['Vida Util'] || f['VIDA UTIL'] || '';
         const fechaMtto = f['Fecha Programada de Mantenimiento'] || f['FECHA PROGRAMADA DE MANTENIMINETO'] || '';
 
         // Estado basado en fecha
-        let estadoText = '';
+        let estadoText = '—';
         if (fechaMtto) {
             const d = new Date(fechaMtto);
             estadoText = d.toLocaleDateString('es-CO', { year: 'numeric', month: 'short', day: 'numeric' });
@@ -164,15 +150,15 @@ function renderTable() {
             <td>${esc(String(vidaUtil))}</td>
             <td>${estadoText}</td>
             <td>
-                <button class="btn btn-small btn-secondary" onclick="editEquipo('${record.id}')" title="Editar"></button>
-                <button class="btn btn-small" onclick="deleteEquipo('${record.id}', '${esc(equipo)}')" title="Eliminar" style="color:#c62828;"></button>
+                <button class="btn btn-small btn-secondary" onclick="editEquipo('${record.id}')" title="Editar">✏️</button>
+                <button class="btn btn-small" onclick="deleteEquipo('${record.id}', '${esc(equipo)}')" title="Eliminar" style="color:#c62828;">🗑️</button>
             </td>
         </tr>`;
     }).join('');
 }
 
 // ============================================================================
-// PAGINACION
+// PAGINACIÓN
 // ============================================================================
 
 function updatePagination() {
@@ -199,7 +185,7 @@ function inventarioPrevPage() {
 }
 
 // ============================================================================
-// BUSQUEDA
+// BÚSQUEDA
 // ============================================================================
 
 function debouncedInventarioSearch() {
@@ -245,21 +231,19 @@ async function editEquipo(recordId) {
 // ============================================================================
 
 async function deleteEquipo(recordId, equipoName) {
-    if (!confirm(`Eliminar el equipo "${equipoName}"?\n\nEsta accion no se puede deshacer.`)) return;
+    if (!confirm(`¿Eliminar el equipo "${equipoName}"?\n\nEsta acción no se puede deshacer.`)) return;
 
     try {
         await axios.delete(`${API_BASE_URL}/inventario/${recordId}`, {
-            headers: getHeaders()
+            headers: (typeof getAuthHeader === 'function' ? getAuthHeader() : { Authorization: 'Bearer ok' })
         });
-        console.log(' Equipo eliminado');
+        console.log('✅ Equipo eliminado');
         currentOffset = null;
         currentPage = 0;
         await loadInventario();
     } catch (error) {
-        console.error('Error eliminando:', error);
-        const serverErr = (error && error.response && error.response.data && error.response.data.error) ? error.response.data.error : null;
-        const msg = serverErr || (error && error.message) || 'Error';
-        alert('Error al eliminar: ' + msg);
+        console.error('❌ Error eliminando:', error);
+        alert('Error al eliminar: ' + ((error && error.response && error.response.data && (error.response.data.error || error.response.data.message)) || error.message));
     }
 }
 
@@ -312,3 +296,24 @@ window.debouncedInventarioSearch = debouncedInventarioSearch;
 window.exportInventarioCSV = exportInventarioCSV;
 window.editEquipo = editEquipo;
 window.deleteEquipo = deleteEquipo;
+
+  
+  // Fallback: si app.js no expuso switchModule por algún motivo, crear versión mínima
+  if (typeof window !== 'undefined' && typeof window.switchModule !== 'function') {
+    window.switchModule = function (moduleName, evt) {
+      document.querySelectorAll('.module').forEach(m => m.classList.remove('active'));
+      const mod = document.getElementById(moduleName);
+      if (mod) mod.classList.add('active');
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      const e = evt || window.event;
+      if (e && e.target && e.target.closest) {
+        const closest = e.target.closest('.nav-item');
+        if (closest) closest.classList.add('active');
+      }
+    };
+  }
+// Exponer funciones requeridas por onclick en index.html
+  if (typeof window !== 'undefined') {
+    window.loadInventario = loadInventario;
+  }
+})();
