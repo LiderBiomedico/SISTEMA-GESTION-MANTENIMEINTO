@@ -23,7 +23,55 @@ function json(statusCode, body) {
 }
 
 // Mapeo de campos del formulario a columnas de Airtable
+// Soporta: Title Case (del equipoModal), UPPERCASE (del newInventario form), y variantes con tildes
 const FIELD_MAP = {
+  // --- UPPERCASE (formulario principal newInventario) ---
+  'ITEM': 'Item',
+  'EQUIPO': 'Equipo',
+  'MARCA': 'Marca',
+  'MODELO': 'Modelo',
+  'SERIE': 'Serie',
+  'PLACA': 'Numero de Placa',
+  'NÚMERO DE PLACA': 'Numero de Placa',
+  'NUMERO DE PLACA': 'Numero de Placa',
+  'CODIGO ECRI': 'Codigo ECRI',
+  'REGISTRO INVIMA': 'Registro INVIMA',
+  'TIPO DE ADQUISICION': 'Tipo de Adquisicion',
+  'NO. DE CONTRATO': 'No. de Contrato',
+  'SERVICIO': 'Servicio',
+  'UBICACIÓN': 'Ubicacion',
+  'UBICACION': 'Ubicacion',
+  'VIDA UTIL': 'Vida Util',
+  'VIDA ÚTIL': 'Vida Util',
+  'FECHA FABRICA': 'Fecha Fabrica',
+  'CERTIFICADO 2025': 'Certificado 2025',
+  'FECHA DE COMRPA': 'Fecha de Compra',
+  'FECHA DE COMPRA': 'Fecha de Compra',
+  'VALOR EN PESOS': 'Valor en Pesos',
+  'FECHA DE RECEPCIÓN': 'Fecha de Recepcion',
+  'FECHA DE RECEPCION': 'Fecha de Recepcion',
+  'FECHA DE INSTALACIÓN': 'Fecha de Instalacion',
+  'FECHA DE INSTALACION': 'Fecha de Instalacion',
+  'INICIO DE GARANTIA': 'Inicio de Garantia',
+  'TERMINO DE GARANTIA': 'Termino de Garantia',
+  'CLASIFICACION BIOMEDICA': 'Clasificacion Biomedica',
+  'CLASIFICACION DE LA TECNOLOGIA': 'Clasificacion de la Tecnologia',
+  'CLASIFICACION DEL RIESGO': 'Clasificacion del Riesgo',
+  'MANUAL': 'Manual',
+  'TIPO DE MTTO': 'Tipo de MTTO',
+  'COSTO DE MANTENIMIENTO': 'Costo de Mantenimiento',
+  'CALIBRABLE': 'Calibrable',
+  'N. CERTIFICADO': 'N. Certificado',
+  'FRECUENCIA DE MTTO PREVENTIVO': 'Frecuencia de MTTO Preventivo',
+  'FECHA PROGRAMADA DE MANTENIMINETO': 'Fecha Programada de Mantenimiento',
+  'FRECUENCIA DE MANTENIMIENTO': 'Frecuencia de Mantenimiento',
+  'PROGRAMACION DE MANTENIMIENTO ANUAL': 'Programacion de Mantenimiento Anual',
+  'RESPONSABLE': 'Responsable',
+  'NOMBRE': 'Nombre',
+  'DIRECCION': 'Direccion',
+  'TELEFONO': 'Telefono',
+  'CIUDAD': 'Ciudad',
+  // --- Title Case (formulario equipoModal / inventario-module.js) ---
   'Item': 'Item',
   'Equipo': 'Equipo',
   'Marca': 'Marca',
@@ -76,7 +124,9 @@ const DATE_FIELDS = new Set([
   'Fecha de Instalacion',
   'Inicio de Garantia',
   'Termino de Garantia',
-  'Fecha Programada de Mantenimiento'
+  'Fecha Programada de Mantenimiento',
+  'Fecha Fabrica',
+  'Fecha de Recepcion'
 ]);
 
 function isUrl(s) {
