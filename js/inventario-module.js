@@ -3,10 +3,7 @@
 // Sistema HSLV - Hospital San Luis de Valencia
 // ============================================================================
 
-// API_BASE_URL ya está definido en app.js — no redeclarar
-if (typeof API_BASE_URL === 'undefined') {
-  var API_BASE_URL = '/.netlify/functions';
-}
+var API_BASE_URL = '/.netlify/functions';
 let currentPage = 0;
 let totalRecords = 0;
 let currentOffset = null;

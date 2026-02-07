@@ -209,13 +209,28 @@ function mapAndNormalizeFields(inputFields) {
     
     out[mapped] = normalizeValue(mapped, v);
   }
+  console.log('[inventario] Mapped fields:', JSON.stringify(out));
   return out;
 }
 
 function removeUnknownFields(fields, errData) {
-  const msg = (errData && (errData.message || errData.error)) ? (errData.message || errData.error) : JSON.stringify(errData || {});
+  // Airtable devuelve errores como: { error: { type: 'UNKNOWN_FIELD_NAME', message: 'Unknown field name: "Xyz"' } }
+  // o { error: 'UNKNOWN_FIELD_NAME', message: 'Unknown field name: "Xyz"' }
+  const errObj = errData?.error || errData || {};
+  const msg = typeof errObj === 'string' 
+    ? errObj 
+    : (errObj.message || errData?.message || JSON.stringify(errData || {}));
+  
+  // Buscar nombres entre comillas
   const matches = String(msg).match(/"([^"]+)"/g) || [];
   const unknown = new Set(matches.map(m => m.replace(/"/g,'').trim()).filter(Boolean));
+  
+  // También buscar después de "Unknown field name:" sin comillas
+  const plainMatch = String(msg).match(/Unknown field name:\s*(\S+)/gi) || [];
+  plainMatch.forEach(m => {
+    const name = m.replace(/Unknown field name:\s*/i, '').replace(/"/g,'').trim();
+    if (name) unknown.add(name);
+  });
   
   if (unknown.size === 0) return { cleaned: fields, removed: [] };
   
@@ -300,46 +315,45 @@ exports.handler = async (event) => {
     // POST - Crear registro
     // =========================================================================
     if (event.httpMethod === 'POST') {
-      const mapped = mapAndNormalizeFields(body.fields || {});
+      let mapped = mapAndNormalizeFields(body.fields || {});
+      let allRemoved = [];
+      let lastError = null;
       
-      try {
-        const resp = await airtableRequest('POST', baseUrl, { fields: mapped });
-        return json(200, { ok: true, record: resp.data });
-      } catch (e) {
-        const status = e.response?.status || 500;
-        const data = e.response?.data || { error: 'Airtable error' };
-
-        // Retry on unknown fields (422)
-        if (status === 422) {
-          const { cleaned, removed } = removeUnknownFields(mapped, data);
-          if (removed.length > 0) {
-            try {
-              const resp2 = await airtableRequest('POST', baseUrl, { fields: cleaned });
-              return json(200, { 
-                ok: true, 
-                record: resp2.data, 
-                warning: { removedUnknownFields: removed } 
-              });
-            } catch (e2) {
-              const status2 = e2.response?.status || 500;
-              const data2 = e2.response?.data || { error: 'Airtable error after retry' };
-              return json(status2, { 
-                ok: false, 
-                error: data2.error || 'Airtable error', 
-                details: data2, 
-                mappedSent: mapped 
-              });
-            }
+      // Intentar hasta 4 veces, removiendo campos desconocidos en cada intento
+      for (let attempt = 0; attempt < 4; attempt++) {
+        try {
+          const resp = await airtableRequest('POST', baseUrl, { fields: mapped });
+          const result = { ok: true, record: resp.data };
+          if (allRemoved.length > 0) {
+            result.warning = { removedUnknownFields: allRemoved };
           }
+          return json(200, result);
+        } catch (e) {
+          const status = e.response?.status || 500;
+          const data = e.response?.data || { error: 'Airtable error' };
+          lastError = { status, data };
+
+          // Solo reintentar en 422 (campo desconocido)
+          if (status !== 422) break;
+
+          const { cleaned, removed } = removeUnknownFields(mapped, data);
+          if (removed.length === 0) break; // No se pudo identificar qué campo falla
+
+          allRemoved.push(...removed);
+          mapped = cleaned;
+          
+          // Si ya no quedan campos, no reintentar
+          if (Object.keys(mapped).length === 0) break;
         }
-        
-        return json(status, { 
-          ok: false, 
-          error: data.error || 'Airtable error', 
-          details: data, 
-          mappedSent: mapped 
-        });
       }
+      
+      return json(lastError?.status || 422, { 
+        ok: false, 
+        error: lastError?.data?.error || 'Airtable error', 
+        details: lastError?.data,
+        removedFields: allRemoved,
+        mappedSent: mapped 
+      });
     }
 
     // =========================================================================

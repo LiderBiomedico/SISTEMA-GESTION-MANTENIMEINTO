@@ -3,7 +3,7 @@
 // Corregido: sin conflictos de módulos, compatible con inventario-module.js
 // ============================================================================
 
-const API_BASE_URL = '/.netlify/functions';
+var API_BASE_URL = '/.netlify/functions';
 
 // Token para autenticación con Netlify Functions
 function getAuthHeader() {
