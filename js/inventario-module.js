@@ -1,9 +1,14 @@
 // ============================================================================
 // MÓDULO DE INVENTARIO - JavaScript Logic
 // Sistema HSLV - Hospital San Luis de Valencia
+// Adaptado a los IDs reales del index.html
 // ============================================================================
 
-var API_BASE_URL = '/.netlify/functions';
+// API_BASE_URL ya definido en app.js
+if (typeof API_BASE_URL === 'undefined') {
+  var API_BASE_URL = '/.netlify/functions';
+}
+
 let currentPage = 0;
 let totalRecords = 0;
 let currentOffset = null;
@@ -18,7 +23,11 @@ let currentEditId = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log('🚀 Módulo de Inventario iniciado');
-    loadInventario();
+    // Solo cargar si el módulo inventario está activo
+    const invMod = document.getElementById('inventario');
+    if (invMod && invMod.classList.contains('active')) {
+        loadInventario();
+    }
 });
 
 // ============================================================================
@@ -26,14 +35,16 @@ document.addEventListener('DOMContentLoaded', () => {
 // ============================================================================
 
 async function loadInventario() {
-    const tbody = document.getElementById('tableBody');
-    const paginationInfo = document.getElementById('paginationInfo');
+    const tbody = document.getElementById('inventarioTbody');
+    if (!tbody) {
+        console.log('inventarioTbody no encontrado, saliendo');
+        return;
+    }
 
     tbody.innerHTML = `
         <tr>
-            <td colspan="11" class="loading">
-                <div class="spinner"></div>
-                <p>Cargando inventario...</p>
+            <td colspan="11" style="text-align:center; padding:18px; color:#607d8b;">
+                Cargando inventario...
             </td>
         </tr>
     `;
@@ -56,7 +67,10 @@ async function loadInventario() {
 
         console.log('✅ Inventario cargado:', allRecords.length, 'registros');
 
-        updateStats();
+        // Actualizar contador
+        const countEl = document.getElementById('inventarioCount');
+        if (countEl) countEl.textContent = `${totalRecords} registros`;
+
         renderTable();
         updatePagination();
 
@@ -64,14 +78,10 @@ async function loadInventario() {
         console.error('❌ Error cargando inventario:', error);
         tbody.innerHTML = `
             <tr>
-                <td colspan="11" class="empty-state">
-                    <div class="empty-icon">⚠️</div>
-                    <div class="empty-title">Error al cargar el inventario</div>
-                    <div class="empty-text">
-                        ${error.response?.data?.error || error.message || 'Error desconocido'}<br>
-                        <small>Verifica la configuración de Airtable en Netlify</small>
-                    </div>
-                    <button class="btn btn-primary" onclick="loadInventario()">
+                <td colspan="11" style="text-align:center; padding:18px; color:#c62828;">
+                    ⚠️ Error al cargar el inventario<br>
+                    <small>${error.response?.data?.error || error.message || 'Error desconocido'}</small><br>
+                    <button class="btn btn-primary" onclick="loadInventario()" style="margin-top:10px">
                         🔄 Reintentar
                     </button>
                 </td>
@@ -85,20 +95,15 @@ async function loadInventario() {
 // ============================================================================
 
 function renderTable() {
-    const tbody = document.getElementById('tableBody');
+    const tbody = document.getElementById('inventarioTbody');
+    if (!tbody) return;
 
     if (allRecords.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="11" class="empty-state">
-                    <div class="empty-icon">📦</div>
-                    <div class="empty-title">No hay equipos registrados</div>
-                    <div class="empty-text">
-                        Comienza agregando tu primer equipo al inventario
-                    </div>
-                    <button class="btn btn-success" onclick="openAddModal()">
-                        ➕ Agregar Primer Equipo
-                    </button>
+                <td colspan="11" style="text-align:center; padding:18px; color:#607d8b;">
+                    📦 No hay equipos registrados.<br>
+                    <small>Comienza agregando tu primer equipo al inventario.</small>
                 </td>
             </tr>
         `;
@@ -106,111 +111,42 @@ function renderTable() {
     }
 
     tbody.innerHTML = allRecords.map(record => {
-        const fields = record.fields || {};
-        const item = fields['Item'] || '';
-        const equipo = fields['Equipo'] || '';
-        const marca = fields['Marca'] || '';
-        const modelo = fields['Modelo'] || '';
-        const serie = fields['Serie'] || '';
-        const placa = fields['Numero de Placa'] || '';
-        const servicio = fields['Servicio'] || '';
-        const ubicacion = fields['Ubicacion'] || fields['Ubicación'] || '';
-        const fechaMtto = fields['Fecha Programada de Mantenimiento'] || '';
-        const calibrable = fields['Calibrable'] || false;
+        const f = record.fields || {};
+        const item = f['Item'] || f['ITEM'] || '';
+        const equipo = f['Equipo'] || f['EQUIPO'] || '';
+        const marca = f['Marca'] || f['MARCA'] || '';
+        const modelo = f['Modelo'] || f['MODELO'] || '';
+        const serie = f['Serie'] || f['SERIE'] || '';
+        const placa = f['Numero de Placa'] || f['PLACA'] || f['Número de Placa'] || '';
+        const servicio = f['Servicio'] || f['SERVICIO'] || '';
+        const ubicacion = f['Ubicacion'] || f['Ubicación'] || f['UBICACIÓN'] || '';
+        const vidaUtil = f['Vida Util'] || f['VIDA UTIL'] || '';
+        const fechaMtto = f['Fecha Programada de Mantenimiento'] || f['FECHA PROGRAMADA DE MANTENIMINETO'] || '';
 
-        // Determinar estado basado en fecha de mantenimiento
-        let estadoBadge = '';
+        // Estado basado en fecha
+        let estadoText = '—';
         if (fechaMtto) {
-            const fechaMttoDate = new Date(fechaMtto);
-            const hoy = new Date();
-            const diasDiferencia = Math.floor((fechaMttoDate - hoy) / (1000 * 60 * 60 * 24));
-
-            if (diasDiferencia < 0) {
-                estadoBadge = '<span class="badge badge-warning">Vencido</span>';
-            } else if (diasDiferencia <= 30) {
-                estadoBadge = '<span class="badge badge-warning">Próximo</span>';
-            } else {
-                estadoBadge = '<span class="badge badge-success">Al día</span>';
-            }
-        } else {
-            estadoBadge = '<span class="badge badge-info">Sin prog.</span>';
+            const d = new Date(fechaMtto);
+            estadoText = d.toLocaleDateString('es-CO', { year: 'numeric', month: 'short', day: 'numeric' });
         }
 
-        return `
-            <tr>
-                <td><strong>${escapeHtml(item)}</strong></td>
-                <td>${escapeHtml(equipo)}</td>
-                <td>${escapeHtml(marca)}</td>
-                <td>${escapeHtml(modelo)}</td>
-                <td><code style="font-family: 'JetBrains Mono', monospace; font-size: 12px;">${escapeHtml(serie)}</code></td>
-                <td><code style="font-family: 'JetBrains Mono', monospace; font-size: 12px;">${escapeHtml(placa)}</code></td>
-                <td>${escapeHtml(servicio)}</td>
-                <td>${escapeHtml(ubicacion)}</td>
-                <td>${estadoBadge}</td>
-                <td>${fechaMtto ? formatDate(fechaMtto) : '—'}</td>
-                <td class="td-actions">
-                    <button class="btn-icon btn-edit" onclick="editEquipo('${record.id}')" title="Editar">
-                        ✏️
-                    </button>
-                    <button class="btn-icon btn-delete" onclick="deleteEquipo('${record.id}', '${escapeHtml(equipo)}')" title="Eliminar">
-                        🗑️
-                    </button>
-                </td>
-            </tr>
-        `;
+        return `<tr>
+            <td>${esc(item)}</td>
+            <td>${esc(equipo)}</td>
+            <td>${esc(marca)}</td>
+            <td>${esc(modelo)}</td>
+            <td>${esc(serie)}</td>
+            <td>${esc(placa)}</td>
+            <td>${esc(servicio)}</td>
+            <td>${esc(ubicacion)}</td>
+            <td>${esc(String(vidaUtil))}</td>
+            <td>${estadoText}</td>
+            <td>
+                <button class="btn btn-small btn-secondary" onclick="editEquipo('${record.id}')" title="Editar">✏️</button>
+                <button class="btn btn-small" onclick="deleteEquipo('${record.id}', '${esc(equipo)}')" title="Eliminar" style="color:#c62828;">🗑️</button>
+            </td>
+        </tr>`;
     }).join('');
-}
-
-// ============================================================================
-// ESTADÍSTICAS
-// ============================================================================
-
-function updateStats() {
-    const totalEquiposEl = document.getElementById('totalEquipos');
-    const equiposActivosEl = document.getElementById('equiposActivos');
-    const equiposMantenimientoEl = document.getElementById('equiposMantenimiento');
-
-    const total = allRecords.length;
-    let activos = 0;
-    let enMantenimiento = 0;
-
-    allRecords.forEach(record => {
-        const fechaMtto = record.fields?.['Fecha Programada de Mantenimiento'];
-        if (fechaMtto) {
-            const fechaMttoDate = new Date(fechaMtto);
-            const hoy = new Date();
-            const diasDiferencia = Math.floor((fechaMttoDate - hoy) / (1000 * 60 * 60 * 24));
-
-            if (diasDiferencia <= 30 && diasDiferencia >= 0) {
-                enMantenimiento++;
-            } else if (diasDiferencia > 30) {
-                activos++;
-            }
-        } else {
-            activos++;
-        }
-    });
-
-    animateNumber(totalEquiposEl, total);
-    animateNumber(equiposActivosEl, activos);
-    animateNumber(equiposMantenimientoEl, enMantenimiento);
-}
-
-function animateNumber(element, target) {
-    const current = parseInt(element.textContent) || 0;
-    const increment = target > current ? 1 : -1;
-    const duration = 500;
-    const steps = Math.abs(target - current);
-    const stepDuration = steps > 0 ? duration / steps : 0;
-
-    let value = current;
-    const timer = setInterval(() => {
-        value += increment;
-        element.textContent = value;
-        if (value === target) {
-            clearInterval(timer);
-        }
-    }, stepDuration);
 }
 
 // ============================================================================
@@ -218,28 +154,24 @@ function animateNumber(element, target) {
 // ============================================================================
 
 function updatePagination() {
-    const paginationInfo = document.getElementById('paginationInfo');
-    const btnPrev = document.getElementById('btnPrev');
-    const btnNext = document.getElementById('btnNext');
+    const prevBtn = document.getElementById('inventarioPrevBtn');
+    const nextBtn = document.getElementById('inventarioNextBtn');
 
-    const showing = allRecords.length;
-    paginationInfo.textContent = `Mostrando ${showing} de ${totalRecords} equipos`;
-
-    btnPrev.disabled = currentPage === 0;
-    btnNext.disabled = !currentOffset;
+    if (prevBtn) prevBtn.disabled = currentPage === 0;
+    if (nextBtn) nextBtn.disabled = !currentOffset;
 }
 
-function nextPage() {
+function inventarioNextPage() {
     if (currentOffset) {
         currentPage++;
         loadInventario();
     }
 }
 
-function previousPage() {
+function inventarioPrevPage() {
     if (currentPage > 0) {
         currentPage--;
-        currentOffset = null; // Airtable no soporta página anterior directamente
+        currentOffset = null;
         loadInventario();
     }
 }
@@ -248,10 +180,11 @@ function previousPage() {
 // BÚSQUEDA
 // ============================================================================
 
-function debouncedSearch() {
+function debouncedInventarioSearch() {
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(() => {
-        searchQuery = document.getElementById('searchInput').value.trim();
+        const el = document.getElementById('inventarioSearch');
+        searchQuery = el ? el.value.trim() : '';
         currentOffset = null;
         currentPage = 0;
         loadInventario();
@@ -259,227 +192,30 @@ function debouncedSearch() {
 }
 
 // ============================================================================
-// MODAL - ABRIR/CERRAR
-// ============================================================================
-
-function openAddModal() {
-    const modal = document.getElementById('equipoModal');
-    const form = document.getElementById('equipoForm');
-    const modalIcon = document.getElementById('modalIcon');
-    const modalTitleText = document.getElementById('modalTitleText');
-    const btnSave = document.getElementById('btnSave');
-
-    form.reset();
-    currentEditId = null;
-    document.getElementById('recordId').value = '';
-
-    modalIcon.textContent = '➕';
-    modalTitleText.textContent = 'Nuevo Equipo';
-    btnSave.innerHTML = '💾 Guardar Equipo';
-
-    modal.classList.add('active');
-    document.body.style.overflow = 'hidden';
-}
-
-function closeModal() {
-    const modal = document.getElementById('equipoModal');
-    modal.classList.remove('active');
-    document.body.style.overflow = 'auto';
-    currentEditId = null;
-}
-
-// Cerrar modal al hacer clic fuera
-document.addEventListener('click', (e) => {
-    const modal = document.getElementById('equipoModal');
-    if (e.target === modal) {
-        closeModal();
-    }
-});
-
-// Cerrar modal con ESC
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-        closeModal();
-    }
-});
-
-// ============================================================================
-// TOGGLE CALIBRACIÓN
-// ============================================================================
-
-function toggleCalibracion() {
-    const checkbox = document.getElementById('calibrableCheckbox');
-    const fields = document.getElementById('calibracionFields');
-    fields.style.display = checkbox.checked ? 'block' : 'none';
-}
-
-// ============================================================================
 // EDITAR EQUIPO
 // ============================================================================
 
 async function editEquipo(recordId) {
-    try {
-        // Buscar el registro en allRecords
-        const record = allRecords.find(r => r.id === recordId);
-        if (!record) {
-            alert('Equipo no encontrado');
-            return;
-        }
+    const record = allRecords.find(r => r.id === recordId);
+    if (!record) { alert('Equipo no encontrado'); return; }
+    // Abrir modal newInventario y llenar con datos
+    openModal('newInventario');
+    const form = document.getElementById('inventarioForm');
+    if (!form) return;
 
-        const modal = document.getElementById('equipoModal');
-        const form = document.getElementById('equipoForm');
-        const modalIcon = document.getElementById('modalIcon');
-        const modalTitleText = document.getElementById('modalTitleText');
-        const btnSave = document.getElementById('btnSave');
-
-        // Actualizar UI del modal
-        modalIcon.textContent = '✏️';
-        modalTitleText.textContent = 'Editar Equipo';
-        btnSave.innerHTML = '💾 Actualizar Equipo';
-
-        currentEditId = recordId;
-        document.getElementById('recordId').value = recordId;
-
-        // Llenar el formulario con los datos
-        const fields = record.fields || {};
-        
-        // Helper para establecer valores
-        const setValue = (name, value) => {
-            const input = form.querySelector(`[name="${name}"]`);
-            if (input) {
-                if (input.type === 'checkbox') {
-                    input.checked = value === true || value === 'true' || value === 1;
-                } else {
-                    input.value = value || '';
-                }
-            }
-        };
-
-        // Llenar todos los campos
-        Object.keys(fields).forEach(key => {
-            setValue(key, fields[key]);
-        });
-
-        // Manejar campos especiales
-        const calibrable = fields['Calibrable'];
-        const calibrableCheckbox = document.getElementById('calibrableCheckbox');
-        if (calibrableCheckbox) {
-            calibrableCheckbox.checked = calibrable === true;
-            toggleCalibracion();
-        }
-
-        modal.classList.add('active');
-        document.body.style.overflow = 'hidden';
-
-    } catch (error) {
-        console.error('Error editando equipo:', error);
-        alert('Error al cargar los datos del equipo');
-    }
-}
-
-// ============================================================================
-// GUARDAR EQUIPO (CREAR O ACTUALIZAR)
-// ============================================================================
-
-async function saveEquipo(event) {
-    event.preventDefault();
-
-    const form = event.target;
-    const btnSave = document.getElementById('btnSave');
-    const originalText = btnSave.innerHTML;
-
-    btnSave.disabled = true;
-    btnSave.innerHTML = '⏳ Guardando...';
-
-    try {
-        const formData = new FormData(form);
-        const fields = {};
-
-        // Recopilar todos los campos
-        for (const [key, value] of formData.entries()) {
-            if (key === 'recordId') continue; // Ignorar campo hidden
-
-            const val = String(value).trim();
-            
-            // Campo booleano
-            if (key === 'Calibrable') {
-                fields[key] = form.querySelector(`[name="${key}"]`).checked;
-                continue;
-            }
-
-            // Campos numéricos
-            if (['Vida Util', 'Valor en Pesos', 'Costo de Mantenimiento'].includes(key)) {
-                if (val) fields[key] = parseFloat(val) || 0;
-                continue;
-            }
-
-            // Solo agregar si tiene valor
-            if (val) {
-                fields[key] = val;
-            }
-        }
-
-        const isEdit = !!currentEditId;
-        const url = `${API_BASE_URL}/inventario`;
-        
-        let response;
-        if (isEdit) {
-            // Actualizar
-            response = await axios.put(url, {
-                id: currentEditId,
-                fields: fields
-            }, {
-                headers: {
-                    'Authorization': 'Bearer ok',
-                    'Content-Type': 'application/json'
-                }
-            });
+    const fields = record.fields || {};
+    // Llenar campos del formulario
+    for (const input of form.querySelectorAll('input, select, textarea')) {
+        const name = input.name;
+        if (!name) continue;
+        const val = fields[name] || '';
+        if (input.type === 'checkbox') {
+            input.checked = val === true || val === 'true';
         } else {
-            // Crear
-            response = await axios.post(url, {
-                fields: fields
-            }, {
-                headers: {
-                    'Authorization': 'Bearer ok',
-                    'Content-Type': 'application/json'
-                }
-            });
+            input.value = val || '';
         }
-
-        if (response.data && (response.data.ok || response.data.record)) {
-            console.log('✅ Equipo guardado exitosamente');
-            
-            // Cerrar modal
-            closeModal();
-            form.reset();
-
-            // Recargar inventario
-            currentOffset = null;
-            currentPage = 0;
-            await loadInventario();
-
-            // Mostrar notificación
-            showNotification(
-                isEdit ? '✅ Equipo actualizado correctamente' : '✅ Equipo creado correctamente',
-                'success'
-            );
-        } else {
-            throw new Error('Respuesta inesperada del servidor');
-        }
-
-    } catch (error) {
-        console.error('❌ Error guardando equipo:', error);
-        
-        const errorMsg = error.response?.data?.error 
-            || error.response?.data?.details?.error?.message
-            || error.message 
-            || 'Error desconocido';
-
-        showNotification(`❌ Error: ${errorMsg}`, 'error');
-    } finally {
-        btnSave.disabled = false;
-        btnSave.innerHTML = originalText;
     }
+    currentEditId = recordId;
 }
 
 // ============================================================================
@@ -487,91 +223,55 @@ async function saveEquipo(event) {
 // ============================================================================
 
 async function deleteEquipo(recordId, equipoName) {
-    const confirmDelete = confirm(
-        `¿Estás seguro de eliminar el equipo "${equipoName}"?\n\nEsta acción no se puede deshacer.`
-    );
-
-    if (!confirmDelete) return;
+    if (!confirm(`¿Eliminar el equipo "${equipoName}"?\n\nEsta acción no se puede deshacer.`)) return;
 
     try {
-        const url = `${API_BASE_URL}/inventario/${recordId}`;
-        await axios.delete(url, {
+        await axios.delete(`${API_BASE_URL}/inventario/${recordId}`, {
             headers: { Authorization: 'Bearer ok' }
         });
-
-        console.log('✅ Equipo eliminado exitosamente');
-        
-        // Recargar inventario
+        console.log('✅ Equipo eliminado');
         currentOffset = null;
         currentPage = 0;
         await loadInventario();
-
-        showNotification('✅ Equipo eliminado correctamente', 'success');
-
     } catch (error) {
-        console.error('❌ Error eliminando equipo:', error);
-        
-        const errorMsg = error.response?.data?.error || error.message || 'Error desconocido';
-        showNotification(`❌ Error al eliminar: ${errorMsg}`, 'error');
+        console.error('❌ Error eliminando:', error);
+        alert('Error al eliminar: ' + (error.response?.data?.error || error.message));
     }
 }
 
 // ============================================================================
-// EXPORTAR A CSV
+// EXPORTAR CSV
 // ============================================================================
 
-function exportToCSV() {
-    if (allRecords.length === 0) {
-        alert('No hay datos para exportar');
-        return;
-    }
+function exportInventarioCSV() {
+    if (allRecords.length === 0) { alert('No hay datos para exportar'); return; }
 
-    const headers = [
-        'Item', 'Equipo', 'Marca', 'Modelo', 'Serie', 'Numero de Placa',
-        'Codigo ECRI', 'Registro INVIMA', 'Tipo de Adquisicion', 'No. de Contrato',
-        'Servicio', 'Ubicacion', 'Vida Util', 'Fecha de Compra', 'Valor en Pesos',
-        'Fecha de Instalacion', 'Inicio de Garantia', 'Termino de Garantia',
-        'Clasificacion Biomedica', 'Clasificacion de la Tecnologia', 'Clasificacion del Riesgo',
-        'Tipo de MTTO', 'Costo de Mantenimiento', 'Calibrable', 'N. Certificado',
-        'Frecuencia de Mantenimiento', 'Fecha Programada de Mantenimiento',
-        'Responsable', 'Nombre', 'Direccion', 'Telefono', 'Ciudad', 'Manual'
-    ];
-
-    const rows = [headers];
+    const headers = ['Item','Equipo','Marca','Modelo','Serie','Numero de Placa','Servicio','Ubicacion','Vida Util','Fecha Programada de Mantenimiento'];
+    const rows = [headers.join(',')];
 
     allRecords.forEach(record => {
-        const fields = record.fields || {};
-        const row = headers.map(header => {
-            const value = fields[header] || '';
-            // Escapar comillas y envolver en comillas si contiene coma
-            const escaped = String(value).replace(/"/g, '""');
-            return escaped.includes(',') ? `"${escaped}"` : escaped;
+        const f = record.fields || {};
+        const row = headers.map(h => {
+            const v = String(f[h] || '').replace(/"/g, '""');
+            return v.includes(',') ? `"${v}"` : v;
         });
-        rows.push(row);
+        rows.push(row.join(','));
     });
 
-    const csv = rows.map(row => row.join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    
-    const fecha = new Date().toISOString().slice(0, 10);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `inventario_${fecha}.csv`);
-    link.style.visibility = 'hidden';
-    
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    showNotification(`✅ Exportado: ${allRecords.length} equipos`, 'success');
+    const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `inventario_${new Date().toISOString().slice(0,10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
 }
 
 // ============================================================================
 // UTILIDADES
 // ============================================================================
 
-function escapeHtml(str) {
+function esc(str) {
     return String(str || '')
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
@@ -580,64 +280,11 @@ function escapeHtml(str) {
         .replace(/'/g, '&#039;');
 }
 
-function formatDate(dateString) {
-    if (!dateString) return '—';
-    const date = new Date(dateString);
-    const options = { year: 'numeric', month: 'short', day: 'numeric' };
-    return date.toLocaleDateString('es-CO', options);
-}
-
-function showNotification(message, type = 'info') {
-    // Crear notificación temporal
-    const notification = document.createElement('div');
-    notification.style.cssText = `
-        position: fixed;
-        top: 80px;
-        right: 20px;
-        background: ${type === 'success' ? '#06D6A0' : type === 'error' ? '#E63946' : '#0052CC'};
-        color: white;
-        padding: 16px 24px;
-        border-radius: 12px;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-        z-index: 10000;
-        font-weight: 600;
-        font-family: 'Outfit', sans-serif;
-        animation: slideIn 0.3s ease;
-    `;
-    notification.textContent = message;
-
-    document.body.appendChild(notification);
-
-    setTimeout(() => {
-        notification.style.animation = 'slideOut 0.3s ease';
-        setTimeout(() => {
-            document.body.removeChild(notification);
-        }, 300);
-    }, 3000);
-}
-
-// Agregar estilos de animación
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideIn {
-        from {
-            transform: translateX(400px);
-            opacity: 0;
-        }
-        to {
-            transform: translateX(0);
-            opacity: 1;
-        }
-    }
-    @keyframes slideOut {
-        from {
-            transform: translateX(0);
-            opacity: 1;
-        }
-        to {
-            transform: translateX(400px);
-            opacity: 0;
-        }
-    }
-`;
-document.head.appendChild(style);
+// Exponer funciones
+window.loadInventario = loadInventario;
+window.inventarioNextPage = inventarioNextPage;
+window.inventarioPrevPage = inventarioPrevPage;
+window.debouncedInventarioSearch = debouncedInventarioSearch;
+window.exportInventarioCSV = exportInventarioCSV;
+window.editEquipo = editEquipo;
+window.deleteEquipo = deleteEquipo;
