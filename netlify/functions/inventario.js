@@ -1,7 +1,7 @@
 // =============================================================================
 // netlify/functions/inventario.js - VERSIÓN COMPLETA CON CRUD
 // Soporta: GET (list), POST (create), PUT (update), DELETE (delete)
-// Auto-detecta campos válidos de Airtable para evitar 422
+// Gestiona errores 422 de Airtable removiendo campos desconocidos (sin filtrar por muestreo de registros)
 // =============================================================================
 const axios = require('axios');
 
@@ -10,8 +10,6 @@ const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID || '';
 const TABLE_NAME = process.env.AIRTABLE_INVENTARIO_TABLE || 'Inventario';
 const AIRTABLE_API = 'https://api.airtable.com/v0';
 
-// Cache de campos válidos (se renueva cada invocación cold start)
-let validFieldsCache = null;
 
 function json(statusCode, body) {
   return {
@@ -257,45 +255,6 @@ async function airtableRequest(method, url, data) {
   return axios({ method, url, headers, data });
 }
 
-// Auto-detectar campos válidos leyendo un registro existente de Airtable
-async function detectValidFields(baseUrl) {
-  if (validFieldsCache) return validFieldsCache;
-  
-  try {
-    const resp = await airtableRequest('GET', `${baseUrl}?pageSize=1`);
-    const records = resp.data.records || [];
-    if (records.length > 0 && records[0].fields) {
-      validFieldsCache = new Set(Object.keys(records[0].fields));
-      console.log('[inventario] Detected valid fields:', [...validFieldsCache]);
-      return validFieldsCache;
-    }
-  } catch (e) {
-    console.log('[inventario] Could not auto-detect fields:', e.message);
-  }
-  return null; // No se pudo detectar
-}
-
-// Filtrar campos para solo enviar los que existen en Airtable
-function filterToValidFields(fields, validFields) {
-  if (!validFields || validFields.size === 0) return { filtered: fields, removed: [] };
-  
-  const filtered = {};
-  const removed = [];
-  
-  for (const [k, v] of Object.entries(fields)) {
-    if (validFields.has(k)) {
-      filtered[k] = v;
-    } else {
-      removed.push(k);
-    }
-  }
-  
-  if (removed.length > 0) {
-    console.log('[inventario] Filtered out unknown fields:', removed);
-  }
-  
-  return { filtered, removed };
-}
 
 exports.handler = async (event) => {
   try {
@@ -361,16 +320,6 @@ exports.handler = async (event) => {
     if (event.httpMethod === 'POST') {
       let mapped = mapAndNormalizeFields(body.fields || {});
       let allRemoved = [];
-      
-      // Auto-detectar campos válidos y filtrar ANTES de enviar
-      const validFields = await detectValidFields(baseUrl);
-      if (validFields && validFields.size > 0) {
-        const { filtered, removed } = filterToValidFields(mapped, validFields);
-        if (removed.length > 0) {
-          allRemoved.push(...removed);
-          mapped = filtered;
-        }
-      }
       
       // Intentar hasta 3 veces, removiendo campos desconocidos en cada intento
       let lastError = null;

@@ -359,6 +359,14 @@ async function submitInventarioForm(e) {
     });
 
     if (resp.data && (resp.data.ok || resp.data.record)) {
+      // Validación extra: si Airtable creó el registro pero sin campos visibles, avisar (suele pasar por filtros de campos)
+      const sentCount = Object.keys(fields || {}).length;
+      const recFields = resp.data.record && resp.data.record.fields ? resp.data.record.fields : {};
+      const recCount = Object.keys(recFields || {}).length;
+      if (sentCount > 0 && recCount === 0) {
+        console.warn('⚠️ Registro creado pero sin campos. Revisa nombres de columnas en Airtable.', { sent: fields, record: resp.data.record });
+        alert('⚠️ Se creó el registro pero quedó vacío en Airtable. Esto suele ocurrir por nombres de columnas diferentes. Te recomiendo revisar el nombre exacto de las columnas en Airtable.');
+      }
       closeModal('newInventario');
       form.reset();
       if (typeof loadInventario === 'function') loadInventario();
