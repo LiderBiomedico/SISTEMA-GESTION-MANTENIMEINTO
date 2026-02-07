@@ -270,26 +270,80 @@ async function submitInventarioForm(e) {
   e.preventDefault();
   const form = e.target;
   const fd = new FormData(form);
-  const fields = {};
+  const rawFields = {};
 
   for (const [k, v] of fd.entries()) {
     const val = String(v).trim();
     if (val === '') continue;
     if (k === 'CALIBRABLE' || k === 'Calibrable') {
-      fields[k] = (val === 'true' || val === 'Sí' || val === 'si');
+      rawFields[k] = (val === 'true' || val === 'Sí' || val === 'si');
     } else {
-      fields[k] = val;
+      rawFields[k] = val;
     }
   }
 
-  if (!fields['ITEM'] && !fields['Item']) {
+  if (!rawFields['ITEM'] && !rawFields['Item']) {
     alert('El campo ITEM es obligatorio');
     return;
   }
-  if (!fields['EQUIPO'] && !fields['Equipo']) {
+  if (!rawFields['EQUIPO'] && !rawFields['Equipo']) {
     alert('El campo EQUIPO es obligatorio');
     return;
   }
+
+  // Mapeo UPPERCASE → nombres exactos de columnas Airtable
+  const FIELD_MAP = {
+    'ITEM': 'Item',
+    'EQUIPO': 'Equipo',
+    'MARCA': 'Marca',
+    'MODELO': 'Modelo',
+    'SERIE': 'Serie',
+    'PLACA': 'Numero de Placa',
+    'NUMERO DE PLACA': 'Numero de Placa',
+    'CODIGO ECRI': 'Codigo ECRI',
+    'REGISTRO INVIMA': 'Registro INVIMA',
+    'TIPO DE ADQUISICION': 'Tipo de Adquisicion',
+    'NO. DE CONTRATO': 'No. de Contrato',
+    'SERVICIO': 'Servicio',
+    'UBICACIÓN': 'Ubicacion',
+    'UBICACION': 'Ubicacion',
+    'VIDA UTIL': 'Vida Util',
+    'FECHA FABRICA': 'Fecha Fabrica',
+    'CERTIFICADO 2025': 'Certificado 2025',
+    'FECHA DE COMRPA': 'Fecha de Compra',
+    'FECHA DE COMPRA': 'Fecha de Compra',
+    'VALOR EN PESOS': 'Valor en Pesos',
+    'FECHA DE RECEPCIÓN': 'Fecha de Recepcion',
+    'FECHA DE INSTALACIÓN': 'Fecha de Instalacion',
+    'INICIO DE GARANTIA': 'Inicio de Garantia',
+    'TERMINO DE GARANTIA': 'Termino de Garantia',
+    'CLASIFICACION BIOMEDICA': 'Clasificacion Biomedica',
+    'CLASIFICACION DE LA TECNOLOGIA': 'Clasificacion de la Tecnologia',
+    'CLASIFICACION DEL RIESGO': 'Clasificacion del Riesgo',
+    'MANUAL': 'Manual',
+    'TIPO DE MTTO': 'Tipo de MTTO',
+    'COSTO DE MANTENIMIENTO': 'Costo de Mantenimiento',
+    'CALIBRABLE': 'Calibrable',
+    'N. CERTIFICADO': 'N. Certificado',
+    'FRECUENCIA DE MTTO PREVENTIVO': 'Frecuencia de MTTO Preventivo',
+    'FECHA PROGRAMADA DE MANTENIMINETO': 'Fecha Programada de Mantenimiento',
+    'FRECUENCIA DE MANTENIMIENTO': 'Frecuencia de Mantenimiento',
+    'PROGRAMACION DE MANTENIMIENTO ANUAL': 'Programacion de Mantenimiento Anual',
+    'RESPONSABLE': 'Responsable',
+    'NOMBRE': 'Nombre',
+    'DIRECCION': 'Direccion',
+    'TELEFONO': 'Telefono',
+    'CIUDAD': 'Ciudad',
+  };
+
+  // Convertir campos del formulario a nombres de Airtable
+  const fields = {};
+  for (const [k, v] of Object.entries(rawFields)) {
+    const mapped = FIELD_MAP[k] || k;
+    fields[mapped] = v;
+  }
+
+  console.log('📤 Enviando campos mapeados:', fields);
 
   const submitBtn = form.querySelector('button[type="submit"]');
   const originalText = submitBtn ? submitBtn.textContent : '';
