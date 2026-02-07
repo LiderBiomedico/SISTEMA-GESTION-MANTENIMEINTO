@@ -1,13 +1,11 @@
-
 // ============================================================================
-// HSLV - Frontend app.js (browser-safe)
-// - Evita "process is not defined"
-// - Incluye switchModule, openModal/closeModal y módulo Inventario
+// HSLV - Frontend app.js (browser-safe, consolidated)
+// Corregido: sin conflictos de módulos, compatible con inventario-module.js
 // ============================================================================
 
 const API_BASE_URL = '/.netlify/functions';
 
-// Token "dummy" (la función Netlify solo valida que exista Authorization).
+// Token para autenticación con Netlify Functions
 function getAuthHeader() {
   const token =
     localStorage.getItem('HSLV_AUTH_TOKEN') ||
@@ -16,13 +14,14 @@ function getAuthHeader() {
   return { Authorization: `Bearer ${token}` };
 }
 
-// ------------------------------
-// Navegación entre módulos
-// ------------------------------
+// ============================================================================
+// NAVEGACIÓN ENTRE MÓDULOS
+// ============================================================================
+
 function switchModule(moduleName, evt) {
   const e = evt || window.event;
 
-  // Ocultar módulos
+  // Ocultar todos los módulos
   document.querySelectorAll('.module').forEach(m => m.classList.remove('active'));
 
   // Activar módulo seleccionado
@@ -31,9 +30,11 @@ function switchModule(moduleName, evt) {
 
   // Nav activo
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  // Buscar nav-item por onclick que contiene el nombre (robusto sin data-attrs)
   const nav = Array.from(document.querySelectorAll('.nav-item'))
-    .find(n => (n.getAttribute('onclick') || '').includes(`'${moduleName}'`) || (n.getAttribute('onclick') || '').includes(`"${moduleName}"`));
+    .find(n => {
+      const onclick = n.getAttribute('onclick') || '';
+      return onclick.includes(`'${moduleName}'`) || onclick.includes(`"${moduleName}"`);
+    });
   if (nav) nav.classList.add('active');
   else if (e && e.target) {
     const closest = e.target.closest ? e.target.closest('.nav-item') : null;
@@ -42,16 +43,16 @@ function switchModule(moduleName, evt) {
 
   // Título
   const titles = {
-    dashboard: 'Dashboard Ejecutivo',
-    inventario: 'Inventario Maestro',
-    equipos: 'Gestión de Equipos',
-    mantenimientos: 'Historial de Intervenciones',
-    planificacion: 'Planificación y Programación',
-    repuestos: 'Gestión de Repuestos',
-    documentos: 'Gestión Documental',
-    kpis: 'Indicadores de Desempeño',
-    reportes: 'Reportes e Informes',
-    auditoria: 'Auditoría y Trazabilidad'
+    dashboard: '📊 Dashboard Ejecutivo',
+    inventario: '🗂️ Inventario Maestro',
+    equipos: '🔧 Gestión de Equipos',
+    mantenimientos: '📋 Historial de Intervenciones',
+    planificacion: '📅 Planificación y Programación',
+    repuestos: '📦 Gestión de Repuestos',
+    documentos: '📄 Gestión Documental',
+    kpis: '📈 Indicadores de Desempeño',
+    reportes: '📝 Reportes e Informes',
+    auditoria: '🔍 Auditoría y Trazabilidad'
   };
   const t = document.getElementById('moduleTitle');
   if (t) t.textContent = titles[moduleName] || moduleName;
@@ -62,125 +63,300 @@ function switchModule(moduleName, evt) {
 
 function loadModuleData(moduleName) {
   console.log(`Cargando datos del módulo: ${moduleName}`);
-  if (moduleName === 'inventario') return loadInventario();
-  if (moduleName === 'dashboard' && typeof initializeDashboard === 'function') return initializeDashboard();
-  // Los demás módulos siguen funcionando con tu lógica existente si la tienes en otros scripts.
+  switch (moduleName) {
+    case 'dashboard':
+      if (typeof initializeDashboard === 'function') initializeDashboard();
+      else initDashboard();
+      break;
+    case 'inventario':
+      if (typeof loadInventario === 'function') loadInventario();
+      break;
+    case 'equipos':
+      loadEquipos();
+      break;
+    case 'mantenimientos':
+      loadMantenimientos();
+      break;
+    case 'kpis':
+      loadKPIs();
+      break;
+  }
 }
 
-// ------------------------------
-// Modales genéricos
-// ------------------------------
+// ============================================================================
+// MODALES
+// ============================================================================
+
 function openModal(modalId) {
   const el = document.getElementById(modalId);
   if (!el) return;
+  // Soporta ambos estilos de modal (display y class)
   el.style.display = 'block';
+  el.classList.add('active');
 }
 
 function closeModal(modalId) {
+  // Si se llama sin argumento (desde inventario-module.js), cierra equipoModal
+  if (!modalId) {
+    const equipoModal = document.getElementById('equipoModal');
+    if (equipoModal) {
+      equipoModal.classList.remove('active');
+      equipoModal.style.display = 'none';
+    }
+    document.body.style.overflow = 'auto';
+    return;
+  }
   const el = document.getElementById(modalId);
   if (!el) return;
   el.style.display = 'none';
+  el.classList.remove('active');
+  document.body.style.overflow = 'auto';
 }
 
 // Cerrar modal al hacer clic fuera
 window.addEventListener('click', (event) => {
-  const modals = document.querySelectorAll('.modal');
-  modals.forEach(m => {
-    if (event.target === m) m.style.display = 'none';
+  document.querySelectorAll('.modal, .inventario-modal').forEach(m => {
+    if (event.target === m) {
+      m.style.display = 'none';
+      m.classList.remove('active');
+      document.body.style.overflow = 'auto';
+    }
   });
 });
 
-// ------------------------------
-// Inventario (GET/POST)
-// ------------------------------
+// ============================================================================
+// DASHBOARD
+// ============================================================================
+
+function initDashboard() {
+  const alert = document.getElementById('dashboardAlert');
+  if (alert) {
+    alert.style.display = 'block';
+    setTimeout(() => alert.style.display = 'none', 5000);
+  }
+
+  initMTBFChart();
+  initComplianceChart();
+  initMaintenanceTypeChart();
+  fetchDashboardData();
+}
+
+function initMTBFChart() {
+  const ctx = document.getElementById('mtbfChart');
+  if (!ctx || typeof Chart === 'undefined') return;
+
+  // Destruir chart previo si existe
+  if (ctx._chartInstance) ctx._chartInstance.destroy();
+  const chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'],
+      datasets: [
+        { label: 'MTBF (Horas)', data: [2400,2500,2450,2600,2700,2750,2800,2850,2900,2920,2870,2847], borderColor: '#0d47a1', backgroundColor: 'rgba(13,71,161,0.05)', tension: 0.4, fill: true },
+        { label: 'MTTR (Horas)', data: [5.2,5.1,5.0,4.9,4.8,4.7,4.6,4.5,4.4,4.3,4.2,4.2], borderColor: '#ff6f00', backgroundColor: 'rgba(255,111,0,0.05)', tension: 0.4, fill: true }
+      ]
+    },
+    options: { responsive: true }
+  });
+  ctx._chartInstance = chart;
+}
+
+function initComplianceChart() {
+  const ctx = document.getElementById('complianceChart');
+  if (!ctx || typeof Chart === 'undefined') return;
+
+  if (ctx._chartInstance) ctx._chartInstance.destroy();
+  const chart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Cumplido','Pendiente'],
+      datasets: [{ data: [92,8], backgroundColor: ['#2e7d32','#c62828'] }]
+    },
+    options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+  });
+  ctx._chartInstance = chart;
+}
+
+function initMaintenanceTypeChart() {
+  const ctx = document.getElementById('maintenanceTypeChart');
+  if (!ctx || typeof Chart === 'undefined') return;
+
+  if (ctx._chartInstance) ctx._chartInstance.destroy();
+  const chart = new Chart(ctx, {
+    type: 'pie',
+    data: {
+      labels: ['Preventivo','Correctivo','Calibración'],
+      datasets: [{ data: [55,35,10], backgroundColor: ['#1565c0','#ff6f00','#2e7d32'] }]
+    },
+    options: { responsive: true, plugins: { legend: { position: 'right' } } }
+  });
+  ctx._chartInstance = chart;
+}
+
+async function fetchDashboardData() {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/kpis`, { headers: getAuthHeader() });
+    const data = response.data || {};
+
+    const equiposTotal = data.equipos?.total ?? data.equiposTotal ?? 0;
+    const cumplimiento = data.cumplimiento ?? 0;
+    const pendientes = data.pendientes ?? 0;
+    const mtbf = data.mtbf ?? 0;
+    const mttr = data.mttr ?? 0;
+    const costo = data.costo ?? 0;
+
+    const setText = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
+
+    setText('kpiEquipos', equiposTotal);
+    setText('kpiCumplimiento', `${cumplimiento}%`);
+    setText('kpiPendientes', pendientes);
+    setText('kpiMTBF', `${Math.round(mtbf)}h`);
+    setText('kpiMTTR', `${Number(mttr).toFixed(1)}h`);
+    setText('kpiCosto', `$${(Number(costo) / 1000).toFixed(0)}K`);
+  } catch (error) {
+    console.error('Error cargando dashboard:', error);
+  }
+}
+
+// ============================================================================
+// EQUIPOS / MANTENIMIENTOS / KPIs
+// ============================================================================
+
+async function loadEquipos() {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/equipos`, { headers: getAuthHeader() });
+    console.log('Equipos cargados:', response.data);
+  } catch (error) {
+    console.error('Error cargando equipos:', error);
+  }
+}
+
+async function loadMantenimientos() {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/mantenimientos`, { headers: getAuthHeader() });
+    console.log('Mantenimientos cargados:', response.data);
+  } catch (error) {
+    console.error('Error cargando mantenimientos:', error);
+  }
+}
+
+async function loadKPIs() {
+  try {
+    await axios.get(`${API_BASE_URL}/kpis`, { headers: getAuthHeader() });
+    const ctx = document.getElementById('kpiDetailChart');
+    if (!ctx || typeof Chart === 'undefined') return;
+
+    if (ctx._chartInstance) ctx._chartInstance.destroy();
+    const chart = new Chart(ctx, {
+      type: 'radar',
+      data: {
+        labels: ['MTBF','MTTR','Cumplimiento','Disponibilidad','Eficiencia','Confiabilidad'],
+        datasets: [{ label: 'Desempeño Actual', data: [85,90,94,92,88,86], borderColor: '#0d47a1', backgroundColor: 'rgba(13,71,161,0.1)', borderWidth: 2 }]
+      },
+      options: { responsive: true, scales: { r: { beginAtZero: true, max: 100 } } }
+    });
+    ctx._chartInstance = chart;
+  } catch (error) {
+    console.error('Error cargando KPIs:', error);
+  }
+}
+
+// ============================================================================
+// INVENTARIO - Formulario del modal "newInventario"
+// (El formulario con campos UPPERCASE que usa <details>)
+// ============================================================================
+
+async function submitInventarioForm(e) {
+  e.preventDefault();
+  const form = e.target;
+  const fd = new FormData(form);
+  const fields = {};
+
+  for (const [k, v] of fd.entries()) {
+    const val = String(v).trim();
+    if (val === '') continue;
+    if (k === 'CALIBRABLE' || k === 'Calibrable') {
+      fields[k] = (val === 'true' || val === 'Sí' || val === 'si');
+    } else {
+      fields[k] = val;
+    }
+  }
+
+  if (!fields['ITEM'] && !fields['Item']) {
+    alert('El campo ITEM es obligatorio');
+    return;
+  }
+  if (!fields['EQUIPO'] && !fields['Equipo']) {
+    alert('El campo EQUIPO es obligatorio');
+    return;
+  }
+
+  const submitBtn = form.querySelector('button[type="submit"]');
+  const originalText = submitBtn ? submitBtn.textContent : '';
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = '⏳ Guardando...';
+  }
+
+  try {
+    const url = `${API_BASE_URL}/inventario`;
+    const resp = await axios.post(url, { fields }, {
+      headers: { ...getAuthHeader(), 'Content-Type': 'application/json' }
+    });
+
+    if (resp.data && (resp.data.ok || resp.data.record)) {
+      closeModal('newInventario');
+      form.reset();
+      if (typeof loadInventario === 'function') loadInventario();
+      alert('✅ Registro guardado correctamente');
+    } else {
+      throw new Error('Respuesta inesperada del servidor');
+    }
+  } catch (err) {
+    console.error('Error guardando inventario:', err?.response?.data || err.message);
+    const msg = err?.response?.data?.error || err?.response?.data?.details?.error?.message || err.message;
+    alert('Error guardando inventario: ' + msg);
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalText;
+    }
+  }
+}
+
+// ============================================================================
+// BÚSQUEDA DE INVENTARIO (para el módulo principal, no inventario-module.js)
+// ============================================================================
+
 let inventarioOffset = null;
-let inventarioQuery = '';
 let inventarioSearchTimer = null;
 
 function debouncedInventarioSearch() {
   clearTimeout(inventarioSearchTimer);
   inventarioSearchTimer = setTimeout(() => {
-    inventarioQuery = (document.getElementById('inventarioSearch')?.value || '').trim();
-    inventarioOffset = null;
-    loadInventario();
-  }, 300);
-}
-
-async function loadInventario() {
-  const tbody = document.getElementById('inventarioTableBody');
-  const countEl = document.getElementById('inventarioCount');
-  if (!tbody) return;
-
-  tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding:18px; color:#607d8b;">Cargando inventario...</td></tr>`;
-
-  try {
-    const params = new URLSearchParams();
-    params.set('pageSize', '20');
-    if (inventarioOffset) params.set('offset', inventarioOffset);
-    if (inventarioQuery) params.set('q', inventarioQuery);
-
-    const url = `${API_BASE_URL}/inventario?${params.toString()}`;
-    const resp = await axios.get(url, { headers: getAuthHeader() });
-    const data = resp.data;
-
-    const records = (data.data || []);
-    inventarioOffset = data.nextOffset || null;
-
-    if (countEl) countEl.textContent = `${data.count ?? records.length} registros`;
-
-    if (!records.length) {
-      tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding:18px; color:#607d8b;">Sin registros</td></tr>`;
-      return;
+    const searchEl = document.getElementById('inventarioSearch');
+    if (searchEl) {
+      inventarioOffset = null;
+      if (typeof loadInventario === 'function') loadInventario();
     }
-
-    tbody.innerHTML = records.map(r => {
-      const f = r.fields || {};
-      const item = f['Item'] ?? f['ITEM'] ?? '';
-      const equipo = f['Equipo'] ?? f['EQUIPO'] ?? '';
-      const marca = f['Marca'] ?? f['MARCA'] ?? '';
-      const modelo = f['Modelo'] ?? f['MODELO'] ?? '';
-      const serie = f['Serie'] ?? f['SERIE'] ?? '';
-      const placa = f['Numero de Placa'] ?? f['Número de Placa'] ?? f['PLACA'] ?? '';
-      const servicio = f['Servicio'] ?? f['SERVICIO'] ?? '';
-      const ubic = f['Ubicación'] ?? f['UBICACIÓN'] ?? '';
-      const vida = f['Vida Util'] ?? f['VIDA UTIL'] ?? '';
-      const prox = f['Fecha Programada de Mantenimiento'] ?? f['FECHA PROGRAMADA DE MANTENIMINETO'] ?? '';
-
-      return `<tr>
-        <td>${escapeHtml(item)}</td>
-        <td>${escapeHtml(equipo)}</td>
-        <td>${escapeHtml(marca)}</td>
-        <td>${escapeHtml(modelo)}</td>
-        <td>${escapeHtml(serie)}</td>
-        <td>${escapeHtml(placa)}</td>
-        <td>${escapeHtml(servicio)}</td>
-        <td>${escapeHtml(ubic)}</td>
-        <td>${escapeHtml(String(vida))}</td>
-        <td>${escapeHtml(String(prox))}</td>
-        <td><button class="btn btn-small btn-secondary" onclick="openInventarioFromRecord('${r.id}')">Ver</button></td>
-      </tr>`;
-    }).join('');
-  } catch (err) {
-    console.error('Error cargando inventario:', err?.response?.data || err.message);
-    tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding:18px; color:#c62828;">Error cargando inventario. Revisa variables AIRTABLE_API_KEY y AIRTABLE_BASE_ID en Netlify, y que exista la tabla "Inventario".</td></tr>`;
-  }
+  }, 300);
 }
 
 function inventarioNextPage() {
   if (!inventarioOffset) return;
-  loadInventario();
+  if (typeof loadInventario === 'function') loadInventario();
 }
+
 function inventarioPrevPage() {
-  // Airtable offset no permite "anterior" directo; reseteamos y recargamos.
   inventarioOffset = null;
-  loadInventario();
+  if (typeof loadInventario === 'function') loadInventario();
 }
 
 function exportInventarioCSV() {
   const rows = [];
   rows.push(['Item','Equipo','Marca','Modelo','Serie','Placa','Servicio','Ubicación','Vida Util','Prox Mtto'].join(','));
 
-  const tbody = document.getElementById('inventarioTableBody');
+  const tbody = document.getElementById('inventarioTableBody') || document.getElementById('tableBody');
   if (!tbody) return;
   tbody.querySelectorAll('tr').forEach(tr => {
     const cols = Array.from(tr.querySelectorAll('td')).slice(0,10).map(td => `"${(td.textContent||'').replaceAll('"','""')}"`);
@@ -190,77 +366,15 @@ function exportInventarioCSV() {
   const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'inventario.csv';
+  a.download = `inventario_${new Date().toISOString().slice(0,10)}.csv`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
 }
 
-function openInventarioFromRecord(recordId) {
-  // Por ahora: solo muestra el id (luego lo convertimos en editor)
-  alert('Registro: ' + recordId);
-}
-
-// ------------------------------
-// Guardar inventario (modal)
-// ------------------------------
-document.addEventListener('DOMContentLoaded', () => {
-  const form = document.getElementById('inventarioForm');
-  if (form) {
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      await submitInventarioForm();
-    });
-  }
-
-  // Carga inicial si el módulo inventario existe y está activo
-  const invMod = document.getElementById('inventario');
-  if (invMod && invMod.classList.contains('active')) {
-    loadInventario();
-  }
-});
-
-async function submitInventarioForm() {
-  const form = document.getElementById('inventarioForm');
-  if (!form) return;
-
-  const fd = new FormData(form);
-  const fields = {};
-  for (const [k, v] of fd.entries()) {
-    const val = String(v).trim();
-    if (val === '') continue;
-    // Normalizamos booleano "Calibrable"
-    if (k === 'Calibrable') fields[k] = (val === 'true');
-    else fields[k] = val;
-  }
-
-  // IMPORTANTE:
-  // - Solo enviamos los campos con nombres compatibles con tu tabla actual
-  // - Si decides renombrar campos en Airtable a MAYÚSCULAS, igual funcionará porque enviamos Title Case.
-  const payload = { fields };
-
-  try {
-    const url = `${API_BASE_URL}/inventario`;
-    const resp = await axios.post(url, payload, { headers: { ...getAuthHeader(), 'Content-Type': 'application/json' } });
-
-    if (resp.data && resp.data.success) {
-      closeModal('newInventario');
-      form.reset();
-      inventarioOffset = null;
-      await loadInventario();
-      // ir al módulo inventario si no está visible
-      switchModule('inventario');
-      return;
-    }
-
-    console.error('Respuesta inesperada:', resp.data);
-    alert('No se pudo guardar. Revisa consola para detalles.');
-  } catch (err) {
-    console.error('Error guardando inventario:', err?.response?.data || err.message);
-    const msg = err?.response?.data?.detail?.error?.message || err?.response?.data?.error || err.message;
-    alert('Error guardando inventario: ' + msg);
-  }
-}
+// ============================================================================
+// UTILIDAD
+// ============================================================================
 
 function escapeHtml(str) {
   return String(str ?? '')
@@ -271,13 +385,43 @@ function escapeHtml(str) {
     .replaceAll("'", '&#039;');
 }
 
+// ============================================================================
+// INICIALIZACIÓN
+// ============================================================================
+
+document.addEventListener('DOMContentLoaded', () => {
+  console.log('✅ Sistema de Gestión de Mantenimiento Hospitalario iniciado');
+
+  // Dashboard init
+  if (document.getElementById('dashboard')) {
+    initDashboard();
+  }
+
+  // Formulario inventario (modal newInventario con campos UPPERCASE)
+  const inventarioForm = document.getElementById('inventarioForm');
+  if (inventarioForm) {
+    // Quitar "required" de inputs dentro de <details> para evitar error "not focusable"
+    // La validación se hace en JS (submitInventarioForm)
+    inventarioForm.querySelectorAll('details input[required], details select[required], details textarea[required]').forEach(el => {
+      el.removeAttribute('required');
+      el.dataset.jsRequired = 'true'; // marcamos para validar por JS
+    });
+
+    inventarioForm.addEventListener('submit', submitInventarioForm);
+  }
+
+  // Refresh dashboard cada 5 min
+  setInterval(() => {
+    const active = document.querySelector('.module.active');
+    if (active && active.id === 'dashboard') fetchDashboardData();
+  }, 300000);
+});
+
 // Exponer funciones al window para onclick=""
 window.switchModule = switchModule;
 window.openModal = openModal;
 window.closeModal = closeModal;
-window.loadInventario = loadInventario;
 window.debouncedInventarioSearch = debouncedInventarioSearch;
 window.inventarioNextPage = inventarioNextPage;
 window.inventarioPrevPage = inventarioPrevPage;
 window.exportInventarioCSV = exportInventarioCSV;
-window.openInventarioFromRecord = openInventarioFromRecord;

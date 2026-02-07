@@ -1217,11 +1217,11 @@
                         <div class="form-grid">
                             <div class="form-group">
                                 <label>ITEM</label>
-                                <input name="ITEM" type="text" placeholder="Ej: 00123" required>
+                                <input name="ITEM" type="text" placeholder="Ej: 00123" data-js-required="true">
                             </div>
                             <div class="form-group">
                                 <label>EQUIPO</label>
-                                <input name="EQUIPO" type="text" placeholder="Ej: Monitor de signos vitales" required>
+                                <input name="EQUIPO" type="text" placeholder="Ej: Monitor de signos vitales" data-js-required="true">
                             </div>
                             <div class="form-group">
                                 <label>MARCA</label>
@@ -1431,79 +1431,6 @@
 
 
     <script src="js/app.js"></script>
-
-    <!-- MODAL: NUEVO REGISTRO INVENTARIO -->
-    <div id="newInventario" class="modal">
-        <div class="modal-content" style="max-width: 980px;">
-            <div class="modal-header">
-                <h2>Registro de Inventario</h2>
-                <span class="close" onclick="closeModal('newInventario')">&times;</span>
-            </div>
-            <div class="modal-body">
-                <form id="inventarioForm">
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label>Item</label>
-                            <input name="Item" required />
-                        </div>
-                        <div class="form-group">
-                            <label>Equipo</label>
-                            <input name="Equipo" required />
-                        </div>
-                        <div class="form-group">
-                            <label>Marca</label>
-                            <input name="Marca" />
-                        </div>
-                        <div class="form-group">
-                            <label>Modelo</label>
-                            <input name="Modelo" />
-                        </div>
-                        <div class="form-group">
-                            <label>Serie</label>
-                            <input name="Serie" />
-                        </div>
-                        <div class="form-group">
-                            <label>Número de Placa</label>
-                            <input name="Numero de Placa" />
-                        </div>
-                        <div class="form-group">
-                            <label>Servicio</label>
-                            <input name="Servicio" />
-                        </div>
-                        <div class="form-group">
-                            <label>Ubicación</label>
-                            <input name="Ubicación" />
-                        </div>
-                        <div class="form-group">
-                            <label>Vida útil (años)</label>
-                            <input name="Vida Util" type="number" min="0" step="1" />
-                        </div>
-                        <div class="form-group">
-                            <label>Próxima fecha programada de mantenimiento</label>
-                            <input name="Fecha Programada de Mantenimiento" type="date" />
-                        </div>
-                        <div class="form-group">
-                            <label>Valor en pesos</label>
-                            <input name="Valor en Pesos" type="number" min="0" step="1" />
-                        </div>
-                        <div class="form-group">
-                            <label>Calibrable</label>
-                            <select name="Calibrable">
-                                <option value="">--</option>
-                                <option value="true">Sí</option>
-                                <option value="false">No</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div style="display:flex; justify-content:flex-end; gap:10px; margin-top: 14px;">
-                        <button type="button" class="btn btn-secondary" onclick="closeModal('newInventario')">Cancelar</button>
-                        <button type="submit" class="btn btn-primary">Guardar en Inventario</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
 
 
 
@@ -1791,7 +1718,7 @@
         </div>
     </div>
 
-    <script src="inventario-module.js"></script>
+    <script src="js/inventario-module.js"></script>
 
 </body>
 </html>
