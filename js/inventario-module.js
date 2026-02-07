@@ -1,5 +1,5 @@
 // ============================================================================
-// MÓDULO DE INVENTARIO - JavaScript Logic
+// MODULO DE INVENTARIO - JavaScript Logic
 // Sistema HSLV - Hospital San Luis de Valencia
 // Adaptado a los IDs reales del index.html
 // ============================================================================
@@ -8,6 +8,22 @@
 if (typeof API_BASE_URL === 'undefined') {
   var API_BASE_URL = '/.netlify/functions';
 }
+
+function getHeaders() {
+  if (typeof getAuthHeader === 'function') return getAuthHeader();
+  return { Authorization: 'Bearer ok' };
+}
+
+function escapeHtml(str) {
+  str = (str === null || typeof str === 'undefined') ? '' : String(str);
+  return str.replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+}
+
+
 
 let currentPage = 0;
 let totalRecords = 0;
@@ -18,12 +34,12 @@ let allRecords = [];
 let currentEditId = null;
 
 // ============================================================================
-// INICIALIZACIÓN
+// INICIALIZACION
 // ============================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('🚀 Módulo de Inventario iniciado');
-    // Solo cargar si el módulo inventario está activo
+    console.log(' Modulo de Inventario iniciado');
+    // Solo cargar si el modulo inventario esta activo
     const invMod = document.getElementById('inventario');
     if (invMod && invMod.classList.contains('active')) {
         loadInventario();
@@ -40,7 +56,7 @@ async function loadInventario() {
                 || document.getElementById('tableBody')
                 || document.getElementById('inventarioTableBody');
     if (!tbody) {
-        console.warn('⚠️ No se encontró tbody para inventario (inventarioTbody/tableBody/inventarioTableBody)');
+        console.warn(' No se encontro tbody para inventario (inventarioTbody/tableBody/inventarioTableBody)');
         return;
     }
 
@@ -60,7 +76,7 @@ async function loadInventario() {
 
         const url = `${API_BASE_URL}/inventario?${params.toString()}`;
         const response = await axios.get(url, {
-            headers: (typeof getAuthHeader === 'function') ? getAuthHeader() : { Authorization: 'Bearer ok' }
+            headers: getHeaders()
         });
 
         const data = response.data;
@@ -68,7 +84,7 @@ async function loadInventario() {
         currentOffset = data.offset || null;
         totalRecords = data.count || allRecords.length;
 
-        console.log('✅ Inventario cargado:', allRecords.length, 'registros');
+        console.log(' Inventario cargado:', allRecords.length, 'registros');
 
         // Actualizar contador
         const countEl = document.getElementById('inventarioCount');
@@ -78,18 +94,19 @@ async function loadInventario() {
         updatePagination();
 
     } catch (error) {
-        console.error('❌ Error cargando inventario:', error);
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="11" style="text-align:center; padding:18px; color:#c62828;">
-                    ⚠️ Error al cargar el inventario<br>
-                    <small>${error.response?.data?.error || error.message || 'Error desconocido'}</small><br>
-                    <button class="btn btn-primary" onclick="loadInventario()" style="margin-top:10px">
-                        🔄 Reintentar
-                    </button>
-                </td>
-            </tr>
-        `;
+        console.error('Error cargando inventario:', error);
+        const serverErr = (error && error.response && error.response.data && error.response.data.error) ? error.response.data.error : null;
+        const msg = serverErr || (error && error.message) || 'Error desconocido';
+        const safeMsg = escapeHtml(msg);
+        tbody.innerHTML = (
+            '<tr>' +
+              '<td colspan="11" style="text-align:center; padding:18px; color:#c62828;">' +
+                'Error al cargar el inventario<br>' +
+                '<small>' + safeMsg + '</small><br>' +
+                '<button class="btn btn-primary" onclick="loadInventario()" style="margin-top:10px">Reintentar</button>' +
+              '</td>' +
+            '</tr>'
+        );
     }
 }
 
@@ -107,7 +124,7 @@ function renderTable() {
         tbody.innerHTML = `
             <tr>
                 <td colspan="11" style="text-align:center; padding:18px; color:#607d8b;">
-                    📦 No hay equipos registrados.<br>
+                     No hay equipos registrados.<br>
                     <small>Comienza agregando tu primer equipo al inventario.</small>
                 </td>
             </tr>
@@ -122,14 +139,14 @@ function renderTable() {
         const marca = f['Marca'] || f['MARCA'] || '';
         const modelo = f['Modelo'] || f['MODELO'] || '';
         const serie = f['Serie'] || f['SERIE'] || '';
-        const placa = f['Numero de Placa'] || f['PLACA'] || f['Número de Placa'] || '';
+        const placa = f['Numero de Placa'] || f['PLACA'] || f['Numero de Placa'] || '';
         const servicio = f['Servicio'] || f['SERVICIO'] || '';
-        const ubicacion = f['Ubicacion'] || f['Ubicación'] || f['UBICACIÓN'] || '';
+        const ubicacion = f['Ubicacion'] || f['Ubicacion'] || f['UBICACION'] || '';
         const vidaUtil = f['Vida Util'] || f['VIDA UTIL'] || '';
         const fechaMtto = f['Fecha Programada de Mantenimiento'] || f['FECHA PROGRAMADA DE MANTENIMINETO'] || '';
 
         // Estado basado en fecha
-        let estadoText = '—';
+        let estadoText = '';
         if (fechaMtto) {
             const d = new Date(fechaMtto);
             estadoText = d.toLocaleDateString('es-CO', { year: 'numeric', month: 'short', day: 'numeric' });
@@ -147,15 +164,15 @@ function renderTable() {
             <td>${esc(String(vidaUtil))}</td>
             <td>${estadoText}</td>
             <td>
-                <button class="btn btn-small btn-secondary" onclick="editEquipo('${record.id}')" title="Editar">✏️</button>
-                <button class="btn btn-small" onclick="deleteEquipo('${record.id}', '${esc(equipo)}')" title="Eliminar" style="color:#c62828;">🗑️</button>
+                <button class="btn btn-small btn-secondary" onclick="editEquipo('${record.id}')" title="Editar"></button>
+                <button class="btn btn-small" onclick="deleteEquipo('${record.id}', '${esc(equipo)}')" title="Eliminar" style="color:#c62828;"></button>
             </td>
         </tr>`;
     }).join('');
 }
 
 // ============================================================================
-// PAGINACIÓN
+// PAGINACION
 // ============================================================================
 
 function updatePagination() {
@@ -182,7 +199,7 @@ function inventarioPrevPage() {
 }
 
 // ============================================================================
-// BÚSQUEDA
+// BUSQUEDA
 // ============================================================================
 
 function debouncedInventarioSearch() {
@@ -228,19 +245,21 @@ async function editEquipo(recordId) {
 // ============================================================================
 
 async function deleteEquipo(recordId, equipoName) {
-    if (!confirm(`¿Eliminar el equipo "${equipoName}"?\n\nEsta acción no se puede deshacer.`)) return;
+    if (!confirm(`Eliminar el equipo "${equipoName}"?\n\nEsta accion no se puede deshacer.`)) return;
 
     try {
         await axios.delete(`${API_BASE_URL}/inventario/${recordId}`, {
-            headers: (typeof getAuthHeader === 'function') ? getAuthHeader() : { Authorization: 'Bearer ok' }
+            headers: getHeaders()
         });
-        console.log('✅ Equipo eliminado');
+        console.log(' Equipo eliminado');
         currentOffset = null;
         currentPage = 0;
         await loadInventario();
     } catch (error) {
-        console.error('❌ Error eliminando:', error);
-        alert('Error al eliminar: ' + (error.response?.data?.error || error.message));
+        console.error('Error eliminando:', error);
+        const serverErr = (error && error.response && error.response.data && error.response.data.error) ? error.response.data.error : null;
+        const msg = serverErr || (error && error.message) || 'Error';
+        alert('Error al eliminar: ' + msg);
     }
 }
 
