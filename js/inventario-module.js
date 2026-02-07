@@ -60,7 +60,7 @@ async function loadInventario() {
 
         const url = `${API_BASE_URL}/inventario?${params.toString()}`;
         const response = await axios.get(url, {
-            headers: { Authorization: 'Bearer ok' }
+            headers: (typeof getAuthHeader === 'function') ? getAuthHeader() : { Authorization: 'Bearer ok' }
         });
 
         const data = response.data;
@@ -232,7 +232,7 @@ async function deleteEquipo(recordId, equipoName) {
 
     try {
         await axios.delete(`${API_BASE_URL}/inventario/${recordId}`, {
-            headers: { Authorization: 'Bearer ok' }
+            headers: (typeof getAuthHeader === 'function') ? getAuthHeader() : { Authorization: 'Bearer ok' }
         });
         console.log('✅ Equipo eliminado');
         currentOffset = null;

@@ -376,8 +376,12 @@ async function submitInventarioForm(e) {
     }
   } catch (err) {
     console.error('Error guardando inventario:', err?.response?.data || err.message);
-    const msg = err?.response?.data?.error || err?.response?.data?.details?.error?.message || err.message;
-    alert('Error guardando inventario: ' + msg);
+    const data = err?.response?.data;
+    const msg = (typeof data === 'string') ? data : (data?.error || data?.details?.error?.message || data?.details?.message || err.message);
+    const extra = (data && typeof data === 'object') ? ('
+
+Detalle: ' + JSON.stringify(data, null, 2)) : '';
+    alert('Error guardando inventario: ' + msg + extra);
   } finally {
     if (submitBtn) {
       submitBtn.disabled = false;
@@ -487,3 +491,103 @@ window.debouncedInventarioSearch = debouncedInventarioSearch;
 window.inventarioNextPage = inventarioNextPage;
 window.inventarioPrevPage = inventarioPrevPage;
 window.exportInventarioCSV = exportInventarioCSV;
+
+
+// ============================================================================
+// INVENTARIO - UTILIDADES UI (Columnas / Programación anual)
+// ============================================================================
+
+(function(){
+  // Estado simple de columnas: "compacto" oculta algunas columnas no críticas
+  let inventarioCompactView = false;
+
+  window.toggleInventarioColumns = function toggleInventarioColumns() {
+    inventarioCompactView = !inventarioCompactView;
+    const table = document.querySelector('#inventario table');
+    if (!table) return;
+
+    // Columnas a ocultar en modo compacto (índices 0-based)
+    // 0 Item,1 Equipo,2 Marca,3 Modelo,4 Serie,5 Placa,6 Servicio,7 Ubicacion,8 Vida Util,9 Próx Mtto,10 Acciones
+    const hideIdx = [3,4,7,8]; // Modelo, Serie, Ubicación, Vida Útil
+    const rows = table.querySelectorAll('tr');
+    rows.forEach(tr => {
+      const cells = Array.from(tr.children);
+      hideIdx.forEach(i => {
+        if (cells[i]) cells[i].style.display = inventarioCompactView ? 'none' : '';
+      });
+    });
+
+    const btn = document.querySelector('button[onclick="toggleInventarioColumns()"]');
+    if (btn) btn.textContent = inventarioCompactView ? 'Columnas (Ver todas)' : 'Columnas';
+  };
+
+  function parseFrequencyToMonths(text) {
+    const t = String(text || '').toLowerCase().trim();
+    if (!t) return null;
+
+    if (t.includes('mensual')) return 1;
+    if (t.includes('bimestral')) return 2;
+    if (t.includes('trimestral')) return 3;
+    if (t.includes('cuatrimestral')) return 4;
+    if (t.includes('semestral')) return 6;
+    if (t.includes('anual') || t.includes('cada año') || t.includes('cada 12')) return 12;
+
+    const m = t.match(/(\d+)\s*(mes|meses)/);
+    if (m) return Math.max(1, parseInt(m[1], 10));
+
+    const w = t.match(/(\d+)\s*(semana|semanas)/);
+    if (w) {
+      const weeks = Math.max(1, parseInt(w[1], 10));
+      const months = Math.max(1, Math.round((weeks * 7) / 30));
+      return months;
+    }
+    return null;
+  }
+
+  function addMonths(date, months) {
+    const d = new Date(date);
+    const day = d.getDate();
+    d.setMonth(d.getMonth() + months);
+    if (d.getDate() < day) d.setDate(0);
+    return d;
+  }
+
+  function toISODate(d) {
+    const x = new Date(d);
+    const yyyy = x.getFullYear();
+    const mm = String(x.getMonth() + 1).padStart(2, '0');
+    const dd = String(x.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  window.generateAnnualSchedule = function generateAnnualSchedule() {
+    const scheduleEl = document.getElementById('invScheduleAnnual');
+    if (!scheduleEl) return;
+
+    const startEl = document.getElementById('invStartDate');
+    const freqEl = document.querySelector('input[name="FRECUENCIA DE MANTENIMIENTO"]')
+                || document.querySelector('input[name="FRECUENCIA DE MTTO PREVENTIVO"]');
+
+    const start = (startEl && startEl.value) ? new Date(startEl.value) : new Date();
+    const months = parseFrequencyToMonths(freqEl ? freqEl.value : '');
+
+    if (!months) {
+      alert('⚠️ Escribe una FRECUENCIA válida (ej: "Cada 3 meses", "Trimestral", "Semestral", "Mensual").');
+      return;
+    }
+
+    const dates = [];
+    let d = new Date(start);
+    const end = addMonths(start, 12);
+    while (d <= end) {
+      dates.push(toISODate(d));
+      d = addMonths(d, months);
+    }
+    scheduleEl.value = dates.join(', ');
+  };
+
+  window.clearAnnualSchedule = function clearAnnualSchedule() {
+    const scheduleEl = document.getElementById('invScheduleAnnual');
+    if (scheduleEl) scheduleEl.value = '';
+  };
+})();

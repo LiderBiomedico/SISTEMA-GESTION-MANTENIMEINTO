@@ -247,6 +247,42 @@ function removeUnknownFields(fields, errData) {
   return { cleaned, removed };
 }
 
+
+function removeInvalidFieldsFrom422(fields, errData) {
+  // Intenta detectar el nombre del campo en diferentes mensajes 422 de Airtable
+  const errObj = errData?.error || errData || {};
+  const type = (typeof errObj === 'object' && errObj.type) ? errObj.type : (errData?.error?.type || errData?.error || errData?.type || '');
+  const msg = (typeof errObj === 'string')
+    ? errObj
+    : (errObj.message || errData?.message || JSON.stringify(errData || {}));
+
+  const patterns = [
+    /Invalid value for (?:column|field)\s+"([^"]+)"/i,
+    /Invalid value for (?:column|field)\s+'([^']+)'/i,
+    /Field\s+"([^"]+)"\s+cannot accept/i,
+    /Cannot parse value for field\s+"([^"]+)"/i,
+    /invalid\s+value\s+for\s+field\s+"([^"]+)"/i,
+    /for\s+field\s+"([^"]+)"/i,
+    /for\s+column\s+"([^"]+)"/i,
+  ];
+
+  let fieldName = null;
+  for (const p of patterns) {
+    const m = String(msg).match(p);
+    if (m && m[1]) { fieldName = m[1].trim(); break; }
+  }
+
+  if (!fieldName) return { cleaned: fields, removed: [] };
+  const cleaned = { ...fields };
+  const removed = [];
+  if (fieldName in cleaned) {
+    delete cleaned[fieldName];
+    removed.push(fieldName);
+  }
+  return { cleaned, removed, type, message: msg };
+}
+
+
 async function airtableRequest(method, url, data) {
   if (!AIRTABLE_API_KEY || !AIRTABLE_BASE_ID) {
     throw { status: 500, data: { error: 'Missing AIRTABLE_API_KEY/TOKEN or AIRTABLE_BASE_ID' } };
@@ -339,7 +375,16 @@ exports.handler = async (event) => {
 
           if (status !== 422) break;
 
-          const { cleaned, removed } = removeUnknownFields(mapped, data);
+          let removedPack = removeUnknownFields(mapped, data);
+          let cleaned = removedPack.cleaned;
+          let removed = removedPack.removed;
+
+          if (removed.length === 0) {
+            const inv = removeInvalidFieldsFrom422(mapped, data);
+            cleaned = inv.cleaned;
+            removed = inv.removed;
+          }
+
           if (removed.length === 0) break;
 
           allRemoved.push(...removed);
