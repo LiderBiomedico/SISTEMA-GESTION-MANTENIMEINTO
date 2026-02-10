@@ -36,36 +36,32 @@ const FIELD_MAP = {
   'PLACA': 'Numero de Placa',
   'NÚMERO DE PLACA': 'Numero de Placa',
   'NUMERO DE PLACA': 'Numero de Placa',
-  // Foto (en Airtable el campo real es "Foto equipo")
   'FOTO DEL EQUIPO': 'Foto equipo',
   'FOTO EQUIPO': 'Foto equipo',
-  'Foto del equipo': 'Foto equipo',
-  'Foto equipo': 'Foto equipo',
-
-  // ECRI (en Airtable el campo real es "ECRI")
+  'FOTO DEL EQUIPO ': 'Foto equipo',
+  'FOTO EQUIPO ': 'Foto equipo',
+  'TIPO': 'Tipo',
+  // Según la vista de Airtable, el campo se llama "ECRI"
   'CODIGO ECRI': 'ECRI',
   'CÓDIGO ECRI': 'ECRI',
 
-  // Registros
-  'REGISTRO SANITARIO': 'Registro Sanitario',
+  // En tu Airtable el campo visible es "Registro Sanitario".
+  // Evita enviar "Registro Invima" (genera UNKNOWN_FIELD_NAME / 422)
   'REGISTRO INVIMA': 'Registro Sanitario',
-
-  // Adquisición
-  'TIPO DE ADQUISICION': 'Tipo de adquisicion',
-  'TIPO DE ADQUISICIÓN': 'Tipo de adquisicion',
-  'NO. DE CONTRATO': 'N° de Contrato',
-  'N° DE CONTRATO': 'N° de Contrato',
-  'Nº DE CONTRATO': 'N° de Contrato',
+  'REGISTRO INVIMA ': 'Registro Sanitario',
+  'REGISTRO SANITARIO': 'Registro Sanitario',
+  'TIPO DE ADQUISICION': 'Tipo de Adquisicion',
+  'NO. DE CONTRATO': 'No. de Contrato',
   'SERVICIO': 'Servicio',
   'UBICACIÓN': 'Ubicacion',
   'UBICACION': 'Ubicacion',
-  'VIDA UTIL': 'Vida Util en años',
-  'VIDA ÚTIL': 'Vida Util en años',
+  'VIDA UTIL': 'Vida Util',
+  'VIDA ÚTIL': 'Vida Util',
   'FECHA FABRICA': 'Fecha Fabrica',
   'CERTIFICADO 2025': 'Certificado 2025',
   'FECHA DE COMRPA': 'Fecha de Compra',
   'FECHA DE COMPRA': 'Fecha de Compra',
-  'VALOR EN PESOS': 'Costo del equipo',
+  'VALOR EN PESOS': 'Valor en Pesos',
   'FECHA DE RECEPCIÓN': 'Fecha de Recepcion',
   'FECHA DE RECEPCION': 'Fecha de Recepcion',
   'FECHA DE INSTALACIÓN': 'Fecha de Instalacion',
@@ -97,28 +93,24 @@ const FIELD_MAP = {
   'Serie': 'Serie',
   'Numero de Placa': 'Numero de Placa',
   'Foto del equipo': 'Foto equipo',
+  'Foto del Equipo': 'Foto equipo',
   'Foto equipo': 'Foto equipo',
-  'ECRI': 'ECRI',
+  'Tipo': 'Tipo',
   'Codigo ECRI': 'ECRI',
+  'ECRI': 'ECRI',
+  'Registro INVIMA': 'Registro Sanitario',
+  'Registro Invima': 'Registro Sanitario',
   'Registro Sanitario': 'Registro Sanitario',
-  'Registro Invima': 'Registro Invima',
-  'Registro INVIMA': 'Registro Invima',
-  'Tipo de adquisicion': 'Tipo de adquisicion',
-  'Tipo de Adquisicion': 'Tipo de adquisicion',
-  'N° de Contrato': 'N° de Contrato',
-  'No. de Contrato': 'N° de Contrato',
+  'Tipo de Adquisicion': 'Tipo de Adquisicion',
+  'No. de Contrato': 'No. de Contrato',
   'Servicio': 'Servicio',
   'Ubicacion': 'Ubicacion',
   'Ubicación': 'Ubicacion',
-  'Vida Util': 'Vida Util en años',
-  'Vida Util en años': 'Vida Util en años',
-  'Fecha de Compra': 'Fecha de compra',
-  'Fecha de compra': 'Fecha de compra',
-  'Valor en Pesos': 'Costo del equipo',
-  'Costo del equipo': 'Costo del equipo',
-  'Fecha de Instalacion': 'Fecha de instalacion',
-  'Fecha de Instalación': 'Fecha de instalacion',
-  'Fecha de instalacion': 'Fecha de instalacion',
+  'Vida Util': 'Vida Util',
+  'Fecha de Compra': 'Fecha de Compra',
+  'Valor en Pesos': 'Valor en Pesos',
+  'Fecha de Instalacion': 'Fecha de Instalacion',
+  'Fecha de Instalación': 'Fecha de Instalacion',
   'Inicio de Garantia': 'Inicio de Garantia',
   'Termino de Garantia': 'Termino de Garantia',
   'Clasificacion Biomedica': 'Clasificacion Biomedica',
@@ -141,16 +133,16 @@ const FIELD_MAP = {
 };
 
 const NUMBER_FIELDS = new Set([
-  'Costo del equipo',
+  'Valor en Pesos',
   'Costo de Mantenimiento',
-  'Vida Util en años'
+  'Vida Util'
 ]);
 
 const BOOL_FIELDS = new Set(['Calibrable']);
 
 const DATE_FIELDS = new Set([
-  'Fecha de compra',
-  'Fecha de instalacion',
+  'Fecha de Compra',
+  'Fecha de Instalacion',
   'Inicio de Garantia',
   'Termino de Garantia',
   'Fecha Programada de Mantenimiento',
@@ -230,14 +222,14 @@ function mapAndNormalizeFields(inputFields) {
     const key = String(k || '').trim();
     const mapped = FIELD_MAP[key] || key;
     
-    // Campo Foto equipo como attachment si es URL
-    if (mapped === 'Foto equipo' && isUrl(v)) {
+    // Campo Manual como attachment si es URL
+    if (mapped === 'Manual' && isUrl(v)) {
       out[mapped] = [{ url: String(v).trim() }];
       continue;
     }
 
-    // Campo Manual como attachment si es URL
-    if (mapped === 'Manual' && isUrl(v)) {
+    // Campo Foto equipo como attachment si es URL
+    if (mapped === 'Foto equipo' && isUrl(v)) {
       out[mapped] = [{ url: String(v).trim() }];
       continue;
     }
@@ -248,55 +240,53 @@ function mapAndNormalizeFields(inputFields) {
   return out;
 }
 
-function normalizeKeyForMatch(s) {
-  return String(s || '')
-    .replace(/\u00A0/g, ' ')                 // NBSP
-    .replace(/[\u200B-\u200D\uFEFF]/g, '') // zero-width
-    .trim()
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')        // quitar tildes
-    .replace(/[^a-z0-9]+/g, ' ')              // solo alfanum y espacios
-    .trim();
-}
-
 function removeUnknownFields(fields, errData) {
   // Airtable devuelve errores como: { error: { type: 'UNKNOWN_FIELD_NAME', message: 'Unknown field name: "Xyz"' } }
   // o { error: 'UNKNOWN_FIELD_NAME', message: 'Unknown field name: "Xyz"' }
   const errObj = errData?.error || errData || {};
-  const msg = typeof errObj === 'string'
-    ? errObj
+  const msg = typeof errObj === 'string' 
+    ? errObj 
     : (errObj.message || errData?.message || JSON.stringify(errData || {}));
-
+  
   // Buscar nombres entre comillas
   const matches = String(msg).match(/"([^"]+)"/g) || [];
-  const unknownRaw = matches.map(m => m.replace(/"/g,'').trim()).filter(Boolean);
-
+  const unknown = new Set(matches.map(m => m.replace(/"/g,'').trim()).filter(Boolean));
+  
   // También buscar después de "Unknown field name:" sin comillas
-  const plainMatch = String(msg).match(/Unknown field name:\s*([^\n\r]+)/gi) || [];
+  const plainMatch = String(msg).match(/Unknown field name:\s*(\S+)/gi) || [];
   plainMatch.forEach(m => {
     const name = m.replace(/Unknown field name:\s*/i, '').replace(/"/g,'').trim();
-    if (name) unknownRaw.push(name);
+    if (name) unknown.add(name);
   });
-
-  const unknownNorm = new Set(unknownRaw.map(normalizeKeyForMatch).filter(Boolean));
-  if (unknownNorm.size === 0) return { cleaned: fields, removed: [] };
+  
+  if (unknown.size === 0) return { cleaned: fields, removed: [] };
+  
+  const norm = (s) => String(s || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
 
   const cleaned = { ...fields };
   const removed = [];
 
-  // Borrar por coincidencia exacta y por coincidencia normalizada
+  const unknownNorm = new Set(Array.from(unknown).map(norm).filter(Boolean));
+
   for (const key of Object.keys(cleaned)) {
-    const keyNorm = normalizeKeyForMatch(key);
-    if (unknownNorm.has(keyNorm)) {
+    const nk = norm(key);
+    if (unknownNorm.has(nk)) {
       removed.push(key);
       delete cleaned[key];
     }
   }
 
+  // Por compatibilidad: si además viene exactamente el nombre, también lo registramos
+  for (const u of unknown) {
+    if (u in fields && !removed.includes(u)) removed.push(u);
+  }
+
   return { cleaned, removed };
 }
-
 
 async function airtableRequest(method, url, data) {
   if (!AIRTABLE_API_KEY || !AIRTABLE_BASE_ID) {

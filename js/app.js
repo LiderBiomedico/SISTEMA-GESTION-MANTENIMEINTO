@@ -300,24 +300,27 @@ async function submitInventarioForm(e) {
     'SERIE': 'Serie',
     'PLACA': 'Numero de Placa',
     'NUMERO DE PLACA': 'Numero de Placa',
+    'CODIGO ECRI': 'ECRI',
+    'CÓDIGO ECRI': 'ECRI',
+    'REGISTRO INVIMA': 'Registro Sanitario',
+    'REGISTRO SANITARIO': 'Registro Sanitario',
     'FOTO DEL EQUIPO': 'Foto equipo',
     'FOTO EQUIPO': 'Foto equipo',
-    'CODIGO ECRI': 'ECRI',
-    'REGISTRO SANITARIO': 'Registro Sanitario',
-    'REGISTRO INVIMA': 'Registro Sanitario',
-    'TIPO DE ADQUISICION': 'Tipo de adquisicion',
-    'NO. DE CONTRATO': 'N° de Contrato',
+    'TIPO DE ADQUISICION': 'Tipo de Adquisicion',
+    'NO. DE CONTRATO': 'No. de Contrato',
     'SERVICIO': 'Servicio',
     'UBICACIÓN': 'Ubicacion',
     'UBICACION': 'Ubicacion',
-    'VIDA UTIL': 'Vida Util en años',
+    'VIDA UTIL': 'Vida Util',
     'FECHA FABRICA': 'Fecha Fabrica',
     'CERTIFICADO 2025': 'Certificado 2025',
     'FECHA DE COMRPA': 'Fecha de Compra',
     'FECHA DE COMPRA': 'Fecha de Compra',
-    'VALOR EN PESOS': 'Costo del equipo',
+    'VALOR EN PESOS': 'Valor en Pesos',
     'FECHA DE RECEPCIÓN': 'Fecha de Recepcion',
+    'FECHA DE RECEPCION': 'Fecha de Recepcion',
     'FECHA DE INSTALACIÓN': 'Fecha de Instalacion',
+    'FECHA DE INSTALACION': 'Fecha de Instalacion',
     'INICIO DE GARANTIA': 'Inicio de Garantia',
     'TERMINO DE GARANTIA': 'Termino de Garantia',
     'CLASIFICACION BIOMEDICA': 'Clasificacion Biomedica',
@@ -438,6 +441,88 @@ function exportInventarioCSV() {
 }
 
 // ============================================================================
+// PROGRAMACIÓN ANUAL (Inventario)
+// ============================================================================
+// Usado por el botón: onclick="generateAnnualSchedule()" en mantenimientohslv.html
+function generateAnnualSchedule() {
+  try {
+    const freqEl = document.getElementById('invFreqSelect');
+    const startEl = document.getElementById('invStartDate');
+    const outEl = document.getElementById('invScheduleAnnual');
+
+    if (!outEl) return;
+
+    const freq = (freqEl?.value || '').trim();
+    const startRaw = (startEl?.value || '').trim();
+
+    if (!freq) {
+      alert('Selecciona la FRECUENCIA DE MTTO PREVENTIVO para generar la programación.');
+      return;
+    }
+
+    // Fecha inicial: si no hay, usar hoy
+    const start = startRaw ? new Date(startRaw + 'T00:00:00') : new Date();
+    if (Number.isNaN(start.getTime())) {
+      alert('La FECHA PROGRAMADA no es válida.');
+      return;
+    }
+
+    const monthsByFreq = {
+      'Mensual': 1,
+      'Bimestral': 2,
+      'Trimestral': 3,
+      'Cuatrimestral': 4,
+      'Semestral': 6,
+      'Anual': 12,
+    };
+    const stepMonths = monthsByFreq[freq] || 0;
+    if (!stepMonths) {
+      alert('Frecuencia no soportada para programación automática.');
+      return;
+    }
+
+    // Generar fechas en el año siguiente (máximo 12 meses)
+    const dates = [];
+    const d = new Date(start.getTime());
+    const end = new Date(start.getTime());
+    end.setFullYear(end.getFullYear() + 1);
+
+    // Normalizar al día del mes original
+    const baseDay = d.getDate();
+
+    while (d < end) {
+      // Mantener el mismo día cuando sea posible
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      dates.push(`${yyyy}-${mm}-${dd}`);
+
+      // avanzar
+      const next = new Date(d.getTime());
+      next.setMonth(next.getMonth() + stepMonths);
+
+      // Ajuste: si el mes siguiente no tiene baseDay (p.ej. 31), JS salta de mes.
+      // Reforzamos para intentar mantener el día.
+      if (next.getDate() !== baseDay) {
+        // Intentar fijar el día, si se pasa, queda en último día del mes (comportamiento aceptable)
+        next.setDate(baseDay);
+      }
+      d.setTime(next.getTime());
+    }
+
+    outEl.value = dates.join(', ');
+  } catch (e) {
+    console.error('generateAnnualSchedule error', e);
+    alert('No se pudo generar la programación anual. Revisa consola.');
+  }
+}
+
+function clearAnnualSchedule() {
+  const outEl = document.getElementById('invScheduleAnnual');
+  if (outEl) outEl.value = '';
+}
+
+// ============================================================================
 // UTILIDAD
 // ============================================================================
 
@@ -490,57 +575,7 @@ window.debouncedInventarioSearch = debouncedInventarioSearch;
 window.inventarioNextPage = inventarioNextPage;
 window.inventarioPrevPage = inventarioPrevPage;
 window.exportInventarioCSV = exportInventarioCSV;
-
-// ============================================================================
-// UTILIDAD: Generar programación anual (botón del formulario de inventario)
-// Evita el error "generateAnnualSchedule is not defined".
-// Usa:
-//  - #invStartDate (FECHA PROGRAMADA DE MANTENIMINETO)
-//  - #invFreqSelect (FRECUENCIA DE MTTO PREVENTIVO)
-//  - #invScheduleAnnual (PROGRAMACION DE MANTENIMIENTO ANUAL)
-// ============================================================================
-
-function generateAnnualSchedule() {
-  try {
-    const startEl = document.getElementById('invStartDate');
-    const freqEl = document.getElementById('invFreqSelect');
-    const outEl = document.getElementById('invScheduleAnnual');
-    if (!startEl || !freqEl || !outEl) return;
-
-    const start = startEl.value ? new Date(startEl.value + 'T00:00:00') : null;
-    if (!start || isNaN(start.getTime())) {
-      alert('Selecciona una fecha programada válida para generar la programación.');
-      return;
-    }
-
-    const freqRaw = String(freqEl.value || '').toLowerCase();
-    // Mapeo a meses por intervalo
-    const monthsStep = (
-      freqRaw.includes('mens') ? 1 :
-      freqRaw.includes('bimes') ? 2 :
-      freqRaw.includes('trimes') ? 3 :
-      freqRaw.includes('cuatr') ? 4 :
-      freqRaw.includes('semes') ? 6 :
-      freqRaw.includes('anual') ? 12 :
-      3
-    );
-
-    const dates = [];
-    const d = new Date(start);
-    // Generar 12 meses hacia adelante (incluye fecha inicial)
-    for (let m = 0; m < 12; m += monthsStep) {
-      const dd = new Date(d);
-      dd.setMonth(d.getMonth() + m);
-      // Normalizar posibles desbordes al final de mes
-      if (dd.getDate() !== d.getDate()) {
-        dd.setDate(0);
-      }
-      dates.push(dd.toISOString().slice(0, 10));
-    }
-    outEl.value = dates.join(', ');
-  } catch (e) {
-    console.error('Error generando programación anual:', e);
-  }
-}
-
 window.generateAnnualSchedule = generateAnnualSchedule;
+window.clearAnnualSchedule = clearAnnualSchedule;
+window.generateAnnualSchedule = generateAnnualSchedule;
+window.clearAnnualSchedule = clearAnnualSchedule;

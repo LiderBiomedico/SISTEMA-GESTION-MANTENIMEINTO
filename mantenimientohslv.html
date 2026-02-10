@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Gestión de Mantenimiento Hospitalario</title>
+    <title>HSLV | Mantenimiento</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -414,8 +414,10 @@
             height: 100%;
             background: rgba(0, 0, 0, 0.5);
             z-index: 1000;
-            align-items: center;
+            align-items: flex-start;
             justify-content: center;
+            overflow-y: auto;
+            padding: 24px 0;
         }
 
         .modal.active {
@@ -429,6 +431,8 @@
             max-width: 500px;
             width: 90%;
             box-shadow: var(--shadow-lg);
+            max-height: 92vh;
+            overflow-y: auto;
         }
 
         .modal-header {
@@ -740,28 +744,7 @@
     .inventario-modal-body { padding: 24px 20px; }
 }
 
-    
-/* Scroll para formulario de inventario (modal) */
-#newInventario .inventario-modal-content{
-  max-height: 92vh;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-#newInventario .inventario-modal-body{
-  flex: 1;
-  min-height: 0; /* IMPORTANT: permite que el hijo haga scroll */
-  overflow: hidden;
-}
-#inventarioFormContainer{
-  height: 100%;
-  overflow-y: auto;
-  padding-right: 10px;
-}
-#inventarioFormContainer::-webkit-scrollbar{ width: 10px; }
-#inventarioFormContainer::-webkit-scrollbar-thumb{ border-radius: 10px; }
-
-</style>
+    </style>
 </head>
 <body>
     <div class="container-app">
@@ -1231,7 +1214,6 @@
             <button class="modal-close" onclick="closeModal('newInventario')">✕</button>
             <div class="modal-header">Registro de Inventario</div>
 
-            <div id="inventarioFormContainer">
             <form id="inventarioForm">
                 <details class="section" open>
                     <summary>1) Identificación del equipo <span class="summary-hint">ITEM, serie, placa, INVIMA</span></summary>
@@ -1448,7 +1430,6 @@
                     <button type="submit" class="btn btn-primary">Guardar en Inventario</button>
                 </div>
             </form>
-            </div>
         </div>
     </div>
 
