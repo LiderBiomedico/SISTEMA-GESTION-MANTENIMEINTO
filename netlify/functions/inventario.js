@@ -3,90 +3,45 @@
 // Soporta: GET (list), POST (create), PUT (update), DELETE (delete)
 // Gestiona errores 422 de Airtable removiendo campos desconocidos (sin filtrar por muestreo de registros)
 // =============================================================================
-const axios = require('axios');
+const https = require('https');
 
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY || process.env.AIRTABLE_TOKEN || '';
 const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID || '';
 const TABLE_NAME = process.env.AIRTABLE_INVENTARIO_TABLE || 'Inventario';
 const AIRTABLE_API = 'https://api.airtable.com/v0';
 
-// ----- Normalización para empatar nombres de campos (Airtable es estricto) -----
-function normKey(s) {
+
+// Cache en memoria (por instancia) para evitar llamar meta API en cada request
+let _schemaNormToActual = null;
+let _schemaLoadedAt = 0;
+
+function normFieldName(s) {
   return String(s || '')
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // quita tildes
-    .replace(/[\u200B-\u200D\uFEFF]/g, '') // quita zero-width
-    .replace(/\u00A0/g, ' ') // NBSP
-    .trim()
+    .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, ' ') // colapsa separadores
-    .trim();
+    .replace(/[^a-z0-9]/g, '');
 }
 
-// Aliases típicos del formulario -> nombres esperados en Airtable (normalizados)
-const NORM_ALIASES = {
-  // Foto
-  'foto del equipo': 'foto equipo',
-  'fotodelequipo': 'foto equipo',
-  // Registro
-  'registro invima': 'registro sanitario',
-  // Otros frecuentes
-  'codigo ecri': 'ecri',
-  'placa': 'numero de placa',
-  'valor en pesos': 'costo del equipo',
-  'vida util': 'vida util en anos',
-  'no de contrato': 'n de contrato',
-  'no. de contrato': 'n de contrato',
-  'n de contrato': 'n de contrato',
-  'n° de contrato': 'n de contrato',
-};
+async function fetchSchemaMap() {
+  // Refresca cada 10 minutos (por si cambian campos)
+  const now = Date.now();
+  if (_schemaNormToActual && (now - _schemaLoadedAt) < 10 * 60 * 1000) return _schemaNormToActual;
 
-// Cache por invocación
-let _schemaCache = null;
-
-async function loadTableSchema() {
-  if (_schemaCache) return _schemaCache;
-  if (!AIRTABLE_API_KEY || !AIRTABLE_BASE_ID) {
-    _schemaCache = { fieldsByNorm: {}, fieldTypesByName: {}, tableId: null };
-    return _schemaCache;
-  }
-
-  const url = `${AIRTABLE_API}/meta/bases/${AIRTABLE_BASE_ID}/tables`;
-  const resp = await axios.get(url, {
-    headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` },
-    timeout: 20000,
-  });
-
+  const metaUrl = `https://api.airtable.com/v0/meta/bases/${AIRTABLE_BASE_ID}/tables`;
+  const resp = await airtableRequest('GET', metaUrl);
   const tables = resp.data?.tables || [];
-  const table = tables.find(t => t.name === TABLE_NAME) || tables[0];
-  const fieldsByNorm = {};
-  const fieldTypesByName = {};
+  const table = tables.find(t => String(t.name).toLowerCase() === String(TABLE_NAME).toLowerCase()) || null;
+
+  const map = new Map();
   if (table && Array.isArray(table.fields)) {
     for (const f of table.fields) {
-      const nk = normKey(f.name);
-      fieldsByNorm[nk] = f.name; // exact name
-      fieldTypesByName[f.name] = f.type || null;
+      if (f && f.name) map.set(normFieldName(f.name), f.name);
     }
   }
-  _schemaCache = { fieldsByNorm, fieldTypesByName, tableId: table?.id || null };
-  return _schemaCache;
-}
-
-function coerceAttachmentIfNeeded(fieldName, value, fieldTypesByName) {
-  const t = fieldTypesByName[fieldName];
-  if (t !== 'multipleAttachments') return value;
-  if (value == null || value === '') return value;
-
-  // Si ya viene en formato attachment válido, se deja
-  if (Array.isArray(value) && value.length && typeof value[0] === 'object') return value;
-
-  // Si viene como URL string, convertir
-  if (typeof value === 'string' && /^https?:\/\/\S+/i.test(value.trim())) {
-    return [{ url: value.trim() }];
-  }
-
-  // Si no es URL válida, descartar para evitar 422 por tipo de dato
-  return null;
+  _schemaNormToActual = map;
+  _schemaLoadedAt = now;
+  return map;
 }
 
 
@@ -106,45 +61,51 @@ function json(statusCode, body) {
 // Mapeo de campos del formulario a columnas de Airtable
 // Soporta: Title Case (del equipoModal), UPPERCASE (del newInventario form), y variantes con tildes
 const FIELD_MAP = {
-  // Identificación
+  // --- UPPERCASE (formulario principal newInventario) ---
   'ITEM': 'Item',
   'EQUIPO': 'Equipo',
   'MARCA': 'Marca',
   'MODELO': 'Modelo',
   'SERIE': 'Serie',
   'PLACA': 'Numero de Placa',
-  'NUMERO DE PLACA': 'Numero de Placa',
   'NÚMERO DE PLACA': 'Numero de Placa',
-
-  // Ubicación / clasificación
-  'SERVICIO': 'Servicio',
-  'UBICACION': 'Ubicacion',
-  'UBICACIÓN': 'Ubicacion',
-  'VIDA UTIL': 'Vida Util en años',
-  'VIDA ÚTIL': 'Vida Util en años',
-
-  // Campos en Airtable (según tu base)
+  'NUMERO DE PLACA': 'Numero de Placa',
+  'FOTO DEL EQUIPO': 'Foto equipo',
+  'FOTO EQUIPO': 'Foto equipo',
+  'FOTO DEL EQUIPO ': 'Foto equipo',
+  'FOTO EQUIPO ': 'Foto equipo',
+  'TIPO': 'Tipo',
+  // Según la vista de Airtable, el campo se llama "ECRI"
   'CODIGO ECRI': 'ECRI',
-  'ECRI': 'ECRI',
+  'CÓDIGO ECRI': 'ECRI',
+
+  // En tu Airtable el campo visible es "Registro Sanitario".
+  // Evita enviar "Registro Invima" (genera UNKNOWN_FIELD_NAME / 422)
   'REGISTRO INVIMA': 'Registro Sanitario',
+  'REGISTRO INVIMA ': 'Registro Sanitario',
   'REGISTRO SANITARIO': 'Registro Sanitario',
-  // soporte alterno
-  'REGISTRO INVIMA ALT': 'Registro Invima',
-
-  // Adquisición
-  'TIPO DE ADQUISICION': 'Tipo de adquisicion',
-  'TIPO DE ADQUISICIÓN': 'Tipo de adquisicion',
-  'NO. DE CONTRATO': 'N° de Contrato',
-  'N° DE CONTRATO': 'N° de Contrato',
-  'Nº DE CONTRATO': 'N° de Contrato',
-  'VALOR EN PESOS': 'Costo del equipo',
-  'COSTO DEL EQUIPO': 'Costo del equipo',
-  'FECHA DE COMPRA': 'Fecha de compra',
-  'FECHA DE COMRPA': 'Fecha de compra',
-  'FECHA DE INSTALACION': 'Fecha de instalacion',
-  'FECHA DE INSTALACIÓN': 'Fecha de instalacion',
-
-  // Mantenimiento
+  'TIPO DE ADQUISICION': 'Tipo de Adquisicion',
+  'NO. DE CONTRATO': 'No. de Contrato',
+  'SERVICIO': 'Servicio',
+  'UBICACIÓN': 'Ubicacion',
+  'UBICACION': 'Ubicacion',
+  'VIDA UTIL': 'Vida Util',
+  'VIDA ÚTIL': 'Vida Util',
+  'FECHA FABRICA': 'Fecha Fabrica',
+  'CERTIFICADO 2025': 'Certificado 2025',
+  'FECHA DE COMRPA': 'Fecha de Compra',
+  'FECHA DE COMPRA': 'Fecha de Compra',
+  'VALOR EN PESOS': 'Valor en Pesos',
+  'FECHA DE RECEPCIÓN': 'Fecha de Recepcion',
+  'FECHA DE RECEPCION': 'Fecha de Recepcion',
+  'FECHA DE INSTALACIÓN': 'Fecha de Instalacion',
+  'FECHA DE INSTALACION': 'Fecha de Instalacion',
+  'INICIO DE GARANTIA': 'Inicio de Garantia',
+  'TERMINO DE GARANTIA': 'Termino de Garantia',
+  'CLASIFICACION BIOMEDICA': 'Clasificacion Biomedica',
+  'CLASIFICACION DE LA TECNOLOGIA': 'Clasificacion de la Tecnologia',
+  'CLASIFICACION DEL RIESGO': 'Clasificacion del Riesgo',
+  'MANUAL': 'Manual',
   'TIPO DE MTTO': 'Tipo de MTTO',
   'COSTO DE MANTENIMIENTO': 'Costo de Mantenimiento',
   'CALIBRABLE': 'Calibrable',
@@ -153,13 +114,56 @@ const FIELD_MAP = {
   'FECHA PROGRAMADA DE MANTENIMINETO': 'Fecha Programada de Mantenimiento',
   'FRECUENCIA DE MANTENIMIENTO': 'Frecuencia de Mantenimiento',
   'PROGRAMACION DE MANTENIMIENTO ANUAL': 'Programacion de Mantenimiento Anual',
-
-  // Responsable / proveedor
   'RESPONSABLE': 'Responsable',
   'NOMBRE': 'Nombre',
   'DIRECCION': 'Direccion',
   'TELEFONO': 'Telefono',
   'CIUDAD': 'Ciudad',
+  // --- Title Case (formulario equipoModal / inventario-module.js) ---
+  'Item': 'Item',
+  'Equipo': 'Equipo',
+  'Marca': 'Marca',
+  'Modelo': 'Modelo',
+  'Serie': 'Serie',
+  'Numero de Placa': 'Numero de Placa',
+  'Foto del equipo': 'Foto equipo',
+  'Foto del Equipo': 'Foto equipo',
+  'Foto equipo': 'Foto equipo',
+  'Tipo': 'Tipo',
+  'Codigo ECRI': 'ECRI',
+  'ECRI': 'ECRI',
+  'Registro INVIMA': 'Registro Sanitario',
+  'Registro Invima': 'Registro Sanitario',
+  'Registro Sanitario': 'Registro Sanitario',
+  'Tipo de Adquisicion': 'Tipo de Adquisicion',
+  'No. de Contrato': 'No. de Contrato',
+  'Servicio': 'Servicio',
+  'Ubicacion': 'Ubicacion',
+  'Ubicación': 'Ubicacion',
+  'Vida Util': 'Vida Util',
+  'Fecha de Compra': 'Fecha de Compra',
+  'Valor en Pesos': 'Valor en Pesos',
+  'Fecha de Instalacion': 'Fecha de Instalacion',
+  'Fecha de Instalación': 'Fecha de Instalacion',
+  'Inicio de Garantia': 'Inicio de Garantia',
+  'Termino de Garantia': 'Termino de Garantia',
+  'Clasificacion Biomedica': 'Clasificacion Biomedica',
+  'Clasificacion de la Tecnologia': 'Clasificacion de la Tecnologia',
+  'Clasificacion del Riesgo': 'Clasificacion del Riesgo',
+  'Manual': 'Manual',
+  'Tipo de MTTO': 'Tipo de MTTO',
+  'Costo de Mantenimiento': 'Costo de Mantenimiento',
+  'Calibrable': 'Calibrable',
+  'N. Certificado': 'N. Certificado',
+  'Frecuencia de MTTO Preventivo': 'Frecuencia de MTTO Preventivo',
+  'Frecuencia de Mantenimiento': 'Frecuencia de Mantenimiento',
+  'Fecha Programada de Mantenimiento': 'Fecha Programada de Mantenimiento',
+  'Programacion de Mantenimiento Anual': 'Programacion de Mantenimiento Anual',
+  'Responsable': 'Responsable',
+  'Nombre': 'Nombre',
+  'Direccion': 'Direccion',
+  'Telefono': 'Telefono',
+  'Ciudad': 'Ciudad',
 };
 
 const NUMBER_FIELDS = new Set([
@@ -246,51 +250,46 @@ function normalizeValue(fieldName, value) {
   return value;
 }
 
-
 async function mapAndNormalizeFields(inputFields) {
-  const { fieldsByNorm, fieldTypesByName } = await loadTableSchema();
-
-  // Si no hay esquema, se comporta como antes (pero con aliases normalizados)
-  const hasSchema = fieldsByNorm && Object.keys(fieldsByNorm).length > 0;
-
   const out = {};
   for (const [k, v] of Object.entries(inputFields || {})) {
-    const rawKey = String(k || '').trim();
-
-    // 1) map explícito (por compatibilidad con versiones anteriores)
-    const mappedName = FIELD_MAP[rawKey] || rawKey;
-
-    // 2) normaliza y aplica alias (ej: "Foto del equipo" -> "Foto equipo")
-    let nk = normKey(mappedName);
-    if (NORM_ALIASES[nk]) nk = normKey(NORM_ALIASES[nk]);
-
-    // 3) resuelve al nombre EXACTO en Airtable usando esquema (tildes/espacios)
-    let finalName = mappedName;
-    if (hasSchema) {
-      const exact = fieldsByNorm[nk];
-      if (!exact) {
-        // No existe en Airtable: se descarta silenciosamente
-        continue;
-      }
-      finalName = exact;
+    const key = String(k || '').trim();
+    const mapped = FIELD_MAP[key] || key;
+    
+    // Campo Manual como attachment si es URL
+    if (mapped === 'Manual' && isUrl(v)) {
+      out[mapped] = [{ url: String(v).trim() }];
+      continue;
     }
 
-    // 4) normaliza valor y aplica coerción por tipo (attachments, etc.)
-    let normVal = normalizeValue(finalName, v);
-    normVal = coerceAttachmentIfNeeded(finalName, normVal, fieldTypesByName);
-
-    // Si coerción devolvió null (por no ser URL válida en attachment), no enviar el campo
-    if (normVal === null) continue;
-
-    out[finalName] = normVal;
+    // Campo Foto equipo como attachment si es URL
+    if (mapped === 'Foto equipo' && isUrl(v)) {
+      out[mapped] = [{ url: String(v).trim() }];
+      continue;
+    }
+    
+    out[mapped] = normalizeValue(mapped, v);
   }
-
   console.log('[inventario] Mapped fields:', JSON.stringify(out));
+    // Ajustar al nombre REAL de Airtable (por si hay tildes/espacios distintos)
+  try {
+    const schema = await fetchSchemaMap();
+    if (schema && schema.size) {
+      for (const k of Object.keys(out)) {
+        const actual = schema.get(normFieldName(k));
+        if (actual && actual !== k) {
+          out[actual] = out[k];
+          delete out[k];
+        }
+      }
+    }
+  } catch (e) {
+    // Si la meta API falla, continuamos con los nombres mapeados.
+  }
   return out;
 }
 
 function removeUnknownFields(fields, errData) {
-(fields, errData) {
   // Airtable devuelve errores como: { error: { type: 'UNKNOWN_FIELD_NAME', message: 'Unknown field name: "Xyz"' } }
   // o { error: 'UNKNOWN_FIELD_NAME', message: 'Unknown field name: "Xyz"' }
   const errObj = errData?.error || errData || {};
@@ -311,32 +310,82 @@ function removeUnknownFields(fields, errData) {
   
   if (unknown.size === 0) return { cleaned: fields, removed: [] };
   
+  const norm = (s) => String(s || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+
   const cleaned = { ...fields };
   const removed = [];
-  for (const u of unknown) {
-    if (u in cleaned) {
-      delete cleaned[u];
-      removed.push(u);
-      continue;
-    }
-    // Intento robusto: comparar por clave normalizada (tildes/espacios invisibles)
-    const nu = normKey(u);
-    const hit = Object.keys(cleaned).find(k => normKey(k) === nu);
-    if (hit) {
-      delete cleaned[hit];
-      removed.push(hit);
+
+  const unknownNorm = new Set(Array.from(unknown).map(norm).filter(Boolean));
+
+  for (const key of Object.keys(cleaned)) {
+    const nk = norm(key);
+    if (unknownNorm.has(nk)) {
+      removed.push(key);
+      delete cleaned[key];
     }
   }
+
+  // Por compatibilidad: si además viene exactamente el nombre, también lo registramos
+  for (const u of unknown) {
+    if (u in fields && !removed.includes(u)) removed.push(u);
+  }
+
   return { cleaned, removed };
 }
 
 async function airtableRequest(method, url, data) {
   if (!AIRTABLE_API_KEY || !AIRTABLE_BASE_ID) {
-    throw { status: 500, data: { error: 'Missing AIRTABLE_API_KEY/TOKEN or AIRTABLE_BASE_ID' } };
+    // Normalizamos el error en formato parecido a axios para no tocar el resto del código
+    throw { response: { status: 500, data: { error: 'Missing AIRTABLE_API_KEY/TOKEN or AIRTABLE_BASE_ID' } } };
   }
-  const headers = { Authorization: `Bearer ${AIRTABLE_API_KEY}` };
-  return axios({ method, url, headers, data });
+
+  return new Promise((resolve, reject) => {
+    const u = new URL(url);
+    const headers = {
+      'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
+      'Content-Type': 'application/json',
+    };
+
+    const opts = {
+      method,
+      hostname: u.hostname,
+      path: u.pathname + u.search,
+      headers,
+    };
+
+    const req = https.request(opts, (res) => {
+      let raw = '';
+      res.on('data', (chunk) => { raw += chunk; });
+      res.on('end', () => {
+        let parsed = {};
+        if (raw && raw.length > 0) {
+          try { parsed = JSON.parse(raw); } catch { parsed = { raw }; }
+        }
+        const resp = { status: res.statusCode || 0, data: parsed, headers: res.headers };
+
+        if (resp.status >= 200 && resp.status < 300) {
+          resolve(resp); // resp.data se usa como axios
+        } else {
+          reject({ response: resp });
+        }
+      });
+    });
+
+    req.on('error', (err) => reject({ response: { status: 502, data: { error: 'Network error', message: err.message } } }));
+
+    // Airtable rechaza body en GET
+    if (method !== 'GET' && typeof data !== 'undefined') {
+      try { req.write(JSON.stringify(data)); } catch { /* ignore */ }
+    }
+
+    req.end();
+  });
 }
+
 
 
 exports.handler = async (event) => {
@@ -450,7 +499,7 @@ exports.handler = async (event) => {
         return json(400, { ok: false, error: 'Missing record id' });
       }
       
-      const mapped = await mapAndNormalizeFields(body.fields || {});
+      const mapped = mapAndNormalizeFields(body.fields || {});
       const url = `${baseUrl}/${encodeURIComponent(id)}`;
       
       try {

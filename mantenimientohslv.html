@@ -416,6 +416,9 @@
             z-index: 1000;
             align-items: center;
             justify-content: center;
+            /* Permite scroll vertical si el contenido excede la altura */
+            overflow-y: auto;
+            padding: 20px;
         }
 
         .modal.active {
@@ -429,14 +432,10 @@
             max-width: 500px;
             width: 90%;
             box-shadow: var(--shadow-lg);
-        }
-
-        /* Scroll vertical para el modal de Inventario (evita que se corte en pantallas pequeñas) */
-        #newInventario .modal-content{
-            max-width: 980px; /* mantiene tu ancho */
-            max-height: 90vh;
+            /* Scroll interno para formularios largos */
+            max-height: calc(100vh - 80px);
             overflow-y: auto;
-            overflow-x: hidden;
+            position: relative;
         }
 
         .modal-header {
