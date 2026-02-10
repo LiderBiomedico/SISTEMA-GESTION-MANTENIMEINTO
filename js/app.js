@@ -291,123 +291,67 @@ async function submitInventarioForm(e) {
     return;
   }
 
-    // Mapeo de campos (formulario) -> nombres EXACTOS en Airtable (según tu base)
-  // Nota: Airtable es sensible a mayúsculas/acentos; estos nombres deben coincidir.
+  // Mapeo UPPERCASE → nombres exactos de columnas Airtable
   const FIELD_MAP = {
     'ITEM': 'Item',
-    'Item': 'Item',
-
     'EQUIPO': 'Equipo',
-    'Equipo': 'Equipo',
-
     'MARCA': 'Marca',
-    'Marca': 'Marca',
-
     'MODELO': 'Modelo',
-    'Modelo': 'Modelo',
-
     'SERIE': 'Serie',
-    'Serie': 'Serie',
-
     'PLACA': 'Numero de Placa',
-    'Numero de Placa': 'Numero de Placa',
     'NUMERO DE PLACA': 'Numero de Placa',
-    'NÚMERO DE PLACA': 'Numero de Placa',
-
-    'SERVICIO': 'Servicio',
-    'Servicio': 'Servicio',
-
     'CODIGO ECRI': 'ECRI',
-    'Codigo ECRI': 'ECRI',
     'ECRI': 'ECRI',
-
-    // En tu vista principal aparece como "Registro Sanitario"
     'REGISTRO INVIMA': 'Registro Sanitario',
-    'Registro INVIMA': 'Registro Sanitario',
     'REGISTRO SANITARIO': 'Registro Sanitario',
-    'Registro Sanitario': 'Registro Sanitario',
-    // Soporte alterno si tu base lo tiene como "Registro Invima"
-    'Registro Invima': 'Registro Invima',
-
-    'TIPO DE ADQUISICION': 'Tipo de adquisicion',
-    'Tipo de Adquisicion': 'Tipo de adquisicion',
-    'TIPO DE ADQUISICIÓN': 'Tipo de adquisicion',
-    'Tipo de adquisicion': 'Tipo de adquisicion',
-
-    // En tu base aparece como "N° de Contrato"
-    'NO. DE CONTRATO': 'N° de Contrato',
-    'No. de Contrato': 'N° de Contrato',
-    'N° de Contrato': 'N° de Contrato',
-    'Nº de Contrato': 'N° de Contrato',
-
+    'TIPO DE ADQUISICION': 'Tipo de Adquisicion',
+    'NO. DE CONTRATO': 'No. de Contrato',
+    'SERVICIO': 'Servicio',
     'UBICACIÓN': 'Ubicacion',
     'UBICACION': 'Ubicacion',
-    'Ubicacion': 'Ubicacion',
-
-    'VIDA UTIL': 'Vida Util en años',
-    'Vida Util': 'Vida Util en años',
-    'VIDA ÚTIL': 'Vida Util en años',
-    'Vida Util en años': 'Vida Util en años',
-
-    'FECHA DE COMPRA': 'Fecha de compra',
-    'Fecha de Compra': 'Fecha de compra',
-    'FECHA DE COMRPA': 'Fecha de compra',
-    'Fecha de compra': 'Fecha de compra',
-
-    'VALOR EN PESOS': 'Costo del equipo',
-    'Costo del equipo': 'Costo del equipo',
-    'VALOR': 'Costo del equipo',
-
-    'FECHA DE INSTALACIÓN': 'Fecha de instalacion',
-    'FECHA DE INSTALACION': 'Fecha de instalacion',
-    'Fecha de Instalacion': 'Fecha de instalacion',
-    'Fecha de instalacion': 'Fecha de instalacion',
-
-    // Campos adicionales que existen en el formulario (si están creados en Airtable quedarán; si no, Airtable los rechazará)
+    'VIDA UTIL': 'Vida Util',
     'FECHA FABRICA': 'Fecha Fabrica',
-    'Fecha Fabrica': 'Fecha Fabrica',
     'CERTIFICADO 2025': 'Certificado 2025',
-    'Certificado 2025': 'Certificado 2025',
-    'CLASIFICACION BIOMEDICA': 'Clasificacion',
-    'Clasificacion Biomedica': 'Clasificacion',
-    'CLASIFICACION DE LA TECNOLOGIA': 'Clasificacion',
-    'Clasificacion de la Tecnologia': 'Clasificacion',
-    'CLASIFICACION DEL RIESGO': 'Clasificacion',
-    'Clasificacion del Riesgo': 'Clasificacion',
-
+    'FECHA DE COMRPA': 'Fecha de Compra',
+    'FECHA DE COMPRA': 'Fecha de Compra',
+    'VALOR EN PESOS': 'Valor en Pesos',
+    'FECHA DE RECEPCIÓN': 'Fecha de Recepcion',
+    'FECHA DE INSTALACIÓN': 'Fecha de Instalacion',
+    'INICIO DE GARANTIA': 'Inicio de Garantia',
+    'TERMINO DE GARANTIA': 'Termino de Garantia',
+    'CLASIFICACION BIOMEDICA': 'Clasificacion Biomedica',
+    'CLASIFICACION DE LA TECNOLOGIA': 'Clasificacion de la Tecnologia',
+    'CLASIFICACION DEL RIESGO': 'Clasificacion del Riesgo',
+    'MANUAL': 'Manual',
     'TIPO DE MTTO': 'Tipo de MTTO',
-    'Tipo de MTTO': 'Tipo de MTTO',
     'COSTO DE MANTENIMIENTO': 'Costo de Mantenimiento',
-    'Costo de Mantenimiento': 'Costo de Mantenimiento',
     'CALIBRABLE': 'Calibrable',
-    'Calibrable': 'Calibrable',
     'N. CERTIFICADO': 'N. Certificado',
-    'N. Certificado': 'N. Certificado',
     'FRECUENCIA DE MTTO PREVENTIVO': 'Frecuencia de MTTO Preventivo',
-    'Frecuencia de MTTO Preventivo': 'Frecuencia de MTTO Preventivo',
     'FECHA PROGRAMADA DE MANTENIMINETO': 'Fecha Programada de Mantenimiento',
-    'Fecha Programada de Mantenimiento': 'Fecha Programada de Mantenimiento',
     'FRECUENCIA DE MANTENIMIENTO': 'Frecuencia de Mantenimiento',
-    'Frecuencia de Mantenimiento': 'Frecuencia de Mantenimiento',
     'PROGRAMACION DE MANTENIMIENTO ANUAL': 'Programacion de Mantenimiento Anual',
-    'Programacion de Mantenimiento Anual': 'Programacion de Mantenimiento Anual',
-
     'RESPONSABLE': 'Responsable',
-    'Responsable': 'Responsable',
     'NOMBRE': 'Nombre',
-    'Nombre': 'Nombre',
     'DIRECCION': 'Direccion',
-    'Direccion': 'Direccion',
     'TELEFONO': 'Telefono',
-    'Telefono': 'Telefono',
     'CIUDAD': 'Ciudad',
-    'Ciudad': 'Ciudad',
   };
+
+  // Normaliza claves para evitar problemas por espacios invisibles (zero-width), NBSP, etc.
+  function normalizeKey(key) {
+    return String(key || '')
+      .replace(/[\u200B-\u200D\uFEFF]/g, '')   // zero-width chars
+      .replace(/\u00A0/g, ' ')                  // NBSP
+      .trim();
+  }
+
 
   // Convertir campos del formulario a nombres de Airtable
   const fields = {};
   for (const [k, v] of Object.entries(rawFields)) {
-    const mapped = FIELD_MAP[k] || k;
+    const nk = normalizeKey(k);
+    const mapped = FIELD_MAP[nk] || FIELD_MAP[nk.toUpperCase()] || nk;
     fields[mapped] = v;
   }
 
@@ -443,19 +387,9 @@ async function submitInventarioForm(e) {
       throw new Error('Respuesta inesperada del servidor');
     }
   } catch (err) {
-    // axios error: mostrar detalle real (no "Object")
-    const data = err?.response?.data;
-    const errText = (() => {
-      try { return data ? JSON.stringify(data, null, 2) : ''; } catch { return ''; }
-    })();
-    console.error('Error guardando inventario (raw):', errText || data || err);
-    const msg =
-      (data && (data.airtableMessage || data.error)) ||
-      (data && data.details && data.details.error && data.details.error.message) ||
-      err?.message ||
-      'Error desconocido';
-    alert('Error guardando inventario:
-' + msg);
+    console.error('Error guardando inventario:', err?.response?.data || err.message);
+    const msg = err?.response?.data?.error || err?.response?.data?.details?.error?.message || err.message;
+    alert('Error guardando inventario: ' + msg);
   } finally {
     if (submitBtn) {
       submitBtn.disabled = false;
@@ -565,72 +499,3 @@ window.debouncedInventarioSearch = debouncedInventarioSearch;
 window.inventarioNextPage = inventarioNextPage;
 window.inventarioPrevPage = inventarioPrevPage;
 window.exportInventarioCSV = exportInventarioCSV;
-
-
-// =====================
-// Programación anual (Inventario)
-// =====================
-(function () {
-  function parseMonthsFromFreq(val) {
-    if (!val) return 3;
-    const v = String(val).toLowerCase().trim();
-    // si es número puro (ej: 3)
-    if (/^\d+$/.test(v)) return Math.max(1, parseInt(v, 10));
-    if (v.includes('mens')) return 1;
-    if (v.includes('bimes')) return 2;
-    if (v.includes('trimes') || v.includes('cada 3')) return 3;
-    if (v.includes('cuatrimes') || v.includes('cada 4')) return 4;
-    if (v.includes('semes') || v.includes('cada 6')) return 6;
-    if (v.includes('anual') || v.includes('cada 12')) return 12;
-    // default
-    return 3;
-  }
-
-  function toISO(d) {
-    const z = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
-    return z.toISOString().slice(0, 10);
-  }
-
-  window.generateAnnualSchedule = function generateAnnualSchedule() {
-    try {
-      const startEl = document.getElementById('invStartDate');
-      const freqEl = document.getElementById('invFreqSelect');
-      const outEl = document.getElementById('invScheduleAnnual');
-      if (!outEl) return;
-
-      const startVal = startEl ? startEl.value : '';
-      if (!startVal) {
-        alert('Por favor selecciona la "Fecha programada de mantenimiento" para generar la programación.');
-        return;
-      }
-
-      const months = parseMonthsFromFreq(freqEl ? freqEl.value : '');
-      const start = new Date(startVal + 'T00:00:00');
-      if (Number.isNaN(start.getTime())) {
-        alert('Fecha programada inválida.');
-        return;
-      }
-
-      // Genera fechas dentro de los próximos 12 meses (incluyendo la fecha inicial)
-      const dates = [];
-      const d = new Date(start);
-      const end = new Date(start);
-      end.setMonth(end.getMonth() + 12);
-
-      while (d <= end) {
-        dates.push(toISO(d));
-        d.setMonth(d.getMonth() + months);
-      }
-
-      outEl.value = dates.join(', ');
-    } catch (e) {
-      console.error('generateAnnualSchedule error', e);
-      alert('No fue posible generar la programación. Revisa la consola.');
-    }
-  };
-
-  window.clearAnnualSchedule = function clearAnnualSchedule() {
-    const outEl = document.getElementById('invScheduleAnnual');
-    if (outEl) outEl.value = '';
-  };
-})();
