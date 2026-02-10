@@ -304,7 +304,7 @@ async function submitInventarioForm(e) {
     'FOTO EQUIPO': 'Foto equipo',
     'CODIGO ECRI': 'ECRI',
     'REGISTRO SANITARIO': 'Registro Sanitario',
-    'REGISTRO INVIMA': 'Registro Invima',
+    'REGISTRO INVIMA': 'Registro Sanitario',
     'TIPO DE ADQUISICION': 'Tipo de adquisicion',
     'NO. DE CONTRATO': 'N° de Contrato',
     'SERVICIO': 'Servicio',

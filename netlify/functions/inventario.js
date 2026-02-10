@@ -48,7 +48,7 @@ const FIELD_MAP = {
 
   // Registros
   'REGISTRO SANITARIO': 'Registro Sanitario',
-  'REGISTRO INVIMA': 'Registro Invima',
+  'REGISTRO INVIMA': 'Registro Sanitario',
 
   // Adquisición
   'TIPO DE ADQUISICION': 'Tipo de adquisicion',
