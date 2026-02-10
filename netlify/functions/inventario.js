@@ -36,16 +36,23 @@ const FIELD_MAP = {
   'PLACA': 'Numero de Placa',
   'NÚMERO DE PLACA': 'Numero de Placa',
   'NUMERO DE PLACA': 'Numero de Placa',
-   'FOTO DEL EQUIPO': 'Foto del equipo',
-   'Foto del equipo': 'Foto del equipo',
-  'CODIGO ECRI': 'Codigo ECRI',
-  'REGISTRO INVIMA': 'Registro INVIMA',
+   'FOTO DEL EQUIPO': 'Foto equipo',
+   'Foto del equipo': 'Foto equipo',
+  'FOTO EQUIPO': 'Foto equipo',
+  'Foto equipo': 'Foto equipo',
+  'CODIGO ECRI': 'ECRI',
+  'ECRI': 'ECRI',
+  'REGISTRO INVIMA': 'Registro Invima',
+  'REGISTRO SANITARIO': 'Registro Sanitario',
+  'Registro Sanitario': 'Registro Sanitario',
+  'Registro Invima': 'Registro Invima',
   'TIPO DE ADQUISICION': 'Tipo de Adquisicion',
   'NO. DE CONTRATO': 'No. de Contrato',
   'SERVICIO': 'Servicio',
   'UBICACIÓN': 'Ubicacion',
   'UBICACION': 'Ubicacion',
-  'VIDA UTIL': 'Vida Util',
+  'VIDA UTIL': 'Vida Util en años',
+  'VIDA ÚTIL': 'Vida Util en años',
   'VIDA ÚTIL': 'Vida Util',
   'FECHA FABRICA': 'Fecha Fabrica',
   'CERTIFICADO 2025': 'Certificado 2025',
@@ -206,7 +213,7 @@ function mapAndNormalizeFields(inputFields) {
     const mapped = FIELD_MAP[key] || key;
     
     // Campo Foto del equipo como attachment si es URL
-    if (mapped === 'Foto del equipo' && isUrl(v)) {
+    if (mapped === 'Foto equipo' && isUrl(v)) {
       out[mapped] = [{ url: String(v).trim() }];
       continue;
     }
