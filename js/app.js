@@ -300,8 +300,10 @@ async function submitInventarioForm(e) {
     'SERIE': 'Serie',
     'PLACA': 'Numero de Placa',
     'NUMERO DE PLACA': 'Numero de Placa',
-    'CODIGO ECRI': 'Codigo ECRI',
-    'REGISTRO INVIMA': 'Registro INVIMA',
+    'CODIGO ECRI': 'ECRI',
+    'ECRI': 'ECRI',
+    'REGISTRO INVIMA': 'Registro Sanitario',
+    'REGISTRO SANITARIO': 'Registro Sanitario',
     'TIPO DE ADQUISICION': 'Tipo de Adquisicion',
     'NO. DE CONTRATO': 'No. de Contrato',
     'SERVICIO': 'Servicio',
@@ -336,10 +338,20 @@ async function submitInventarioForm(e) {
     'CIUDAD': 'Ciudad',
   };
 
+  // Normaliza claves para evitar problemas por espacios invisibles (zero-width), NBSP, etc.
+  function normalizeKey(key) {
+    return String(key || '')
+      .replace(/[\u200B-\u200D\uFEFF]/g, '')   // zero-width chars
+      .replace(/\u00A0/g, ' ')                  // NBSP
+      .trim();
+  }
+
+
   // Convertir campos del formulario a nombres de Airtable
   const fields = {};
   for (const [k, v] of Object.entries(rawFields)) {
-    const mapped = FIELD_MAP[k] || k;
+    const nk = normalizeKey(k);
+    const mapped = FIELD_MAP[nk] || FIELD_MAP[nk.toUpperCase()] || nk;
     fields[mapped] = v;
   }
 
@@ -374,36 +386,11 @@ async function submitInventarioForm(e) {
     } else {
       throw new Error('Respuesta inesperada del servidor');
     }
-  
   } catch (err) {
-    const respData = (err && err.response && err.response.data) ? err.response.data : null;
-    console.error('Error guardando inventario (raw):', respData ? JSON.stringify(respData) : err);
-
-    let msg = 'Error desconocido';
-    try {
-      if (respData) {
-        // Prioridad: mensaje explícito (si viene del backend)
-        msg =
-          respData.airtableMessage ||
-          (typeof respData.error === 'string' ? respData.error : null) ||
-          (respData.details && respData.details.error && respData.details.error.message) ||
-          respData.message ||
-          null;
-
-        // Si aún no tenemos string, serializamos el objeto completo para que sea visible
-        if (!msg || typeof msg !== 'string') {
-          msg = JSON.stringify(respData);
-        }
-      } else {
-        msg = (err && err.message) ? err.message : msg;
-      }
-    } catch (e) {
-      msg = (err && err.message) ? err.message : msg;
-    }
-
+    console.error('Error guardando inventario:', err?.response?.data || err.message);
+    const msg = err?.response?.data?.error || err?.response?.data?.details?.error?.message || err.message;
     alert('Error guardando inventario: ' + msg);
   } finally {
-
     if (submitBtn) {
       submitBtn.disabled = false;
       submitBtn.textContent = originalText;
@@ -512,133 +499,3 @@ window.debouncedInventarioSearch = debouncedInventarioSearch;
 window.inventarioNextPage = inventarioNextPage;
 window.inventarioPrevPage = inventarioPrevPage;
 window.exportInventarioCSV = exportInventarioCSV;
-
-
-// ============================================================================
-// INVENTARIO - Toggle de columnas (botón "Columnas")
-// Crea un panel flotante con checkboxes y guarda preferencias en localStorage
-// ============================================================================
-function toggleInventarioColumns() {
-  const existing = document.getElementById('inventarioColumnsPanel');
-  if (existing) {
-    const isHidden = existing.classList.toggle('hidden');
-    if (!isHidden) existing.classList.remove('hidden');
-    return;
-  }
-
-  const table = document.querySelector('#inventario table');
-  if (!table) { alert('No se encontró la tabla de inventario'); return; }
-
-  const ths = Array.from(table.querySelectorAll('thead th[data-col]'));
-  if (ths.length === 0) { alert('No se encontraron columnas configurables'); return; }
-
-  const storageKey = 'HSLV_INV_COL_VIS';
-  let vis = {};
-  try { vis = JSON.parse(localStorage.getItem(storageKey) || '{}') || {}; } catch(e) { vis = {}; }
-
-  // Crear panel
-  const panel = document.createElement('div');
-  panel.id = 'inventarioColumnsPanel';
-  panel.style.position = 'fixed';
-  panel.style.top = '90px';
-  panel.style.right = '30px';
-  panel.style.zIndex = '20000';
-  panel.style.background = 'white';
-  panel.style.border = '1px solid rgba(144,164,174,0.55)';
-  panel.style.borderRadius = '12px';
-  panel.style.boxShadow = '0 8px 24px rgba(0,0,0,0.18)';
-  panel.style.padding = '14px 14px 10px';
-  panel.style.minWidth = '220px';
-
-  const title = document.createElement('div');
-  title.textContent = 'Columnas visibles';
-  title.style.fontWeight = '700';
-  title.style.color = '#0d47a1';
-  title.style.marginBottom = '10px';
-  panel.appendChild(title);
-
-  const list = document.createElement('div');
-  list.style.display = 'grid';
-  list.style.gap = '8px';
-
-  function applyVisibility() {
-    const rows = Array.from(table.querySelectorAll('tbody tr'));
-    ths.forEach((th, idx) => {
-      const key = th.getAttribute('data-col');
-      const show = (vis[key] !== false); // default true
-      th.style.display = show ? '' : 'none';
-      rows.forEach(r => {
-        const cell = r.children[idx];
-        if (cell) cell.style.display = show ? '' : 'none';
-      });
-    });
-    localStorage.setItem(storageKey, JSON.stringify(vis));
-  }
-
-  ths.forEach((th) => {
-    const key = th.getAttribute('data-col');
-    const label = document.createElement('label');
-    label.style.display = 'flex';
-    label.style.alignItems = 'center';
-    label.style.gap = '10px';
-    label.style.fontSize = '14px';
-    label.style.cursor = 'pointer';
-
-    const cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.checked = (vis[key] !== false);
-    cb.addEventListener('change', () => {
-      vis[key] = cb.checked;
-      applyVisibility();
-    });
-
-    const span = document.createElement('span');
-    span.textContent = key;
-
-    label.appendChild(cb);
-    label.appendChild(span);
-    list.appendChild(label);
-  });
-
-  panel.appendChild(list);
-
-  const footer = document.createElement('div');
-  footer.style.display = 'flex';
-  footer.style.justifyContent = 'space-between';
-  footer.style.gap = '8px';
-  footer.style.marginTop = '12px';
-
-  const btnAll = document.createElement('button');
-  btnAll.textContent = 'Mostrar todo';
-  btnAll.className = 'btn btn-small btn-secondary';
-  btnAll.type = 'button';
-  btnAll.onclick = () => {
-    ths.forEach(th => { vis[th.getAttribute('data-col')] = true; });
-    panel.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = true);
-    applyVisibility();
-  };
-
-  const btnClose = document.createElement('button');
-  btnClose.textContent = 'Cerrar';
-  btnClose.className = 'btn btn-small btn-secondary';
-  btnClose.type = 'button';
-  btnClose.onclick = () => panel.remove();
-
-  footer.appendChild(btnAll);
-  footer.appendChild(btnClose);
-  panel.appendChild(footer);
-
-  document.body.appendChild(panel);
-  applyVisibility();
-
-  // Cerrar al hacer clic fuera
-  setTimeout(() => {
-    const onDocClick = (ev) => {
-      if (!panel.contains(ev.target) && ev.target && !(ev.target.closest && ev.target.closest('#inventarioColumnsPanel'))) {
-        panel.remove();
-        document.removeEventListener('click', onDocClick);
-      }
-    };
-    document.addEventListener('click', onDocClick);
-  }, 0);
-}

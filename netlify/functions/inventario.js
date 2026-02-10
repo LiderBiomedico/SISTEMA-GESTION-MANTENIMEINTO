@@ -36,8 +36,10 @@ const FIELD_MAP = {
   'PLACA': 'Numero de Placa',
   'NÚMERO DE PLACA': 'Numero de Placa',
   'NUMERO DE PLACA': 'Numero de Placa',
-  'CODIGO ECRI': 'Codigo ECRI',
-  'REGISTRO INVIMA': 'Registro INVIMA',
+  'CODIGO ECRI': 'ECRI',
+  'ECRI': 'ECRI',
+  'REGISTRO INVIMA': 'Registro Sanitario',
+  'REGISTRO SANITARIO': 'Registro Sanitario',
   'TIPO DE ADQUISICION': 'Tipo de Adquisicion',
   'NO. DE CONTRATO': 'No. de Contrato',
   'SERVICIO': 'Servicio',
@@ -113,55 +115,27 @@ const FIELD_MAP = {
   'Ciudad': 'Ciudad',
 };
 
-// Reverse map (Title Case -> UPPERCASE) to soportar tablas en Airtable con columnas en mayúsculas
-const REVERSE_FIELD_MAP = (() => {
-  const rev = {};
-  for (const [k, v] of Object.entries(FIELD_MAP)) {
-    // Preferimos claves UPPERCASE como destino
-    if (/^[A-Z0-9 .ÁÉÍÓÚÜÑ-]+$/.test(k) && !rev[v]) rev[v] = k;
-  }
-  // Fallbacks comunes (si la tabla está en UPPERCASE)
-  const fallbacks = {
-    'Item': 'ITEM',
-    'Equipo': 'EQUIPO',
-    'Marca': 'MARCA',
-    'Modelo': 'MODELO',
-    'Serie': 'SERIE',
-    'Numero de Placa': 'PLACA',
-    'Codigo ECRI': 'CODIGO ECRI',
-    'Registro INVIMA': 'REGISTRO INVIMA',
-    'Servicio': 'SERVICIO',
-    'Ubicacion': 'UBICACIÓN',
-    'Vida Util': 'VIDA UTIL',
-    'Fecha Programada de Mantenimiento': 'PROX_MTTO'
-  };
-  for (const [k,v] of Object.entries(fallbacks)) if (!rev[k]) rev[k] = v;
-  return rev;
-})();
-
-
-function airtableErrorSummary(errData) {
-  const e = errData?.error || errData || {};
-  const type = (typeof e === 'object' && e.type) ? String(e.type) : (typeof errData?.error === 'string' ? String(errData.error) : '');
-  const message = (typeof e === 'object' && e.message) ? String(e.message) : (typeof errData?.message === 'string' ? String(errData.message) : '');
-  return { type: type || null, message: message || null };
+function normalizeKey(key) {
+  return String(key || '')
+    .replace(/[\u200B-\u200D\uFEFF]/g, '') // zero-width chars
+    .replace(/\u00A0/g, ' ')                // NBSP
+    .trim();
 }
 
-function isUnknownFieldError(errData) {
-  const e = errData?.error || errData || {};
-  const type = (typeof e === 'object' && e.type) ? String(e.type) : String(errData?.error || '');
-  const msg = (typeof e === 'object' && e.message) ? String(e.message) : String(errData?.message || '');
-  return (type.includes('UNKNOWN_FIELD_NAME') || msg.includes('Unknown field name'));
+// Mapa normalizado (case-insensitive, sin tildes) para máxima compatibilidad con formularios
+function stripAccents(s) {
+  return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 
-function remapFieldsToUppercase(fields) {
+const FIELD_MAP_NORM = (() => {
   const out = {};
-  for (const [k, v] of Object.entries(fields || {})) {
-    const alt = REVERSE_FIELD_MAP[k] || k;
-    out[alt] = v;
+  for (const [k, v] of Object.entries(FIELD_MAP)) {
+    const kk = stripAccents(normalizeKey(k)).toUpperCase();
+    out[kk] = v;
   }
   return out;
-}
+})();
+
 
 const NUMBER_FIELDS = new Set([
   'Valor en Pesos',
@@ -250,8 +224,9 @@ function normalizeValue(fieldName, value) {
 function mapAndNormalizeFields(inputFields) {
   const out = {};
   for (const [k, v] of Object.entries(inputFields || {})) {
-    const key = String(k || '').trim();
-    const mapped = FIELD_MAP[key] || key;
+    const keyRaw = normalizeKey(k);
+    const keyNorm = stripAccents(keyRaw).toUpperCase();
+    const mapped = FIELD_MAP[keyRaw] || FIELD_MAP[keyRaw.toUpperCase()] || FIELD_MAP_NORM[keyNorm] || keyRaw;
     
     // Campo Manual como attachment si es URL
     if (mapped === 'Manual' && isUrl(v)) {
@@ -370,7 +345,6 @@ exports.handler = async (event) => {
     if (event.httpMethod === 'POST') {
       let mapped = mapAndNormalizeFields(body.fields || {});
       let allRemoved = [];
-      let triedUppercase = false;
       
       // Intentar hasta 3 veces, removiendo campos desconocidos en cada intento
       let lastError = null;
@@ -390,13 +364,6 @@ exports.handler = async (event) => {
 
           if (status !== 422) break;
 
-          // Si la tabla en Airtable tiene columnas en UPPERCASE, reintenta una vez remapeando
-          if (!triedUppercase && isUnknownFieldError(data)) {
-            triedUppercase = true;
-            mapped = remapFieldsToUppercase(mapped);
-            continue;
-          }
-
           const { cleaned, removed } = removeUnknownFields(mapped, data);
           if (removed.length === 0) break;
 
@@ -407,18 +374,14 @@ exports.handler = async (event) => {
         }
       }
       
-      const sum = airtableErrorSummary(lastError?.data);
       return json(lastError?.status || 422, { 
         ok: false, 
-        error: (sum.message || (typeof lastError?.data?.error === 'string' ? lastError.data.error : null) || 'Airtable error'),
-        airtableErrorType: sum.type,
-        airtableMessage: sum.message,
+        error: lastError?.data?.error || 'Airtable error', 
         details: lastError?.data,
         removedFields: allRemoved,
         mappedSent: mapped 
       });
     }
-
 
     // =========================================================================
     // PUT - Actualizar registro
@@ -441,16 +404,6 @@ exports.handler = async (event) => {
         
         // Retry on unknown fields
         if (status === 422) {
-          // Reintento si la tabla usa UPPERCASE
-          if (isUnknownFieldError(data)) {
-            try {
-              const alt = remapFieldsToUppercase(mapped);
-              const resp2 = await airtableRequest('PATCH', url, { fields: alt });
-              return json(200, { ok: true, record: resp2.data, warning: { remappedToUppercase: true } });
-            } catch (e2) {
-              // continua con limpieza/remoción de campos
-            }
-          }
           const { cleaned, removed } = removeUnknownFields(mapped, data);
           if (removed.length > 0) {
             try {
@@ -474,7 +427,7 @@ exports.handler = async (event) => {
         
         return json(status, { 
           ok: false, 
-          error: (typeof data.error === 'object' && data.error && data.error.message) ? data.error.message : (data.error || 'Airtable error'), 
+          error: data.error || 'Airtable error', 
           details: data 
         });
       }
@@ -502,7 +455,7 @@ exports.handler = async (event) => {
         const data = e.response?.data || { error: 'Airtable error' };
         return json(status, { 
           ok: false, 
-          error: (typeof data.error === 'object' && data.error && data.error.message) ? data.error.message : (data.error || 'Error deleting record'), 
+          error: data.error || 'Error deleting record', 
           details: data 
         });
       }
@@ -515,7 +468,7 @@ exports.handler = async (event) => {
     const data = err.data || err.response?.data || { error: err.message || 'Server error' };
     return json(status, { 
       ok: false, 
-      error: (typeof data.error === 'object' && data.error && data.error.message) ? data.error.message : (data.error || 'Server error'), 
+      error: data.error || 'Server error', 
       details: data 
     });
   }
