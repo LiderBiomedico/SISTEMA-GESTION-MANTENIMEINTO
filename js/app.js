@@ -300,12 +300,8 @@ async function submitInventarioForm(e) {
     'SERIE': 'Serie',
     'PLACA': 'Numero de Placa',
     'NUMERO DE PLACA': 'Numero de Placa',
-    'CODIGO ECRI': 'ECRI',
-    'CÓDIGO ECRI': 'ECRI',
-    'REGISTRO INVIMA': 'Registro Sanitario',
-    'REGISTRO SANITARIO': 'Registro Sanitario',
-    'FOTO DEL EQUIPO': 'Foto equipo',
-    'FOTO EQUIPO': 'Foto equipo',
+    'CODIGO ECRI': 'Codigo ECRI',
+    'REGISTRO INVIMA': 'Registro INVIMA',
     'TIPO DE ADQUISICION': 'Tipo de Adquisicion',
     'NO. DE CONTRATO': 'No. de Contrato',
     'SERVICIO': 'Servicio',
@@ -318,9 +314,7 @@ async function submitInventarioForm(e) {
     'FECHA DE COMPRA': 'Fecha de Compra',
     'VALOR EN PESOS': 'Valor en Pesos',
     'FECHA DE RECEPCIÓN': 'Fecha de Recepcion',
-    'FECHA DE RECEPCION': 'Fecha de Recepcion',
     'FECHA DE INSTALACIÓN': 'Fecha de Instalacion',
-    'FECHA DE INSTALACION': 'Fecha de Instalacion',
     'INICIO DE GARANTIA': 'Inicio de Garantia',
     'TERMINO DE GARANTIA': 'Termino de Garantia',
     'CLASIFICACION BIOMEDICA': 'Clasificacion Biomedica',
@@ -441,88 +435,6 @@ function exportInventarioCSV() {
 }
 
 // ============================================================================
-// PROGRAMACIÓN ANUAL (Inventario)
-// ============================================================================
-// Usado por el botón: onclick="generateAnnualSchedule()" en mantenimientohslv.html
-function generateAnnualSchedule() {
-  try {
-    const freqEl = document.getElementById('invFreqSelect');
-    const startEl = document.getElementById('invStartDate');
-    const outEl = document.getElementById('invScheduleAnnual');
-
-    if (!outEl) return;
-
-    const freq = (freqEl?.value || '').trim();
-    const startRaw = (startEl?.value || '').trim();
-
-    if (!freq) {
-      alert('Selecciona la FRECUENCIA DE MTTO PREVENTIVO para generar la programación.');
-      return;
-    }
-
-    // Fecha inicial: si no hay, usar hoy
-    const start = startRaw ? new Date(startRaw + 'T00:00:00') : new Date();
-    if (Number.isNaN(start.getTime())) {
-      alert('La FECHA PROGRAMADA no es válida.');
-      return;
-    }
-
-    const monthsByFreq = {
-      'Mensual': 1,
-      'Bimestral': 2,
-      'Trimestral': 3,
-      'Cuatrimestral': 4,
-      'Semestral': 6,
-      'Anual': 12,
-    };
-    const stepMonths = monthsByFreq[freq] || 0;
-    if (!stepMonths) {
-      alert('Frecuencia no soportada para programación automática.');
-      return;
-    }
-
-    // Generar fechas en el año siguiente (máximo 12 meses)
-    const dates = [];
-    const d = new Date(start.getTime());
-    const end = new Date(start.getTime());
-    end.setFullYear(end.getFullYear() + 1);
-
-    // Normalizar al día del mes original
-    const baseDay = d.getDate();
-
-    while (d < end) {
-      // Mantener el mismo día cuando sea posible
-      const yyyy = d.getFullYear();
-      const mm = String(d.getMonth() + 1).padStart(2, '0');
-      const dd = String(d.getDate()).padStart(2, '0');
-      dates.push(`${yyyy}-${mm}-${dd}`);
-
-      // avanzar
-      const next = new Date(d.getTime());
-      next.setMonth(next.getMonth() + stepMonths);
-
-      // Ajuste: si el mes siguiente no tiene baseDay (p.ej. 31), JS salta de mes.
-      // Reforzamos para intentar mantener el día.
-      if (next.getDate() !== baseDay) {
-        // Intentar fijar el día, si se pasa, queda en último día del mes (comportamiento aceptable)
-        next.setDate(baseDay);
-      }
-      d.setTime(next.getTime());
-    }
-
-    outEl.value = dates.join(', ');
-  } catch (e) {
-    console.error('generateAnnualSchedule error', e);
-    alert('No se pudo generar la programación anual. Revisa consola.');
-  }
-}
-
-function clearAnnualSchedule() {
-  const outEl = document.getElementById('invScheduleAnnual');
-  if (outEl) outEl.value = '';
-}
-
-// ============================================================================
 // UTILIDAD
 // ============================================================================
 
@@ -575,7 +487,3 @@ window.debouncedInventarioSearch = debouncedInventarioSearch;
 window.inventarioNextPage = inventarioNextPage;
 window.inventarioPrevPage = inventarioPrevPage;
 window.exportInventarioCSV = exportInventarioCSV;
-window.generateAnnualSchedule = generateAnnualSchedule;
-window.clearAnnualSchedule = clearAnnualSchedule;
-window.generateAnnualSchedule = generateAnnualSchedule;
-window.clearAnnualSchedule = clearAnnualSchedule;

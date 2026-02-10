@@ -10,6 +10,85 @@ const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID || '';
 const TABLE_NAME = process.env.AIRTABLE_INVENTARIO_TABLE || 'Inventario';
 const AIRTABLE_API = 'https://api.airtable.com/v0';
 
+// ----- Normalización para empatar nombres de campos (Airtable es estricto) -----
+function normKey(s) {
+  return String(s || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // quita tildes
+    .replace(/[\u200B-\u200D\uFEFF]/g, '') // quita zero-width
+    .replace(/\u00A0/g, ' ') // NBSP
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ') // colapsa separadores
+    .trim();
+}
+
+// Aliases típicos del formulario -> nombres esperados en Airtable (normalizados)
+const NORM_ALIASES = {
+  // Foto
+  'foto del equipo': 'foto equipo',
+  'fotodelequipo': 'foto equipo',
+  // Registro
+  'registro invima': 'registro sanitario',
+  // Otros frecuentes
+  'codigo ecri': 'ecri',
+  'placa': 'numero de placa',
+  'valor en pesos': 'costo del equipo',
+  'vida util': 'vida util en anos',
+  'no de contrato': 'n de contrato',
+  'no. de contrato': 'n de contrato',
+  'n de contrato': 'n de contrato',
+  'n° de contrato': 'n de contrato',
+};
+
+// Cache por invocación
+let _schemaCache = null;
+
+async function loadTableSchema() {
+  if (_schemaCache) return _schemaCache;
+  if (!AIRTABLE_API_KEY || !AIRTABLE_BASE_ID) {
+    _schemaCache = { fieldsByNorm: {}, fieldTypesByName: {}, tableId: null };
+    return _schemaCache;
+  }
+
+  const url = `${AIRTABLE_API}/meta/bases/${AIRTABLE_BASE_ID}/tables`;
+  const resp = await axios.get(url, {
+    headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` },
+    timeout: 20000,
+  });
+
+  const tables = resp.data?.tables || [];
+  const table = tables.find(t => t.name === TABLE_NAME) || tables[0];
+  const fieldsByNorm = {};
+  const fieldTypesByName = {};
+  if (table && Array.isArray(table.fields)) {
+    for (const f of table.fields) {
+      const nk = normKey(f.name);
+      fieldsByNorm[nk] = f.name; // exact name
+      fieldTypesByName[f.name] = f.type || null;
+    }
+  }
+  _schemaCache = { fieldsByNorm, fieldTypesByName, tableId: table?.id || null };
+  return _schemaCache;
+}
+
+function coerceAttachmentIfNeeded(fieldName, value, fieldTypesByName) {
+  const t = fieldTypesByName[fieldName];
+  if (t !== 'multipleAttachments') return value;
+  if (value == null || value === '') return value;
+
+  // Si ya viene en formato attachment válido, se deja
+  if (Array.isArray(value) && value.length && typeof value[0] === 'object') return value;
+
+  // Si viene como URL string, convertir
+  if (typeof value === 'string' && /^https?:\/\/\S+/i.test(value.trim())) {
+    return [{ url: value.trim() }];
+  }
+
+  // Si no es URL válida, descartar para evitar 422 por tipo de dato
+  return null;
+}
+
 
 function json(statusCode, body) {
   return {
@@ -27,51 +106,45 @@ function json(statusCode, body) {
 // Mapeo de campos del formulario a columnas de Airtable
 // Soporta: Title Case (del equipoModal), UPPERCASE (del newInventario form), y variantes con tildes
 const FIELD_MAP = {
-  // --- UPPERCASE (formulario principal newInventario) ---
+  // Identificación
   'ITEM': 'Item',
   'EQUIPO': 'Equipo',
   'MARCA': 'Marca',
   'MODELO': 'Modelo',
   'SERIE': 'Serie',
   'PLACA': 'Numero de Placa',
-  'NÚMERO DE PLACA': 'Numero de Placa',
   'NUMERO DE PLACA': 'Numero de Placa',
-  'FOTO DEL EQUIPO': 'Foto equipo',
-  'FOTO EQUIPO': 'Foto equipo',
-  'FOTO DEL EQUIPO ': 'Foto equipo',
-  'FOTO EQUIPO ': 'Foto equipo',
-  'TIPO': 'Tipo',
-  // Según la vista de Airtable, el campo se llama "ECRI"
-  'CODIGO ECRI': 'ECRI',
-  'CÓDIGO ECRI': 'ECRI',
+  'NÚMERO DE PLACA': 'Numero de Placa',
 
-  // En tu Airtable el campo visible es "Registro Sanitario".
-  // Evita enviar "Registro Invima" (genera UNKNOWN_FIELD_NAME / 422)
-  'REGISTRO INVIMA': 'Registro Sanitario',
-  'REGISTRO INVIMA ': 'Registro Sanitario',
-  'REGISTRO SANITARIO': 'Registro Sanitario',
-  'TIPO DE ADQUISICION': 'Tipo de Adquisicion',
-  'NO. DE CONTRATO': 'No. de Contrato',
+  // Ubicación / clasificación
   'SERVICIO': 'Servicio',
-  'UBICACIÓN': 'Ubicacion',
   'UBICACION': 'Ubicacion',
-  'VIDA UTIL': 'Vida Util',
-  'VIDA ÚTIL': 'Vida Util',
-  'FECHA FABRICA': 'Fecha Fabrica',
-  'CERTIFICADO 2025': 'Certificado 2025',
-  'FECHA DE COMRPA': 'Fecha de Compra',
-  'FECHA DE COMPRA': 'Fecha de Compra',
-  'VALOR EN PESOS': 'Valor en Pesos',
-  'FECHA DE RECEPCIÓN': 'Fecha de Recepcion',
-  'FECHA DE RECEPCION': 'Fecha de Recepcion',
-  'FECHA DE INSTALACIÓN': 'Fecha de Instalacion',
-  'FECHA DE INSTALACION': 'Fecha de Instalacion',
-  'INICIO DE GARANTIA': 'Inicio de Garantia',
-  'TERMINO DE GARANTIA': 'Termino de Garantia',
-  'CLASIFICACION BIOMEDICA': 'Clasificacion Biomedica',
-  'CLASIFICACION DE LA TECNOLOGIA': 'Clasificacion de la Tecnologia',
-  'CLASIFICACION DEL RIESGO': 'Clasificacion del Riesgo',
-  'MANUAL': 'Manual',
+  'UBICACIÓN': 'Ubicacion',
+  'VIDA UTIL': 'Vida Util en años',
+  'VIDA ÚTIL': 'Vida Util en años',
+
+  // Campos en Airtable (según tu base)
+  'CODIGO ECRI': 'ECRI',
+  'ECRI': 'ECRI',
+  'REGISTRO INVIMA': 'Registro Sanitario',
+  'REGISTRO SANITARIO': 'Registro Sanitario',
+  // soporte alterno
+  'REGISTRO INVIMA ALT': 'Registro Invima',
+
+  // Adquisición
+  'TIPO DE ADQUISICION': 'Tipo de adquisicion',
+  'TIPO DE ADQUISICIÓN': 'Tipo de adquisicion',
+  'NO. DE CONTRATO': 'N° de Contrato',
+  'N° DE CONTRATO': 'N° de Contrato',
+  'Nº DE CONTRATO': 'N° de Contrato',
+  'VALOR EN PESOS': 'Costo del equipo',
+  'COSTO DEL EQUIPO': 'Costo del equipo',
+  'FECHA DE COMPRA': 'Fecha de compra',
+  'FECHA DE COMRPA': 'Fecha de compra',
+  'FECHA DE INSTALACION': 'Fecha de instalacion',
+  'FECHA DE INSTALACIÓN': 'Fecha de instalacion',
+
+  // Mantenimiento
   'TIPO DE MTTO': 'Tipo de MTTO',
   'COSTO DE MANTENIMIENTO': 'Costo de Mantenimiento',
   'CALIBRABLE': 'Calibrable',
@@ -80,56 +153,13 @@ const FIELD_MAP = {
   'FECHA PROGRAMADA DE MANTENIMINETO': 'Fecha Programada de Mantenimiento',
   'FRECUENCIA DE MANTENIMIENTO': 'Frecuencia de Mantenimiento',
   'PROGRAMACION DE MANTENIMIENTO ANUAL': 'Programacion de Mantenimiento Anual',
+
+  // Responsable / proveedor
   'RESPONSABLE': 'Responsable',
   'NOMBRE': 'Nombre',
   'DIRECCION': 'Direccion',
   'TELEFONO': 'Telefono',
   'CIUDAD': 'Ciudad',
-  // --- Title Case (formulario equipoModal / inventario-module.js) ---
-  'Item': 'Item',
-  'Equipo': 'Equipo',
-  'Marca': 'Marca',
-  'Modelo': 'Modelo',
-  'Serie': 'Serie',
-  'Numero de Placa': 'Numero de Placa',
-  'Foto del equipo': 'Foto equipo',
-  'Foto del Equipo': 'Foto equipo',
-  'Foto equipo': 'Foto equipo',
-  'Tipo': 'Tipo',
-  'Codigo ECRI': 'ECRI',
-  'ECRI': 'ECRI',
-  'Registro INVIMA': 'Registro Sanitario',
-  'Registro Invima': 'Registro Sanitario',
-  'Registro Sanitario': 'Registro Sanitario',
-  'Tipo de Adquisicion': 'Tipo de Adquisicion',
-  'No. de Contrato': 'No. de Contrato',
-  'Servicio': 'Servicio',
-  'Ubicacion': 'Ubicacion',
-  'Ubicación': 'Ubicacion',
-  'Vida Util': 'Vida Util',
-  'Fecha de Compra': 'Fecha de Compra',
-  'Valor en Pesos': 'Valor en Pesos',
-  'Fecha de Instalacion': 'Fecha de Instalacion',
-  'Fecha de Instalación': 'Fecha de Instalacion',
-  'Inicio de Garantia': 'Inicio de Garantia',
-  'Termino de Garantia': 'Termino de Garantia',
-  'Clasificacion Biomedica': 'Clasificacion Biomedica',
-  'Clasificacion de la Tecnologia': 'Clasificacion de la Tecnologia',
-  'Clasificacion del Riesgo': 'Clasificacion del Riesgo',
-  'Manual': 'Manual',
-  'Tipo de MTTO': 'Tipo de MTTO',
-  'Costo de Mantenimiento': 'Costo de Mantenimiento',
-  'Calibrable': 'Calibrable',
-  'N. Certificado': 'N. Certificado',
-  'Frecuencia de MTTO Preventivo': 'Frecuencia de MTTO Preventivo',
-  'Frecuencia de Mantenimiento': 'Frecuencia de Mantenimiento',
-  'Fecha Programada de Mantenimiento': 'Fecha Programada de Mantenimiento',
-  'Programacion de Mantenimiento Anual': 'Programacion de Mantenimiento Anual',
-  'Responsable': 'Responsable',
-  'Nombre': 'Nombre',
-  'Direccion': 'Direccion',
-  'Telefono': 'Telefono',
-  'Ciudad': 'Ciudad',
 };
 
 const NUMBER_FIELDS = new Set([
@@ -216,31 +246,51 @@ function normalizeValue(fieldName, value) {
   return value;
 }
 
-function mapAndNormalizeFields(inputFields) {
+
+async function mapAndNormalizeFields(inputFields) {
+  const { fieldsByNorm, fieldTypesByName } = await loadTableSchema();
+
+  // Si no hay esquema, se comporta como antes (pero con aliases normalizados)
+  const hasSchema = fieldsByNorm && Object.keys(fieldsByNorm).length > 0;
+
   const out = {};
   for (const [k, v] of Object.entries(inputFields || {})) {
-    const key = String(k || '').trim();
-    const mapped = FIELD_MAP[key] || key;
-    
-    // Campo Manual como attachment si es URL
-    if (mapped === 'Manual' && isUrl(v)) {
-      out[mapped] = [{ url: String(v).trim() }];
-      continue;
+    const rawKey = String(k || '').trim();
+
+    // 1) map explícito (por compatibilidad con versiones anteriores)
+    const mappedName = FIELD_MAP[rawKey] || rawKey;
+
+    // 2) normaliza y aplica alias (ej: "Foto del equipo" -> "Foto equipo")
+    let nk = normKey(mappedName);
+    if (NORM_ALIASES[nk]) nk = normKey(NORM_ALIASES[nk]);
+
+    // 3) resuelve al nombre EXACTO en Airtable usando esquema (tildes/espacios)
+    let finalName = mappedName;
+    if (hasSchema) {
+      const exact = fieldsByNorm[nk];
+      if (!exact) {
+        // No existe en Airtable: se descarta silenciosamente
+        continue;
+      }
+      finalName = exact;
     }
 
-    // Campo Foto equipo como attachment si es URL
-    if (mapped === 'Foto equipo' && isUrl(v)) {
-      out[mapped] = [{ url: String(v).trim() }];
-      continue;
-    }
-    
-    out[mapped] = normalizeValue(mapped, v);
+    // 4) normaliza valor y aplica coerción por tipo (attachments, etc.)
+    let normVal = normalizeValue(finalName, v);
+    normVal = coerceAttachmentIfNeeded(finalName, normVal, fieldTypesByName);
+
+    // Si coerción devolvió null (por no ser URL válida en attachment), no enviar el campo
+    if (normVal === null) continue;
+
+    out[finalName] = normVal;
   }
+
   console.log('[inventario] Mapped fields:', JSON.stringify(out));
   return out;
 }
 
 function removeUnknownFields(fields, errData) {
+(fields, errData) {
   // Airtable devuelve errores como: { error: { type: 'UNKNOWN_FIELD_NAME', message: 'Unknown field name: "Xyz"' } }
   // o { error: 'UNKNOWN_FIELD_NAME', message: 'Unknown field name: "Xyz"' }
   const errObj = errData?.error || errData || {};
@@ -261,30 +311,22 @@ function removeUnknownFields(fields, errData) {
   
   if (unknown.size === 0) return { cleaned: fields, removed: [] };
   
-  const norm = (s) => String(s || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, '');
-
   const cleaned = { ...fields };
   const removed = [];
-
-  const unknownNorm = new Set(Array.from(unknown).map(norm).filter(Boolean));
-
-  for (const key of Object.keys(cleaned)) {
-    const nk = norm(key);
-    if (unknownNorm.has(nk)) {
-      removed.push(key);
-      delete cleaned[key];
+  for (const u of unknown) {
+    if (u in cleaned) {
+      delete cleaned[u];
+      removed.push(u);
+      continue;
+    }
+    // Intento robusto: comparar por clave normalizada (tildes/espacios invisibles)
+    const nu = normKey(u);
+    const hit = Object.keys(cleaned).find(k => normKey(k) === nu);
+    if (hit) {
+      delete cleaned[hit];
+      removed.push(hit);
     }
   }
-
-  // Por compatibilidad: si además viene exactamente el nombre, también lo registramos
-  for (const u of unknown) {
-    if (u in fields && !removed.includes(u)) removed.push(u);
-  }
-
   return { cleaned, removed };
 }
 
@@ -359,7 +401,7 @@ exports.handler = async (event) => {
     // POST - Crear registro
     // =========================================================================
     if (event.httpMethod === 'POST') {
-      let mapped = mapAndNormalizeFields(body.fields || {});
+      let mapped = await mapAndNormalizeFields(body.fields || {});
       let allRemoved = [];
       
       // Intentar hasta 3 veces, removiendo campos desconocidos en cada intento
@@ -408,7 +450,7 @@ exports.handler = async (event) => {
         return json(400, { ok: false, error: 'Missing record id' });
       }
       
-      const mapped = mapAndNormalizeFields(body.fields || {});
+      const mapped = await mapAndNormalizeFields(body.fields || {});
       const url = `${baseUrl}/${encodeURIComponent(id)}`;
       
       try {

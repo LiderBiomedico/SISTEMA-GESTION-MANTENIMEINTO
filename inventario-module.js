@@ -161,7 +161,7 @@ function renderTable() {
         const placa = f['Numero de Placa'] || f['PLACA'] || f['Número de Placa'] || '';
         const servicio = f['Servicio'] || f['SERVICIO'] || '';
         const ubicacion = f['Ubicacion'] || f['Ubicación'] || f['UBICACIÓN'] || '';
-        const vidaUtil = f['Vida Util en años'] || f['Vida Util'] || f['VIDA UTIL'] || '';
+        const vidaUtil = f['Vida Util'] || f['VIDA UTIL'] || '';
         const fechaMtto = f['Fecha Programada de Mantenimiento'] || f['FECHA PROGRAMADA DE MANTENIMINETO'] || '';
 
         // Estado basado en fecha
