@@ -36,26 +36,37 @@ const FIELD_MAP = {
   'PLACA': 'Numero de Placa',
   'NÚMERO DE PLACA': 'Numero de Placa',
   'NUMERO DE PLACA': 'Numero de Placa',
+  'FOTO DEL EQUIPO': 'Foto del equipo',
+  'TIPO': 'Tipo',
   'CODIGO ECRI': 'ECRI',
   'ECRI': 'ECRI',
-  'REGISTRO INVIMA': 'Registro Sanitario',
+  'CLASIFICACION': 'Clasificacion',
+  'REGISTRO INVIMA': 'Registro Invima',
   'REGISTRO SANITARIO': 'Registro Sanitario',
-  'TIPO DE ADQUISICION': 'Tipo de Adquisicion',
-  'NO. DE CONTRATO': 'No. de Contrato',
+  'PERMISO DE COMERCIALIZACION': 'Permiso de comercializacion',
+  'CLASIFICACION POSTERIOR': 'Clasificacion Posterior',
+  'FRECUENCIA DE CALIBRACION': 'Frecuencia de calibracion',
+  'SALDO': 'Saldo',
+  'TIPO DE ADQUISICION': 'Tipo de adquisición',
+  'NO. DE CONTRATO': 'N° de Contrato',
+  'N° DE CONTRATO': 'N° de Contrato',
   'SERVICIO': 'Servicio',
   'UBICACIÓN': 'Ubicacion',
   'UBICACION': 'Ubicacion',
-  'VIDA UTIL': 'Vida Util',
-  'VIDA ÚTIL': 'Vida Util',
+  'VIDA UTIL': 'Vida Util en años',
+  'VIDA UTIL EN AÑOS': 'Vida Util en años',
+  'VIDA ÚTIL': 'Vida Util en años',
   'FECHA FABRICA': 'Fecha Fabrica',
   'CERTIFICADO 2025': 'Certificado 2025',
-  'FECHA DE COMRPA': 'Fecha de Compra',
-  'FECHA DE COMPRA': 'Fecha de Compra',
-  'VALOR EN PESOS': 'Valor en Pesos',
+  'FECHA DE COMRPA': 'Fecha de compra',
+  'FECHA DE COMPRA': 'Fecha de compra',
+  'COSTO DEL EQUIPO': 'Costo del equipo',
+  'VALOR EN PESOS': 'Costo del equipo',
   'FECHA DE RECEPCIÓN': 'Fecha de Recepcion',
   'FECHA DE RECEPCION': 'Fecha de Recepcion',
-  'FECHA DE INSTALACIÓN': 'Fecha de Instalacion',
-  'FECHA DE INSTALACION': 'Fecha de Instalacion',
+  'FECHA DE INSTALACIÓN': 'Fecha de instalacion',
+  'FECHA DE INSTALACION': 'Fecha de instalacion',
+  'CLASIFICACIÓN': 'Clasificación',
   'INICIO DE GARANTIA': 'Inicio de Garantia',
   'TERMINO DE GARANTIA': 'Termino de Garantia',
   'CLASIFICACION BIOMEDICA': 'Clasificacion Biomedica',
@@ -82,18 +93,33 @@ const FIELD_MAP = {
   'Modelo': 'Modelo',
   'Serie': 'Serie',
   'Numero de Placa': 'Numero de Placa',
-  'Codigo ECRI': 'Codigo ECRI',
-  'Registro INVIMA': 'Registro INVIMA',
-  'Tipo de Adquisicion': 'Tipo de Adquisicion',
-  'No. de Contrato': 'No. de Contrato',
+  'Foto del equipo': 'Foto del equipo',
+  'Tipo': 'Tipo',
+  'Codigo ECRI': 'ECRI',
+  'Registro Invima': 'Registro Invima',
+  'Registro INVIMA': 'Registro Invima',
+  'Registro Sanitario': 'Registro Sanitario',
+  'Permiso de comercializacion': 'Permiso de comercializacion',
+  'Clasificacion Posterior': 'Clasificacion Posterior',
+  'Frecuencia de calibracion': 'Frecuencia de calibracion',
+  'Saldo': 'Saldo',
+  'Tipo de Adquisicion': 'Tipo de adquisición',
+  'Tipo de adquisición': 'Tipo de adquisición',
+  'No. de Contrato': 'N° de Contrato',
+  'N° de Contrato': 'N° de Contrato',
   'Servicio': 'Servicio',
   'Ubicacion': 'Ubicacion',
   'Ubicación': 'Ubicacion',
-  'Vida Util': 'Vida Util',
-  'Fecha de Compra': 'Fecha de Compra',
-  'Valor en Pesos': 'Valor en Pesos',
-  'Fecha de Instalacion': 'Fecha de Instalacion',
-  'Fecha de Instalación': 'Fecha de Instalacion',
+  'Vida Util': 'Vida Util en años',
+  'Vida Util en años': 'Vida Util en años',
+  'Fecha de Compra': 'Fecha de compra',
+  'Fecha de compra': 'Fecha de compra',
+  'Costo del equipo': 'Costo del equipo',
+  'Valor en Pesos': 'Costo del equipo',
+  'Fecha de Instalacion': 'Fecha de instalacion',
+  'Fecha de instalacion': 'Fecha de instalacion',
+  'Fecha de Instalación': 'Fecha de instalacion',
+  'Clasificación': 'Clasificación',
   'Inicio de Garantia': 'Inicio de Garantia',
   'Termino de Garantia': 'Termino de Garantia',
   'Clasificacion Biomedica': 'Clasificacion Biomedica',
@@ -138,16 +164,17 @@ const FIELD_MAP_NORM = (() => {
 
 
 const NUMBER_FIELDS = new Set([
-  'Valor en Pesos',
+  'Costo del equipo',
   'Costo de Mantenimiento',
-  'Vida Util'
+  'Vida Util en años',
+  'Saldo'
 ]);
 
 const BOOL_FIELDS = new Set(['Calibrable']);
 
 const DATE_FIELDS = new Set([
-  'Fecha de Compra',
-  'Fecha de Instalacion',
+  'Fecha de compra',
+  'Fecha de instalacion',
   'Inicio de Garantia',
   'Termino de Garantia',
   'Fecha Programada de Mantenimiento',
@@ -230,6 +257,12 @@ function mapAndNormalizeFields(inputFields) {
     
     // Campo Manual como attachment si es URL
     if (mapped === 'Manual' && isUrl(v)) {
+      out[mapped] = [{ url: String(v).trim() }];
+      continue;
+    }
+    
+    // Campo Foto del equipo como attachment si es URL
+    if (mapped === 'Foto del equipo' && isUrl(v)) {
       out[mapped] = [{ url: String(v).trim() }];
       continue;
     }
