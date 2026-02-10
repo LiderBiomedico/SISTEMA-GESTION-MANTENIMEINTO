@@ -36,29 +36,36 @@ const FIELD_MAP = {
   'PLACA': 'Numero de Placa',
   'NÚMERO DE PLACA': 'Numero de Placa',
   'NUMERO DE PLACA': 'Numero de Placa',
-   'FOTO DEL EQUIPO': 'Foto equipo',
-   'Foto del equipo': 'Foto equipo',
+  // Foto (en Airtable el campo real es "Foto equipo")
+  'FOTO DEL EQUIPO': 'Foto equipo',
   'FOTO EQUIPO': 'Foto equipo',
+  'Foto del equipo': 'Foto equipo',
   'Foto equipo': 'Foto equipo',
+
+  // ECRI (en Airtable el campo real es "ECRI")
   'CODIGO ECRI': 'ECRI',
-  'ECRI': 'ECRI',
-  'REGISTRO INVIMA': 'Registro Invima',
+  'CÓDIGO ECRI': 'ECRI',
+
+  // Registros
   'REGISTRO SANITARIO': 'Registro Sanitario',
-  'Registro Sanitario': 'Registro Sanitario',
-  'Registro Invima': 'Registro Invima',
-  'TIPO DE ADQUISICION': 'Tipo de Adquisicion',
-  'NO. DE CONTRATO': 'No. de Contrato',
+  'REGISTRO INVIMA': 'Registro Invima',
+
+  // Adquisición
+  'TIPO DE ADQUISICION': 'Tipo de adquisicion',
+  'TIPO DE ADQUISICIÓN': 'Tipo de adquisicion',
+  'NO. DE CONTRATO': 'N° de Contrato',
+  'N° DE CONTRATO': 'N° de Contrato',
+  'Nº DE CONTRATO': 'N° de Contrato',
   'SERVICIO': 'Servicio',
   'UBICACIÓN': 'Ubicacion',
   'UBICACION': 'Ubicacion',
   'VIDA UTIL': 'Vida Util en años',
   'VIDA ÚTIL': 'Vida Util en años',
-  'VIDA ÚTIL': 'Vida Util',
   'FECHA FABRICA': 'Fecha Fabrica',
   'CERTIFICADO 2025': 'Certificado 2025',
   'FECHA DE COMRPA': 'Fecha de Compra',
   'FECHA DE COMPRA': 'Fecha de Compra',
-  'VALOR EN PESOS': 'Valor en Pesos',
+  'VALOR EN PESOS': 'Costo del equipo',
   'FECHA DE RECEPCIÓN': 'Fecha de Recepcion',
   'FECHA DE RECEPCION': 'Fecha de Recepcion',
   'FECHA DE INSTALACIÓN': 'Fecha de Instalacion',
@@ -89,18 +96,29 @@ const FIELD_MAP = {
   'Modelo': 'Modelo',
   'Serie': 'Serie',
   'Numero de Placa': 'Numero de Placa',
-  'Codigo ECRI': 'Codigo ECRI',
-  'Registro INVIMA': 'Registro INVIMA',
-  'Tipo de Adquisicion': 'Tipo de Adquisicion',
-  'No. de Contrato': 'No. de Contrato',
+  'Foto del equipo': 'Foto equipo',
+  'Foto equipo': 'Foto equipo',
+  'ECRI': 'ECRI',
+  'Codigo ECRI': 'ECRI',
+  'Registro Sanitario': 'Registro Sanitario',
+  'Registro Invima': 'Registro Invima',
+  'Registro INVIMA': 'Registro Invima',
+  'Tipo de adquisicion': 'Tipo de adquisicion',
+  'Tipo de Adquisicion': 'Tipo de adquisicion',
+  'N° de Contrato': 'N° de Contrato',
+  'No. de Contrato': 'N° de Contrato',
   'Servicio': 'Servicio',
   'Ubicacion': 'Ubicacion',
   'Ubicación': 'Ubicacion',
-  'Vida Util': 'Vida Util',
-  'Fecha de Compra': 'Fecha de Compra',
-  'Valor en Pesos': 'Valor en Pesos',
-  'Fecha de Instalacion': 'Fecha de Instalacion',
-  'Fecha de Instalación': 'Fecha de Instalacion',
+  'Vida Util': 'Vida Util en años',
+  'Vida Util en años': 'Vida Util en años',
+  'Fecha de Compra': 'Fecha de compra',
+  'Fecha de compra': 'Fecha de compra',
+  'Valor en Pesos': 'Costo del equipo',
+  'Costo del equipo': 'Costo del equipo',
+  'Fecha de Instalacion': 'Fecha de instalacion',
+  'Fecha de Instalación': 'Fecha de instalacion',
+  'Fecha de instalacion': 'Fecha de instalacion',
   'Inicio de Garantia': 'Inicio de Garantia',
   'Termino de Garantia': 'Termino de Garantia',
   'Clasificacion Biomedica': 'Clasificacion Biomedica',
@@ -123,16 +141,16 @@ const FIELD_MAP = {
 };
 
 const NUMBER_FIELDS = new Set([
-  'Valor en Pesos',
+  'Costo del equipo',
   'Costo de Mantenimiento',
-  'Vida Util'
+  'Vida Util en años'
 ]);
 
 const BOOL_FIELDS = new Set(['Calibrable']);
 
 const DATE_FIELDS = new Set([
-  'Fecha de Compra',
-  'Fecha de Instalacion',
+  'Fecha de compra',
+  'Fecha de instalacion',
   'Inicio de Garantia',
   'Termino de Garantia',
   'Fecha Programada de Mantenimiento',
@@ -212,7 +230,7 @@ function mapAndNormalizeFields(inputFields) {
     const key = String(k || '').trim();
     const mapped = FIELD_MAP[key] || key;
     
-    // Campo Foto del equipo como attachment si es URL
+    // Campo Foto equipo como attachment si es URL
     if (mapped === 'Foto equipo' && isUrl(v)) {
       out[mapped] = [{ url: String(v).trim() }];
       continue;

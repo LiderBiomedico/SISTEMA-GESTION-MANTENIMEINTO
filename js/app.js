@@ -300,19 +300,22 @@ async function submitInventarioForm(e) {
     'SERIE': 'Serie',
     'PLACA': 'Numero de Placa',
     'NUMERO DE PLACA': 'Numero de Placa',
-    'CODIGO ECRI': 'Codigo ECRI',
-    'REGISTRO INVIMA': 'Registro INVIMA',
-    'TIPO DE ADQUISICION': 'Tipo de Adquisicion',
-    'NO. DE CONTRATO': 'No. de Contrato',
+    'FOTO DEL EQUIPO': 'Foto equipo',
+    'FOTO EQUIPO': 'Foto equipo',
+    'CODIGO ECRI': 'ECRI',
+    'REGISTRO SANITARIO': 'Registro Sanitario',
+    'REGISTRO INVIMA': 'Registro Invima',
+    'TIPO DE ADQUISICION': 'Tipo de adquisicion',
+    'NO. DE CONTRATO': 'N° de Contrato',
     'SERVICIO': 'Servicio',
     'UBICACIÓN': 'Ubicacion',
     'UBICACION': 'Ubicacion',
-    'VIDA UTIL': 'Vida Util',
+    'VIDA UTIL': 'Vida Util en años',
     'FECHA FABRICA': 'Fecha Fabrica',
     'CERTIFICADO 2025': 'Certificado 2025',
     'FECHA DE COMRPA': 'Fecha de Compra',
     'FECHA DE COMPRA': 'Fecha de Compra',
-    'VALOR EN PESOS': 'Valor en Pesos',
+    'VALOR EN PESOS': 'Costo del equipo',
     'FECHA DE RECEPCIÓN': 'Fecha de Recepcion',
     'FECHA DE INSTALACIÓN': 'Fecha de Instalacion',
     'INICIO DE GARANTIA': 'Inicio de Garantia',
@@ -487,3 +490,57 @@ window.debouncedInventarioSearch = debouncedInventarioSearch;
 window.inventarioNextPage = inventarioNextPage;
 window.inventarioPrevPage = inventarioPrevPage;
 window.exportInventarioCSV = exportInventarioCSV;
+
+// ============================================================================
+// UTILIDAD: Generar programación anual (botón del formulario de inventario)
+// Evita el error "generateAnnualSchedule is not defined".
+// Usa:
+//  - #invStartDate (FECHA PROGRAMADA DE MANTENIMINETO)
+//  - #invFreqSelect (FRECUENCIA DE MTTO PREVENTIVO)
+//  - #invScheduleAnnual (PROGRAMACION DE MANTENIMIENTO ANUAL)
+// ============================================================================
+
+function generateAnnualSchedule() {
+  try {
+    const startEl = document.getElementById('invStartDate');
+    const freqEl = document.getElementById('invFreqSelect');
+    const outEl = document.getElementById('invScheduleAnnual');
+    if (!startEl || !freqEl || !outEl) return;
+
+    const start = startEl.value ? new Date(startEl.value + 'T00:00:00') : null;
+    if (!start || isNaN(start.getTime())) {
+      alert('Selecciona una fecha programada válida para generar la programación.');
+      return;
+    }
+
+    const freqRaw = String(freqEl.value || '').toLowerCase();
+    // Mapeo a meses por intervalo
+    const monthsStep = (
+      freqRaw.includes('mens') ? 1 :
+      freqRaw.includes('bimes') ? 2 :
+      freqRaw.includes('trimes') ? 3 :
+      freqRaw.includes('cuatr') ? 4 :
+      freqRaw.includes('semes') ? 6 :
+      freqRaw.includes('anual') ? 12 :
+      3
+    );
+
+    const dates = [];
+    const d = new Date(start);
+    // Generar 12 meses hacia adelante (incluye fecha inicial)
+    for (let m = 0; m < 12; m += monthsStep) {
+      const dd = new Date(d);
+      dd.setMonth(d.getMonth() + m);
+      // Normalizar posibles desbordes al final de mes
+      if (dd.getDate() !== d.getDate()) {
+        dd.setDate(0);
+      }
+      dates.push(dd.toISOString().slice(0, 10));
+    }
+    outEl.value = dates.join(', ');
+  } catch (e) {
+    console.error('Error generando programación anual:', e);
+  }
+}
+
+window.generateAnnualSchedule = generateAnnualSchedule;
