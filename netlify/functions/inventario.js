@@ -38,24 +38,48 @@ const FIELD_MAP = {
   'NUMERO DE PLACA': 'Numero de Placa',
   'CODIGO ECRI': 'ECRI',
   'ECRI': 'ECRI',
-  'REGISTRO INVIMA': 'Registro Sanitario',
+  // En Airtable aparecen variantes según la vista: "Registro Sanitario" y "Registro Invima"
+  'REGISTRO INVIMA': 'Registro Invima',
   'REGISTRO SANITARIO': 'Registro Sanitario',
-  'TIPO DE ADQUISICION': 'Tipo de Adquisicion',
-  'NO. DE CONTRATO': 'No. de Contrato',
+  'REGISTRO SANITARIO (INVIMA)': 'Registro Sanitario',
+  // Adquisición
+  'TIPO DE ADQUISICION': 'Tipo de adquisicion',
+  'TIPO DE ADQUISICIÓN': 'Tipo de adquisicion',
+  'TIPO DE ADQUISICION (COMPRA/DONACION/COMODATO)': 'Tipo de adquisicion',
+  'NO. DE CONTRATO': 'N° de Contrato',
+  'N° DE CONTRATO': 'N° de Contrato',
+  'Nº DE CONTRATO': 'N° de Contrato',
+  'NUMERO DE CONTRATO': 'N° de Contrato',
+  'SEDE': 'Sede',
+  // Campos visibles en la vista principal de Airtable
+  'FOTO DEL EQUIPO': 'Foto del equipo',
+  'FOTO DE EQUIPO': 'Foto del equipo',
+  'TIPO': 'Tipo',
+  // Clasificaciones / permisos (los nombres exactos pueden variar por vista)
+  'PERMISO DE': 'Permiso de',
+  'PERMISO DE USO': 'Permiso de',
+  'PERMISO DE FUNCIONAMIENTO': 'Permiso de',
+  'CLASIFICACION POR': 'Clasificacion Por',
+  'CLASIFICACIÓN POR': 'Clasificacion Por',
+  'CLASIFICACION': 'Clasificación',
+  'CLASIFICACIÓN': 'Clasificación',
+  // Costos / vida útil
+  'COSTO DEL EQUIPO': 'Costo del equipo',
+  'VALOR EN PESOS': 'Costo del equipo',
+  'VIDA UTIL': 'Vida Util en años',
+  'VIDA ÚTIL': 'Vida Util en años',
+  'VIDA UTIL EN AÑOS': 'Vida Util en años',
   'SERVICIO': 'Servicio',
   'UBICACIÓN': 'Ubicacion',
   'UBICACION': 'Ubicacion',
-  'VIDA UTIL': 'Vida Util',
-  'VIDA ÚTIL': 'Vida Util',
   'FECHA FABRICA': 'Fecha Fabrica',
   'CERTIFICADO 2025': 'Certificado 2025',
-  'FECHA DE COMRPA': 'Fecha de Compra',
-  'FECHA DE COMPRA': 'Fecha de Compra',
-  'VALOR EN PESOS': 'Valor en Pesos',
+  'FECHA DE COMRPA': 'Fecha de compra',
+  'FECHA DE COMPRA': 'Fecha de compra',
   'FECHA DE RECEPCIÓN': 'Fecha de Recepcion',
   'FECHA DE RECEPCION': 'Fecha de Recepcion',
-  'FECHA DE INSTALACIÓN': 'Fecha de Instalacion',
-  'FECHA DE INSTALACION': 'Fecha de Instalacion',
+  'FECHA DE INSTALACIÓN': 'Fecha de instalacion',
+  'FECHA DE INSTALACION': 'Fecha de instalacion',
   'INICIO DE GARANTIA': 'Inicio de Garantia',
   'TERMINO DE GARANTIA': 'Termino de Garantia',
   'CLASIFICACION BIOMEDICA': 'Clasificacion Biomedica',
@@ -90,10 +114,12 @@ const FIELD_MAP = {
   'Ubicacion': 'Ubicacion',
   'Ubicación': 'Ubicacion',
   'Vida Util': 'Vida Util',
-  'Fecha de Compra': 'Fecha de Compra',
+  'Fecha de Compra': 'Fecha de compra',
+  'Fecha de compra': 'Fecha de compra',
   'Valor en Pesos': 'Valor en Pesos',
-  'Fecha de Instalacion': 'Fecha de Instalacion',
-  'Fecha de Instalación': 'Fecha de Instalacion',
+  'Fecha de Instalacion': 'Fecha de instalacion',
+  'Fecha de Instalación': 'Fecha de instalacion',
+  'Fecha de instalacion': 'Fecha de instalacion',
   'Inicio de Garantia': 'Inicio de Garantia',
   'Termino de Garantia': 'Termino de Garantia',
   'Clasificacion Biomedica': 'Clasificacion Biomedica',
@@ -113,6 +139,17 @@ const FIELD_MAP = {
   'Direccion': 'Direccion',
   'Telefono': 'Telefono',
   'Ciudad': 'Ciudad',
+  // Campos adicionales (según vistas de Airtable)
+  'Sede': 'Sede',
+  'Foto del equipo': 'Foto del equipo',
+  'Tipo': 'Tipo',
+  'Registro Invima': 'Registro Invima',
+  'Registro Sanitario': 'Registro Sanitario',
+  'Costo del equipo': 'Costo del equipo',
+  'Vida Util en años': 'Vida Util en años',
+  'Permiso de': 'Permiso de',
+  'Clasificacion Por': 'Clasificacion Por',
+  'Clasificación': 'Clasificación',
 };
 
 function normalizeKey(key) {
@@ -138,21 +175,27 @@ const FIELD_MAP_NORM = (() => {
 
 
 const NUMBER_FIELDS = new Set([
+  // En Airtable el campo se llama "Costo del equipo" (en el formulario puede venir como "Valor en Pesos")
+  'Costo del equipo',
   'Valor en Pesos',
   'Costo de Mantenimiento',
-  'Vida Util'
+  'Vida Util',
+  'Vida Util en años'
 ]);
 
 const BOOL_FIELDS = new Set(['Calibrable']);
 
 const DATE_FIELDS = new Set([
   'Fecha de Compra',
+  'Fecha de compra',
   'Fecha de Instalacion',
+  'Fecha de instalacion',
   'Inicio de Garantia',
   'Termino de Garantia',
   'Fecha Programada de Mantenimiento',
   'Fecha Fabrica',
-  'Fecha de Recepcion'
+  'Fecha de Recepcion',
+  'Fecha de recepción'
 ]);
 
 function isUrl(s) {
