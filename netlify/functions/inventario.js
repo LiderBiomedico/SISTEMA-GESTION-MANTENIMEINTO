@@ -36,37 +36,26 @@ const FIELD_MAP = {
   'PLACA': 'Numero de Placa',
   'NÚMERO DE PLACA': 'Numero de Placa',
   'NUMERO DE PLACA': 'Numero de Placa',
-  'FOTO DEL EQUIPO': 'Foto del equipo',
-  'TIPO': 'Tipo',
-  'CODIGO ECRI': 'ECRI',
-  'ECRI': 'ECRI',
-  'CLASIFICACION': 'Clasificacion',
-  'REGISTRO INVIMA': 'Registro Invima',
-  'REGISTRO SANITARIO': 'Registro Sanitario',
-  'PERMISO DE COMERCIALIZACION': 'Permiso de comercializacion',
-  'CLASIFICACION POSTERIOR': 'Clasificacion Posterior',
-  'FRECUENCIA DE CALIBRACION': 'Frecuencia de calibracion',
-  'SALDO': 'Saldo',
-  'TIPO DE ADQUISICION': 'Tipo de adquisición',
-  'NO. DE CONTRATO': 'N° de Contrato',
-  'N° DE CONTRATO': 'N° de Contrato',
+   'FOTO DEL EQUIPO': 'Foto del equipo',
+   'Foto del equipo': 'Foto del equipo',
+  'CODIGO ECRI': 'Codigo ECRI',
+  'REGISTRO INVIMA': 'Registro INVIMA',
+  'TIPO DE ADQUISICION': 'Tipo de Adquisicion',
+  'NO. DE CONTRATO': 'No. de Contrato',
   'SERVICIO': 'Servicio',
   'UBICACIÓN': 'Ubicacion',
   'UBICACION': 'Ubicacion',
-  'VIDA UTIL': 'Vida Util en años',
-  'VIDA UTIL EN AÑOS': 'Vida Util en años',
-  'VIDA ÚTIL': 'Vida Util en años',
+  'VIDA UTIL': 'Vida Util',
+  'VIDA ÚTIL': 'Vida Util',
   'FECHA FABRICA': 'Fecha Fabrica',
   'CERTIFICADO 2025': 'Certificado 2025',
-  'FECHA DE COMRPA': 'Fecha de compra',
-  'FECHA DE COMPRA': 'Fecha de compra',
-  'COSTO DEL EQUIPO': 'Costo del equipo',
-  'VALOR EN PESOS': 'Costo del equipo',
+  'FECHA DE COMRPA': 'Fecha de Compra',
+  'FECHA DE COMPRA': 'Fecha de Compra',
+  'VALOR EN PESOS': 'Valor en Pesos',
   'FECHA DE RECEPCIÓN': 'Fecha de Recepcion',
   'FECHA DE RECEPCION': 'Fecha de Recepcion',
-  'FECHA DE INSTALACIÓN': 'Fecha de instalacion',
-  'FECHA DE INSTALACION': 'Fecha de instalacion',
-  'CLASIFICACIÓN': 'Clasificación',
+  'FECHA DE INSTALACIÓN': 'Fecha de Instalacion',
+  'FECHA DE INSTALACION': 'Fecha de Instalacion',
   'INICIO DE GARANTIA': 'Inicio de Garantia',
   'TERMINO DE GARANTIA': 'Termino de Garantia',
   'CLASIFICACION BIOMEDICA': 'Clasificacion Biomedica',
@@ -93,33 +82,18 @@ const FIELD_MAP = {
   'Modelo': 'Modelo',
   'Serie': 'Serie',
   'Numero de Placa': 'Numero de Placa',
-  'Foto del equipo': 'Foto del equipo',
-  'Tipo': 'Tipo',
-  'Codigo ECRI': 'ECRI',
-  'Registro Invima': 'Registro Invima',
-  'Registro INVIMA': 'Registro Invima',
-  'Registro Sanitario': 'Registro Sanitario',
-  'Permiso de comercializacion': 'Permiso de comercializacion',
-  'Clasificacion Posterior': 'Clasificacion Posterior',
-  'Frecuencia de calibracion': 'Frecuencia de calibracion',
-  'Saldo': 'Saldo',
-  'Tipo de Adquisicion': 'Tipo de adquisición',
-  'Tipo de adquisición': 'Tipo de adquisición',
-  'No. de Contrato': 'N° de Contrato',
-  'N° de Contrato': 'N° de Contrato',
+  'Codigo ECRI': 'Codigo ECRI',
+  'Registro INVIMA': 'Registro INVIMA',
+  'Tipo de Adquisicion': 'Tipo de Adquisicion',
+  'No. de Contrato': 'No. de Contrato',
   'Servicio': 'Servicio',
   'Ubicacion': 'Ubicacion',
   'Ubicación': 'Ubicacion',
-  'Vida Util': 'Vida Util en años',
-  'Vida Util en años': 'Vida Util en años',
-  'Fecha de Compra': 'Fecha de compra',
-  'Fecha de compra': 'Fecha de compra',
-  'Costo del equipo': 'Costo del equipo',
-  'Valor en Pesos': 'Costo del equipo',
-  'Fecha de Instalacion': 'Fecha de instalacion',
-  'Fecha de instalacion': 'Fecha de instalacion',
-  'Fecha de Instalación': 'Fecha de instalacion',
-  'Clasificación': 'Clasificación',
+  'Vida Util': 'Vida Util',
+  'Fecha de Compra': 'Fecha de Compra',
+  'Valor en Pesos': 'Valor en Pesos',
+  'Fecha de Instalacion': 'Fecha de Instalacion',
+  'Fecha de Instalación': 'Fecha de Instalacion',
   'Inicio de Garantia': 'Inicio de Garantia',
   'Termino de Garantia': 'Termino de Garantia',
   'Clasificacion Biomedica': 'Clasificacion Biomedica',
@@ -141,40 +115,17 @@ const FIELD_MAP = {
   'Ciudad': 'Ciudad',
 };
 
-function normalizeKey(key) {
-  return String(key || '')
-    .replace(/[\u200B-\u200D\uFEFF]/g, '') // zero-width chars
-    .replace(/\u00A0/g, ' ')                // NBSP
-    .trim();
-}
-
-// Mapa normalizado (case-insensitive, sin tildes) para máxima compatibilidad con formularios
-function stripAccents(s) {
-  return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-}
-
-const FIELD_MAP_NORM = (() => {
-  const out = {};
-  for (const [k, v] of Object.entries(FIELD_MAP)) {
-    const kk = stripAccents(normalizeKey(k)).toUpperCase();
-    out[kk] = v;
-  }
-  return out;
-})();
-
-
 const NUMBER_FIELDS = new Set([
-  'Costo del equipo',
+  'Valor en Pesos',
   'Costo de Mantenimiento',
-  'Vida Util en años',
-  'Saldo'
+  'Vida Util'
 ]);
 
 const BOOL_FIELDS = new Set(['Calibrable']);
 
 const DATE_FIELDS = new Set([
-  'Fecha de compra',
-  'Fecha de instalacion',
+  'Fecha de Compra',
+  'Fecha de Instalacion',
   'Inicio de Garantia',
   'Termino de Garantia',
   'Fecha Programada de Mantenimiento',
@@ -251,18 +202,17 @@ function normalizeValue(fieldName, value) {
 function mapAndNormalizeFields(inputFields) {
   const out = {};
   for (const [k, v] of Object.entries(inputFields || {})) {
-    const keyRaw = normalizeKey(k);
-    const keyNorm = stripAccents(keyRaw).toUpperCase();
-    const mapped = FIELD_MAP[keyRaw] || FIELD_MAP[keyRaw.toUpperCase()] || FIELD_MAP_NORM[keyNorm] || keyRaw;
-    
-    // Campo Manual como attachment si es URL
-    if (mapped === 'Manual' && isUrl(v)) {
-      out[mapped] = [{ url: String(v).trim() }];
-      continue;
-    }
+    const key = String(k || '').trim();
+    const mapped = FIELD_MAP[key] || key;
     
     // Campo Foto del equipo como attachment si es URL
     if (mapped === 'Foto del equipo' && isUrl(v)) {
+      out[mapped] = [{ url: String(v).trim() }];
+      continue;
+    }
+
+    // Campo Manual como attachment si es URL
+    if (mapped === 'Manual' && isUrl(v)) {
       out[mapped] = [{ url: String(v).trim() }];
       continue;
     }
@@ -273,37 +223,55 @@ function mapAndNormalizeFields(inputFields) {
   return out;
 }
 
+function normalizeKeyForMatch(s) {
+  return String(s || '')
+    .replace(/\u00A0/g, ' ')                 // NBSP
+    .replace(/[\u200B-\u200D\uFEFF]/g, '') // zero-width
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')        // quitar tildes
+    .replace(/[^a-z0-9]+/g, ' ')              // solo alfanum y espacios
+    .trim();
+}
+
 function removeUnknownFields(fields, errData) {
   // Airtable devuelve errores como: { error: { type: 'UNKNOWN_FIELD_NAME', message: 'Unknown field name: "Xyz"' } }
   // o { error: 'UNKNOWN_FIELD_NAME', message: 'Unknown field name: "Xyz"' }
   const errObj = errData?.error || errData || {};
-  const msg = typeof errObj === 'string' 
-    ? errObj 
+  const msg = typeof errObj === 'string'
+    ? errObj
     : (errObj.message || errData?.message || JSON.stringify(errData || {}));
-  
+
   // Buscar nombres entre comillas
   const matches = String(msg).match(/"([^"]+)"/g) || [];
-  const unknown = new Set(matches.map(m => m.replace(/"/g,'').trim()).filter(Boolean));
-  
+  const unknownRaw = matches.map(m => m.replace(/"/g,'').trim()).filter(Boolean);
+
   // También buscar después de "Unknown field name:" sin comillas
-  const plainMatch = String(msg).match(/Unknown field name:\s*(\S+)/gi) || [];
+  const plainMatch = String(msg).match(/Unknown field name:\s*([^\n\r]+)/gi) || [];
   plainMatch.forEach(m => {
     const name = m.replace(/Unknown field name:\s*/i, '').replace(/"/g,'').trim();
-    if (name) unknown.add(name);
+    if (name) unknownRaw.push(name);
   });
-  
-  if (unknown.size === 0) return { cleaned: fields, removed: [] };
-  
+
+  const unknownNorm = new Set(unknownRaw.map(normalizeKeyForMatch).filter(Boolean));
+  if (unknownNorm.size === 0) return { cleaned: fields, removed: [] };
+
   const cleaned = { ...fields };
   const removed = [];
-  for (const u of unknown) {
-    if (u in cleaned) { 
-      delete cleaned[u]; 
-      removed.push(u); 
+
+  // Borrar por coincidencia exacta y por coincidencia normalizada
+  for (const key of Object.keys(cleaned)) {
+    const keyNorm = normalizeKeyForMatch(key);
+    if (unknownNorm.has(keyNorm)) {
+      removed.push(key);
+      delete cleaned[key];
     }
   }
+
   return { cleaned, removed };
 }
+
 
 async function airtableRequest(method, url, data) {
   if (!AIRTABLE_API_KEY || !AIRTABLE_BASE_ID) {

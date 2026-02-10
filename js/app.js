@@ -291,8 +291,7 @@ async function submitInventarioForm(e) {
     return;
   }
 
-  // Mapeo UPPERCASE → nombres EXACTOS de columnas en Airtable
-  // (verificados contra la base "Gestion Biomedica" real)
+  // Mapeo UPPERCASE → nombres exactos de columnas Airtable
   const FIELD_MAP = {
     'ITEM': 'Item',
     'EQUIPO': 'Equipo',
@@ -301,38 +300,21 @@ async function submitInventarioForm(e) {
     'SERIE': 'Serie',
     'PLACA': 'Numero de Placa',
     'NUMERO DE PLACA': 'Numero de Placa',
-    'FOTO DEL EQUIPO': 'Foto del equipo',
-    'TIPO': 'Tipo',
-    'CODIGO ECRI': 'ECRI',
-    'ECRI': 'ECRI',
-    'CLASIFICACION': 'Clasificacion',
-    'REGISTRO SANITARIO': 'Registro Sanitario',
-    'REGISTRO INVIMA': 'Registro Invima',
-    'PERMISO DE COMERCIALIZACION': 'Permiso de comercializacion',
-    'CLASIFICACION POSTERIOR': 'Clasificacion Posterior',
-    'FRECUENCIA DE CALIBRACION': 'Frecuencia de calibracion',
-    'SALDO': 'Saldo',
-    'TIPO DE ADQUISICION': 'Tipo de adquisición',
-    'NO. DE CONTRATO': 'N° de Contrato',
-    'N° DE CONTRATO': 'N° de Contrato',
-    'Nº DE CONTRATO': 'N° de Contrato',
+    'CODIGO ECRI': 'Codigo ECRI',
+    'REGISTRO INVIMA': 'Registro INVIMA',
+    'TIPO DE ADQUISICION': 'Tipo de Adquisicion',
+    'NO. DE CONTRATO': 'No. de Contrato',
     'SERVICIO': 'Servicio',
     'UBICACIÓN': 'Ubicacion',
     'UBICACION': 'Ubicacion',
-    'VIDA UTIL': 'Vida Util en años',
-    'VIDA UTIL EN AÑOS': 'Vida Util en años',
+    'VIDA UTIL': 'Vida Util',
     'FECHA FABRICA': 'Fecha Fabrica',
     'CERTIFICADO 2025': 'Certificado 2025',
-    'FECHA DE COMRPA': 'Fecha de compra',
-    'FECHA DE COMPRA': 'Fecha de compra',
-    'COSTO DEL EQUIPO': 'Costo del equipo',
-    'VALOR EN PESOS': 'Costo del equipo',
+    'FECHA DE COMRPA': 'Fecha de Compra',
+    'FECHA DE COMPRA': 'Fecha de Compra',
+    'VALOR EN PESOS': 'Valor en Pesos',
     'FECHA DE RECEPCIÓN': 'Fecha de Recepcion',
-    'FECHA DE RECEPCION': 'Fecha de Recepcion',
-    'FECHA DE INSTALACIÓN': 'Fecha de instalacion',
-    'FECHA DE INSTALACION': 'Fecha de instalacion',
-    'CLASIFICACIÓN': 'Clasificación',
-    'CLASIFICACIÓN': 'Clasificación',
+    'FECHA DE INSTALACIÓN': 'Fecha de Instalacion',
     'INICIO DE GARANTIA': 'Inicio de Garantia',
     'TERMINO DE GARANTIA': 'Termino de Garantia',
     'CLASIFICACION BIOMEDICA': 'Clasificacion Biomedica',
@@ -354,20 +336,10 @@ async function submitInventarioForm(e) {
     'CIUDAD': 'Ciudad',
   };
 
-  // Normaliza claves para evitar problemas por espacios invisibles (zero-width), NBSP, etc.
-  function normalizeKey(key) {
-    return String(key || '')
-      .replace(/[\u200B-\u200D\uFEFF]/g, '')   // zero-width chars
-      .replace(/\u00A0/g, ' ')                  // NBSP
-      .trim();
-  }
-
-
   // Convertir campos del formulario a nombres de Airtable
   const fields = {};
   for (const [k, v] of Object.entries(rawFields)) {
-    const nk = normalizeKey(k);
-    const mapped = FIELD_MAP[nk] || FIELD_MAP[nk.toUpperCase()] || nk;
+    const mapped = FIELD_MAP[k] || k;
     fields[mapped] = v;
   }
 

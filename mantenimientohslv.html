@@ -1,0 +1,1735 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Gestión de Mantenimiento Hospitalario</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0d47a1;
+            --secondary: #1565c0;
+            --accent: #ff6f00;
+            --success: #2e7d32;
+            --warning: #f57f17;
+            --danger: #c62828;
+            --neutral-dark: #263238;
+            --neutral-light: #eceff1;
+            --border: #90a4ae;
+            --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            color: var(--neutral-dark);
+        }
+
+        .container-app {
+            display: flex;
+            height: 100vh;
+            background: var(--neutral-light);
+        }
+
+        /* SIDEBAR */
+        .sidebar {
+            width: 260px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 25px 0;
+            box-shadow: var(--shadow-lg);
+            overflow-y: auto;
+            position: fixed;
+            height: 100vh;
+            left: 0;
+        }
+
+        .sidebar-header {
+            padding: 0 20px 30px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            margin-bottom: 20px;
+        }
+
+        .logo-icon {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .hospital-name {
+            font-size: 14px;
+            font-weight: 600;
+            opacity: 0.95;
+            letter-spacing: 0.5px;
+        }
+
+        .nav-section {
+            padding: 20px 0;
+        }
+
+        .nav-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            opacity: 0.7;
+            padding: 0 20px;
+            margin-bottom: 12px;
+            letter-spacing: 1px;
+        }
+
+        .nav-item {
+            padding: 12px 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.15);
+            padding-left: 24px;
+        }
+
+        .nav-item.active {
+            background: rgba(255, 255, 255, 0.25);
+            border-left: 4px solid var(--accent);
+            padding-left: 16px;
+            font-weight: 600;
+        }
+
+        .nav-item-icon {
+            font-size: 18px;
+            min-width: 20px;
+        }
+
+        /* MAIN CONTENT */
+        .main-content {
+            flex: 1;
+            margin-left: 260px;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background: var(--neutral-light);
+        }
+
+        .header {
+            background: white;
+            padding: 20px 30px;
+            box-shadow: var(--shadow);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .header-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .btn-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: none;
+            background: var(--neutral-light);
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-icon:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 15px;
+            background: var(--neutral-light);
+            border-radius: 20px;
+        }
+
+        .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 30px;
+        }
+
+        /* MODULES */
+        .module {
+            display: none;
+        }
+
+        .module.active {
+            display: block;
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* DASHBOARD */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .kpi-card {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            border-left: 5px solid var(--primary);
+            transition: all 0.3s ease;
+        }
+
+        .kpi-card:hover {
+            box-shadow: var(--shadow-lg);
+            transform: translateY(-5px);
+        }
+
+        .kpi-card.success {
+            border-left-color: var(--success);
+        }
+
+        .kpi-card.warning {
+            border-left-color: var(--warning);
+        }
+
+        .kpi-card.danger {
+            border-left-color: var(--danger);
+        }
+
+        .kpi-label {
+            font-size: 12px;
+            color: var(--border);
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+        }
+
+        .kpi-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+
+        .kpi-change {
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            display: inline-block;
+            background: rgba(46, 125, 50, 0.1);
+            color: var(--success);
+        }
+
+        .kpi-change.negative {
+            background: rgba(198, 40, 40, 0.1);
+            color: var(--danger);
+        }
+
+        .chart-container {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            margin-bottom: 30px;
+        }
+
+        .chart-container h3 {
+            margin-bottom: 20px;
+            color: var(--primary);
+            font-size: 16px;
+        }
+
+        /* TABLA */
+        .table-container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .table-header {
+            padding: 20px;
+            background: #f5f7fa;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .table-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #f5f7fa;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--primary);
+            border-bottom: 2px solid #e0e0e0;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 14px;
+        }
+
+        tr:hover {
+            background: #fafbfc;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-active {
+            background: rgba(46, 125, 50, 0.1);
+            color: var(--success);
+        }
+
+        .status-pending {
+            background: rgba(245, 127, 23, 0.1);
+            color: var(--warning);
+        }
+
+        .status-inactive {
+            background: rgba(198, 40, 40, 0.1);
+            color: var(--danger);
+        }
+
+        /* BOTONES */
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #0a3d91;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-secondary {
+            background: var(--neutral-light);
+            color: var(--primary);
+            border: 1px solid var(--primary);
+        }
+
+        .btn-secondary:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        /* MODAL */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .modal-header {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 20px;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--border);
+        }
+
+        /* FORMULARIOS */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--neutral-dark);
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d0d0d0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(13, 71, 161, 0.1);
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 25px;
+        }
+
+        /* ALERTAS */
+        .alert {
+            padding: 15px 20px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+        }
+
+        .alert-success {
+            background: rgba(46, 125, 50, 0.1);
+            border-left: 4px solid var(--success);
+            color: var(--success);
+        }
+
+        .alert-warning {
+            background: rgba(245, 127, 23, 0.1);
+            border-left: 4px solid var(--warning);
+            color: var(--warning);
+        }
+
+        .alert-danger {
+            background: rgba(198, 40, 40, 0.1);
+            border-left: 4px solid var(--danger);
+            color: var(--danger);
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 1024px) {
+            .sidebar {
+                width: 80px;
+            }
+
+            .sidebar-header {
+                display: none;
+            }
+
+            .nav-title {
+                display: none;
+            }
+
+            .nav-item span {
+                display: none;
+            }
+
+            .main-content {
+                margin-left: 80px;
+            }
+
+            .kpi-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                left: 0;
+                width: 60px;
+                z-index: 100;
+            }
+
+            .main-content {
+                margin-left: 60px;
+            }
+
+            .kpi-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header {
+                flex-direction: column;
+                gap: 15px;
+                align-items: flex-start;
+            }
+
+            .header-title {
+                font-size: 18px;
+            }
+
+            .content {
+                padding: 15px;
+            }
+        }
+
+        .text-muted {
+            color: var(--border);
+            font-size: 12px;
+        }
+
+        .mt-3 {
+            margin-top: 20px;
+        }
+
+        .mb-3 {
+            margin-bottom: 20px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* INVENTARIO */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+        @media (max-width: 900px) {
+            .form-grid { grid-template-columns: 1fr; }
+        }
+        details.section {
+            background: white;
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            margin-bottom: 14px;
+            overflow: hidden;
+            border: 1px solid rgba(144,164,174,0.35);
+        }
+        details.section > summary {
+            cursor: pointer;
+            padding: 14px 16px;
+            font-weight: 700;
+            color: var(--primary);
+            list-style: none;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+        details.section > summary::-webkit-details-marker { display: none; }
+        details.section[open] > summary {
+            border-bottom: 1px solid rgba(144,164,174,0.35);
+            background: rgba(13,71,161,0.04);
+        }
+        .summary-hint {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--border);
+        }
+        .section-body { padding: 16px; }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 700;
+            background: rgba(13,71,161,0.08);
+            color: var(--primary);
+        }
+        .btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+        .table-actions .btn { white-space: nowrap; }
+    
+
+        /* =========================================================================
+   MÓDULO DE INVENTARIO - ESTILOS ADICIONALES
+   ========================================================================= */
+#inventario { font-family: 'Outfit', sans-serif; }
+#inventario .inventario-container { padding: 0; background: transparent; }
+.inventario-header { background: white; border-radius: 20px; padding: 32px 40px; margin-bottom: 32px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; }
+.inventario-header-title { display: flex; align-items: center; gap: 16px; }
+.inventario-header-icon { width: 56px; height: 56px; background: linear-gradient(135deg, #0052CC 0%, #0065FF 100%); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 28px; box-shadow: 0 4px 16px rgba(0,82,204,0.3); }
+.inventario-header-text h1 { font-size: 32px; font-weight: 800; color: #0A1628; letter-spacing: -0.5px; margin: 0; font-family: 'Outfit', sans-serif; }
+.inventario-header-text p { color: #546E7A; font-size: 15px; margin: 4px 0 0; }
+.inventario-header-stats { display: flex; gap: 32px; }
+.inventario-stat-item { text-align: center; }
+.inventario-stat-value { font-size: 28px; font-weight: 800; color: #0052CC; font-family: 'JetBrains Mono', monospace; }
+.inventario-stat-label { font-size: 12px; text-transform: uppercase; color: #546E7A; font-weight: 600; letter-spacing: 0.5px; margin-top: 4px; }
+.inventario-toolbar { background: white; border-radius: 16px; padding: 24px 32px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+.inventario-search-box { position: relative; flex: 1; min-width: 300px; max-width: 500px; }
+.inventario-search-box input { width: 100%; padding: 14px 48px 14px 20px; border: 2px solid #CFD8DC; border-radius: 12px; font-size: 15px; font-family: 'Outfit', sans-serif; font-weight: 500; transition: all 0.25s; background: #F5F7FA; }
+.inventario-search-box input:focus { outline: none; border-color: #0052CC; background: white; box-shadow: 0 0 0 4px rgba(0,82,204,0.1); }
+.inventario-search-icon { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); color: #90A4AE; font-size: 20px; pointer-events: none; }
+.inventario-toolbar-actions { display: flex; gap: 12px; }
+.inventario-btn { padding: 12px 24px; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; font-family: 'Outfit', sans-serif; cursor: pointer; transition: all 0.25s; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+.inventario-btn-primary { background: linear-gradient(135deg, #0052CC 0%, #0065FF 100%); color: white; box-shadow: 0 4px 12px rgba(0,82,204,0.3); }
+.inventario-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,82,204,0.4); }
+.inventario-btn-secondary { background: #ECEFF1; color: #2D3E57; }
+.inventario-btn-secondary:hover { background: #CFD8DC; transform: translateY(-2px); }
+.inventario-btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.inventario-btn-success { background: linear-gradient(135deg, #00C7B1 0%, #00A896 100%); color: white; box-shadow: 0 4px 12px rgba(0,199,177,0.3); }
+.inventario-btn-success:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,199,177,0.4); }
+.inventario-table-container { background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+.inventario-table-wrapper { overflow-x: auto; max-height: calc(100vh - 450px); }
+#inventario table { width: 100%; border-collapse: separate; border-spacing: 0; }
+#inventario thead { position: sticky; top: 0; z-index: 10; }
+#inventario thead th { background: linear-gradient(135deg, #0A1628 0%, #1B2B44 100%); color: white; padding: 16px 20px; text-align: left; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; border-bottom: 3px solid #00C7B1; font-family: 'Outfit', sans-serif; }
+#inventario tbody tr { transition: all 0.15s; border-bottom: 1px solid #ECEFF1; }
+#inventario tbody tr:hover { background: linear-gradient(90deg, rgba(0,199,177,0.05) 0%, rgba(0,82,204,0.02) 100%); }
+#inventario tbody td { padding: 16px 20px; font-size: 14px; color: #2D3E57; font-weight: 500; }
+.inventario-td-actions { display: flex; gap: 8px; }
+.inventario-btn-icon { width: 36px; height: 36px; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; transition: all 0.15s; }
+.inventario-btn-edit { background: rgba(0,82,204,0.1); color: #0052CC; }
+.inventario-btn-edit:hover { background: #0052CC; color: white; transform: scale(1.1); }
+.inventario-btn-delete { background: rgba(230,57,70,0.1); color: #E63946; }
+.inventario-btn-delete:hover { background: #E63946; color: white; transform: scale(1.1); }
+.inventario-badge { display: inline-block; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+.inventario-badge-success { background: rgba(6,214,160,0.15); color: #06D6A0; }
+.inventario-badge-warning { background: rgba(247,127,0,0.15); color: #F77F00; }
+.inventario-badge-info { background: rgba(0,82,204,0.15); color: #0052CC; }
+.inventario-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(10,22,40,0.8); backdrop-filter: blur(8px); z-index: 10000; padding: 20px; overflow-y: auto; }
+.inventario-modal.active { display: flex; align-items: flex-start; justify-content: center; padding-top: 40px; padding-bottom: 40px; }
+.inventario-modal-content { background: white; border-radius: 24px; width: 100%; max-width: 1200px; box-shadow: 0 16px 48px rgba(0,0,0,0.2); animation: invSlideUp 0.35s ease; }
+@keyframes invSlideUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
+.inventario-modal-header { padding: 32px 40px; border-bottom: 2px solid #ECEFF1; display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #F5F7FA 0%, white 100%); border-radius: 24px 24px 0 0; }
+.inventario-modal-title { font-size: 28px; font-weight: 800; color: #0A1628; display: flex; align-items: center; gap: 12px; margin: 0; font-family: 'Outfit', sans-serif; }
+.inventario-modal-close { width: 40px; height: 40px; border: none; background: #ECEFF1; border-radius: 10px; cursor: pointer; font-size: 24px; color: #546E7A; transition: all 0.15s; display: flex; align-items: center; justify-content: center; }
+.inventario-modal-close:hover { background: #E63946; color: white; transform: rotate(90deg); }
+.inventario-modal-body { padding: 40px; max-height: calc(100vh - 300px); overflow-y: auto; }
+.inventario-form-section { margin-bottom: 40px; }
+.inventario-section-header { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; padding-bottom: 12px; border-bottom: 2px solid #ECEFF1; }
+.inventario-section-icon { width: 40px; height: 40px; background: linear-gradient(135deg, #0052CC 0%, #0065FF 100%); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; color: white; }
+.inventario-section-title { font-size: 20px; font-weight: 700; color: #0A1628; margin: 0; font-family: 'Outfit', sans-serif; }
+.inventario-form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; }
+.inventario-form-grid-2 { grid-template-columns: repeat(2, 1fr); }
+.inventario-form-grid-3 { grid-template-columns: repeat(3, 1fr); }
+.inventario-form-group { display: flex; flex-direction: column; gap: 8px; }
+.inventario-form-group.full-width { grid-column: 1 / -1; }
+.inventario-form-label { font-size: 14px; font-weight: 600; color: #2D3E57; display: flex; align-items: center; gap: 6px; }
+.inventario-form-label .required { color: #E63946; }
+.inventario-form-input, .inventario-form-select, .inventario-form-textarea { padding: 12px 16px; border: 2px solid #CFD8DC; border-radius: 10px; font-size: 15px; font-family: 'Outfit', sans-serif; font-weight: 500; transition: all 0.25s; background: #F5F7FA; }
+.inventario-form-input:focus, .inventario-form-select:focus, .inventario-form-textarea:focus { outline: none; border-color: #0052CC; background: white; box-shadow: 0 0 0 4px rgba(0,82,204,0.1); }
+.inventario-form-textarea { min-height: 100px; resize: vertical; }
+.inventario-form-checkbox { display: flex; align-items: center; gap: 12px; padding: 16px; background: #F5F7FA; border-radius: 10px; cursor: pointer; transition: all 0.25s; }
+.inventario-form-checkbox:hover { background: #ECEFF1; }
+.inventario-form-checkbox input[type="checkbox"] { width: 20px; height: 20px; cursor: pointer; }
+.inventario-modal-footer { padding: 24px 40px; border-top: 2px solid #ECEFF1; display: flex; justify-content: flex-end; gap: 12px; background: #F5F7FA; border-radius: 0 0 24px 24px; }
+.inventario-loading { text-align: center; padding: 40px; }
+.inventario-spinner { width: 50px; height: 50px; border: 4px solid #CFD8DC; border-top-color: #0052CC; border-radius: 50%; animation: invSpin 1s linear infinite; margin: 0 auto 20px; }
+@keyframes invSpin { to { transform: rotate(360deg); } }
+.inventario-empty-state { padding: 80px 40px; text-align: center; }
+.inventario-empty-icon { font-size: 80px; margin-bottom: 24px; opacity: 0.3; }
+.inventario-empty-title { font-size: 24px; font-weight: 700; color: #2D3E57; margin-bottom: 12px; }
+.inventario-empty-text { font-size: 16px; color: #546E7A; margin-bottom: 32px; }
+.inventario-pagination { padding: 24px 32px; display: flex; justify-content: space-between; align-items: center; border-top: 2px solid #ECEFF1; }
+.inventario-pagination-info { color: #546E7A; font-size: 14px; font-weight: 500; }
+.inventario-pagination-controls { display: flex; gap: 8px; }
+@media (max-width: 1200px) { .inventario-form-grid-3 { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 768px) {
+    .inventario-header { padding: 24px 20px; }
+    .inventario-header-title { flex-direction: column; align-items: flex-start; }
+    .inventario-header-stats { width: 100%; justify-content: space-around; }
+    .inventario-toolbar { padding: 20px; }
+    .inventario-search-box { min-width: 100%; }
+    .inventario-form-grid, .inventario-form-grid-2, .inventario-form-grid-3 { grid-template-columns: 1fr; }
+    .inventario-modal-body { padding: 24px 20px; }
+}
+
+    
+/* Scroll para formulario de inventario (modal) */
+#inventarioFormContainer{
+  max-height: 78vh;
+  overflow-y: auto;
+  padding-right: 10px;
+}
+#inventarioFormContainer::-webkit-scrollbar{ width: 10px; }
+#inventarioFormContainer::-webkit-scrollbar-thumb{ border-radius: 10px; }
+
+</style>
+</head>
+<body>
+    <div class="container-app">
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-icon">🏥</div>
+                <div class="hospital-name">Hospital Management</div>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-title">Principal</div>
+                <div class="nav-item active" onclick="switchModule('dashboard')">
+                    <span class="nav-item-icon">📊</span>
+                    <span>Dashboard</span>
+                </div>
+            
+                <div class="nav-item" onclick="switchModule('inventario')">
+                    <span class="nav-item-icon">📦</span>
+                    <span>Inventario Maestro</span>
+                </div>
+</div>
+
+            <div class="nav-section">
+                <div class="nav-title">Operaciones</div>
+                <div class="nav-item" onclick="switchModule('equipos')">
+                    <span class="nav-item-icon">🔧</span>
+                    <span>Equipos</span>
+                </div>
+                <div class="nav-item" onclick="switchModule('inventario')">
+                    <span class="nav-item-icon">🗃️</span>
+                    <span>Inventario</span>
+                </div>
+                <div class="nav-item" onclick="switchModule('mantenimientos')">
+                    <span class="nav-item-icon">📋</span>
+                    <span>Mantenimientos</span>
+                </div>
+                <div class="nav-item" onclick="switchModule('planificacion')">
+                    <span class="nav-item-icon">📅</span>
+                    <span>Planificación</span>
+                </div>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-title">Recursos</div>
+                <div class="nav-item" onclick="switchModule('repuestos')">
+                    <span class="nav-item-icon">📦</span>
+                    <span>Repuestos</span>
+                </div>
+                <div class="nav-item" onclick="switchModule('documentos')">
+                    <span class="nav-item-icon">📄</span>
+                    <span>Documentos</span>
+                </div>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-title">Análisis</div>
+                <div class="nav-item" onclick="switchModule('kpis')">
+                    <span class="nav-item-icon">📈</span>
+                    <span>KPIs</span>
+                </div>
+                <div class="nav-item" onclick="switchModule('reportes')">
+                    <span class="nav-item-icon">📑</span>
+                    <span>Reportes</span>
+                </div>
+                <div class="nav-item" onclick="switchModule('auditoria')">
+                    <span class="nav-item-icon">🔍</span>
+                    <span>Auditoría</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <div class="main-content">
+            <!-- HEADER -->
+            <div class="header">
+                <div class="header-title" id="moduleTitle">Dashboard Ejecutivo</div>
+                <div class="header-actions">
+                    <button class="btn-icon" title="Notificaciones">🔔</button>
+                    <button class="btn-icon" onclick="printModule()" title="Imprimir">🖨️</button>
+                    <button class="btn-icon" onclick="exportData()" title="Exportar">💾</button>
+                    <div class="user-profile">
+                        <div class="avatar">PM</div>
+                        <span style="font-size: 12px; color: var(--neutral-dark);">Ing. Paul Eduardo Muñoz Rodriguez</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CONTENT -->
+            <div class="content">
+                <!-- DASHBOARD MODULE -->
+                <div id="dashboard" class="module active">
+                    <div class="alert alert-success" id="dashboardAlert" style="display: none;">
+                        ✓ Sistema sincronizado - Últimas actualizaciones cargadas
+                    </div>
+
+                    <div class="kpi-grid">
+                        <div class="kpi-card">
+                            <div class="kpi-label">Equipos Activos</div>
+                            <div class="kpi-value" id="kpiEquipos">1,182</div>
+                            <div class="kpi-change">+5.3% vs último mes</div>
+                            <div class="text-muted mt-3">Operativos en 28 áreas</div>
+                        </div>
+
+                        <div class="kpi-card success">
+                            <div class="kpi-label">Cumplimiento Plan</div>
+                            <div class="kpi-value" id="kpiCumplimiento">94.2%</div>
+                            <div class="kpi-change">+2.1% vs trimestre anterior</div>
+                            <div class="text-muted mt-3">Mantenimientos ejecutados</div>
+                        </div>
+
+                        <div class="kpi-card warning">
+                            <div class="kpi-label">Mantenimientos Pendientes</div>
+                            <div class="kpi-value" id="kpiPendientes">23</div>
+                            <div class="kpi-change negative">⚠️ Requieren atención</div>
+                            <div class="text-muted mt-3">Próximos 7 días</div>
+                        </div>
+
+                        <div class="kpi-card">
+                            <div class="kpi-label">MTBF Promedio</div>
+                            <div class="kpi-value" id="kpiMTBF">2,847h</div>
+                            <div class="kpi-change">+324h respecto a año anterior</div>
+                            <div class="text-muted mt-3">Horas entre fallos</div>
+                        </div>
+
+                        <div class="kpi-card">
+                            <div class="kpi-label">MTTR Promedio</div>
+                            <div class="kpi-value" id="kpiMTTR">4.2h</div>
+                            <div class="kpi-change">-0.8h mejora</div>
+                            <div class="text-muted mt-3">Horas promedio reparación</div>
+                        </div>
+
+                        <div class="kpi-card danger">
+                            <div class="kpi-label">Costo Mantenimiento</div>
+                            <div class="kpi-value" id="kpiCosto">$847K</div>
+                            <div class="kpi-change negative">+12% vs presupuesto</div>
+                            <div class="text-muted mt-3">Período enero-diciembre</div>
+                        </div>
+                    </div>
+
+                    <div class="chart-container">
+                        <h3>Tendencia MTBF/MTTR (Últimos 12 meses)</h3>
+                        <canvas id="mtbfChart"></canvas>
+                    </div>
+
+                    <div class="chart-container">
+                        <h3>Cumplimiento Plan de Mantenimiento por Área</h3>
+                        <canvas id="complianceChart"></canvas>
+                    </div>
+
+                    <div class="chart-container">
+                        <h3>Distribución de Tipos de Mantenimiento</h3>
+                        <canvas id="maintenanceTypeChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- EQUIPOS MODULE -->
+                
+                
+
+
+<div id="equipos" class="module">
+                    <div class="mb-3">
+                        <div class="btn-row">
+                            <button class="btn btn-primary" onclick="openModal('newEquipo')">+ Nuevo Equipo</button>
+                            <button class="btn btn-secondary" onclick="switchModule('inventario')">🗃️ Ir a Inventario</button>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <div class="table-header">
+                            <input type="text" placeholder="Buscar equipo..." style="width: 300px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                            <div class="table-actions">
+                                <button class="btn btn-small btn-secondary">Filtrar</button>
+                                <button class="btn btn-small btn-secondary">Exportar</button>
+                            </div>
+                        </div>
+
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Código/Serial</th>
+                                    <th>Nombre</th>
+                                    <th>Área</th>
+                                    <th>Tipo</th>
+                                    <th>Estado</th>
+                                    <th>Próx. Mantenimiento</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>#EQ-2024-001</td>
+                                    <td>Resonancia Magnética 3T</td>
+                                    <td>Imagenología</td>
+                                    <td>Imagenología</td>
+                                    <td><span class="status-badge status-active">Activo</span></td>
+                                    <td>2025-02-15</td>
+                                    <td>
+                                        <button class="btn btn-small btn-secondary">Ver</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>#EQ-2024-002</td>
+                                    <td>Ventilador Mecánico V500</td>
+                                    <td>UCI</td>
+                                    <td>Monitoreo</td>
+                                    <td><span class="status-badge status-active">Activo</span></td>
+                                    <td>2025-01-20</td>
+                                    <td>
+                                        <button class="btn btn-small btn-secondary">Ver</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>#EQ-2024-003</td>
+                                    <td>Analizador Bioquímico</td>
+                                    <td>Laboratorio</td>
+                                    <td>Laboratorio</td>
+                                    <td><span class="status-badge status-pending">Mantenimiento</span></td>
+                                    <td>2025-03-10</td>
+                                    <td>
+                                        <button class="btn btn-small btn-secondary">Ver</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+
+                <!-- INVENTARIO MODULE -->
+                <div id="inventario" class="module">
+                    <div class="mb-3" style="display:flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
+                        <div class="btn-row">
+                            <button class="btn btn-primary" onclick="openModal('newInventario')">+ Nuevo Registro</button>
+                            <button class="btn btn-secondary" onclick="loadInventario(true)">🔄 Actualizar</button>
+                            <span class="badge" id="inventarioCount">0 registros</span>
+                        </div>
+                        <div class="btn-row">
+                            <input id="inventarioSearch" type="text" placeholder="Buscar por ITEM, equipo, serie, placa, servicio..." style="width: 360px; max-width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px;">
+                            <button class="btn btn-small btn-secondary" onclick="exportInventarioCSV()">💾 Exportar CSV</button>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <div class="table-header">
+                            <div class="text-muted">Módulo de inventario maestro (vida útil, adquisición, garantía, calibración y mantenimiento).</div>
+                            <div class="table-actions">
+                                <button class="btn btn-small btn-secondary" onclick="toggleInventarioColumns()">Columnas</button>
+                            </div>
+                        </div>
+
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th data-col="ITEM">ITEM</th>
+                                    <th data-col="EQUIPO">EQUIPO</th>
+                                    <th data-col="MARCA">MARCA</th>
+                                    <th data-col="MODELO">MODELO</th>
+                                    <th data-col="SERIE">SERIE</th>
+                                    <th data-col="PLACA">PLACA</th>
+                                    <th data-col="SERVICIO">SERVICIO</th>
+                                    <th data-col="UBICACIÓN">UBICACIÓN</th>
+                                    <th data-col="VIDA UTIL">VIDA ÚTIL</th>
+                                    <th data-col="PROX_MTTO">PRÓX. MTTO</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventarioTbody">
+                                <tr>
+                                    <td colspan="11" class="text-muted" style="padding: 18px; text-align:center;">
+                                        Cargando inventario...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <div class="text-muted mt-3" id="inventarioPaging" style="display:flex; justify-content: space-between; align-items:center; gap: 10px; flex-wrap: wrap;">
+                            <span>Tip: usa búsqueda para filtrar rápidamente.</span>
+                            <div class="btn-row">
+                                <button class="btn btn-small btn-secondary" id="inventarioPrevBtn" onclick="inventarioPrevPage()" disabled>◀ Anterior</button>
+                                <button class="btn btn-small btn-secondary" id="inventarioNextBtn" onclick="inventarioNextPage()" disabled>Siguiente ▶</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+                <!-- MANTENIMIENTOS MODULE -->
+                <div id="mantenimientos" class="module">
+                    <div class="mb-3">
+                        <button class="btn btn-primary" onclick="openModal('newMantenimiento')">+ Registrar Intervención</button>
+                    </div>
+
+                    <div class="table-container">
+                        <div class="table-header">
+                            <input type="text" placeholder="Buscar intervención..." style="width: 300px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                        </div>
+
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Equipo</th>
+                                    <th>Tipo</th>
+                                    <th>Fecha Ejecución</th>
+                                    <th>Técnico</th>
+                                    <th>Duración</th>
+                                    <th>Costo</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>#INT-2025-001</td>
+                                    <td>Resonancia Magnética 3T</td>
+                                    <td>Preventivo</td>
+                                    <td>2025-01-05</td>
+                                    <td>Carlos López</td>
+                                    <td>2.5h</td>
+                                    <td>$450</td>
+                                    <td><span class="status-badge status-active">Completado</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- PLANIFICACIÓN MODULE -->
+                <div id="planificacion" class="module">
+                    <div class="mb-3">
+                        <button class="btn btn-primary" onclick="openModal('newPlan')">+ Crear Plan Preventivo</button>
+                    </div>
+                    <div style="background: white; padding: 20px; border-radius: 8px; text-align: center; color: var(--border);">
+                        Calendario de mantenimientos programados
+                    </div>
+                </div>
+
+                <!-- REPUESTOS MODULE -->
+                <div id="repuestos" class="module">
+                    <div class="table-container">
+                        <div class="table-header">
+                            <input type="text" placeholder="Buscar repuesto..." style="width: 300px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                            <div class="table-actions">
+                                <button class="btn btn-small btn-primary">+ Nuevo Movimiento</button>
+                            </div>
+                        </div>
+
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Nombre</th>
+                                    <th>Stock Actual</th>
+                                    <th>Stock Mín./Máx.</th>
+                                    <th>Costo Unitario</th>
+                                    <th>Estado Stock</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>#REP-001</td>
+                                    <td>Tubo rayos X 150kVp</td>
+                                    <td>2</td>
+                                    <td>1/4</td>
+                                    <td>$12,500</td>
+                                    <td><span class="status-badge status-warning">Bajo</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- DOCUMENTOS MODULE -->
+                <div id="documentos" class="module">
+                    <div class="mb-3">
+                        <button class="btn btn-primary">+ Subir Documento</button>
+                    </div>
+                    <div style="background: white; padding: 20px; border-radius: 8px; color: var(--border); text-align: center;">
+                        Repositorio centralizado de procedimientos, protocolos y manuales
+                    </div>
+                </div>
+
+                <!-- KPIS MODULE -->
+                <div id="kpis" class="module">
+                    <div class="chart-container">
+                        <h3>Indicadores Clave de Desempeño - Período 2024</h3>
+                        <canvas id="kpiDetailChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- REPORTES MODULE -->
+                <div id="reportes" class="module">
+                    <div class="mb-3">
+                        <button class="btn btn-primary">📑 Generar Reporte Desempeño</button>
+                        <button class="btn btn-secondary">📋 Reporte Cumplimiento</button>
+                        <button class="btn btn-secondary">💰 Reporte Costos</button>
+                        <button class="btn btn-secondary">🔍 Reporte Auditoría</button>
+                    </div>
+                    <div style="background: white; padding: 20px; border-radius: 8px; color: var(--border); text-align: center;">
+                        Selecciona un tipo de reporte para generar
+                    </div>
+                </div>
+
+                <!-- AUDITORÍA MODULE -->
+                <div id="auditoria" class="module">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Usuario</th>
+                                    <th>Acción</th>
+                                    <th>Registro Afectado</th>
+                                    <th>Cambios</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>2025-01-07 14:30</td>
+                                    <td>Ing. Paul Eduardo Muñoz Rodriguez</td>
+                                    <td>Crear Intervención</td>
+                                    <td>#INT-2025-001</td>
+                                    <td>Intervención registrada</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODALS -->
+    <div id="newEquipo" class="modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal('newEquipo')">✕</button>
+            <div class="modal-header">Registrar Nuevo Equipo</div>
+            <form>
+                <div class="form-group">
+                    <label>Nombre del Equipo</label>
+                    <input type="text" placeholder="Ej: Resonancia Magnética 3T">
+                </div>
+                <div class="form-group">
+                    <label>Código/Serial</label>
+                    <input type="text" placeholder="Ej: EQ-2025-001">
+                </div>
+                <div class="form-group">
+                    <label>Tipo</label>
+                    <select>
+                        <option>Imagenología</option>
+                        <option>Laboratorio</option>
+                        <option>Monitoreo</option>
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('newEquipo')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <div id="newInventario" class="modal">
+        <div class="modal-content" style="max-width: 980px;">
+            <button class="modal-close" onclick="closeModal('newInventario')">✕</button>
+            <div class="modal-header">Registro de Inventario</div>
+
+            <div id="inventarioFormContainer">
+            <form id="inventarioForm">
+                <details class="section" open>
+                    <summary>1) Identificación del equipo <span class="summary-hint">ITEM, serie, placa, INVIMA</span></summary>
+                    <div class="section-body">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>ITEM</label>
+                                <input name="ITEM" type="text" placeholder="Ej: 00123" data-js-required="true">
+                            </div>
+                            <div class="form-group">
+                                <label>EQUIPO</label>
+                                <input name="EQUIPO" type="text" placeholder="Ej: Monitor de signos vitales" data-js-required="true">
+                            </div>
+                            <div class="form-group">
+                                <label>MARCA</label>
+                                <input name="MARCA" type="text" placeholder="Ej: Nihon Kohden">
+                            </div>
+                            <div class="form-group">
+                                <label>MODELO</label>
+                                <input name="MODELO" type="text" placeholder="Ej: BSM-3000">
+                            </div>
+                            <div class="form-group">
+                                <label>FECHA FABRICA</label>
+                                <input name="FECHA FABRICA" type="date">
+                            </div>
+                            <div class="form-group">
+                                <label>SERIE</label>
+                                <input name="SERIE" type="text" placeholder="Ej: SN123456">
+                            </div>
+                            <div class="form-group">
+                                <label>CERTIFICADO 2025</label>
+                                <input name="CERTIFICADO 2025" type="text" placeholder="Ej: Sí / No / Código">
+                            </div>
+                            <div class="form-group">
+                                <label>PLACA</label>
+                                <input name="PLACA" type="text" placeholder="Ej: HSLV-PL-0098">
+                            </div>
+                            <div class="form-group">
+                                <label>CODIGO ECRI</label>
+                                <input name="CODIGO ECRI" type="text" placeholder="Ej: ECRI-XXXX">
+                            </div>
+                            <div class="form-group">
+                                <label>REGISTRO INVIMA</label>
+                                <input name="REGISTRO INVIMA" type="text" placeholder="Ej: 2019DM-0012345">
+                            </div>
+                        </div>
+                    </div>
+                </details>
+
+                <details class="section">
+                    <summary>2) Ubicación y clasificación <span class="summary-hint">servicio, riesgo, vida útil</span></summary>
+                    <div class="section-body">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>SERVICIO</label>
+                                <input name="SERVICIO" type="text" placeholder="Ej: UCI Adultos">
+                            </div>
+                            <div class="form-group">
+                                <label>UBICACIÓN</label>
+                                <input name="UBICACIÓN" type="text" placeholder="Ej: Torre A - Piso 2 - Cubículo 4">
+                            </div>
+                            <div class="form-group">
+                                <label>CLASIFICACION BIOMEDICA</label>
+                                <input name="CLASIFICACION BIOMEDICA" type="text" placeholder="Ej: Diagnóstico / Terapéutico / Soporte">
+                            </div>
+                            <div class="form-group">
+                                <label>CLASIFICACION DE LA TECNOLOGIA</label>
+                                <input name="CLASIFICACION DE LA TECNOLOGIA" type="text" placeholder="Ej: Equipo biomédico / Dispositivo médico">
+                            </div>
+                            <div class="form-group">
+                                <label>CLASIFICACION DEL RIESGO</label>
+                                <input name="CLASIFICACION DEL RIESGO" type="text" placeholder="Ej: I / IIa / IIb / III">
+                            </div>
+                            <div class="form-group">
+                                <label>VIDA UTIL</label>
+                                <input name="VIDA UTIL" type="text" placeholder="Ej: 10 años">
+                            </div>
+                        </div>
+                    </div>
+                </details>
+
+                <details class="section">
+                    <summary>3) Adquisición, compra y garantía <span class="summary-hint">contrato, valor, fechas</span></summary>
+                    <div class="section-body">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>TIPO DE ADQUISICION</label>
+                                <input name="TIPO DE ADQUISICION" type="text" placeholder="Ej: Compra / Donación / Comodato">
+                            </div>
+                            <div class="form-group">
+                                <label>NO. DE CONTRATO</label>
+                                <input name="NO. DE CONTRATO" type="text" placeholder="Ej: 123-2025">
+                            </div>
+                            <div class="form-group">
+                                <label>FECHA DE COMRPA</label>
+                                <input name="FECHA DE COMRPA" type="date">
+                            </div>
+                            <div class="form-group">
+                                <label>VALOR EN PESOS</label>
+                                <input name="VALOR EN PESOS" type="number" step="1" placeholder="Ej: 15000000">
+                            </div>
+                            <div class="form-group">
+                                <label>FECHA DE RECEPCIÓN</label>
+                                <input name="FECHA DE RECEPCIÓN" type="date">
+                            </div>
+                            <div class="form-group">
+                                <label>FECHA DE INSTALACIÓN</label>
+                                <input name="FECHA DE INSTALACIÓN" type="date">
+                            </div>
+                            <div class="form-group">
+                                <label>INICIO DE GARANTIA</label>
+                                <input name="INICIO DE GARANTIA" type="date">
+                            </div>
+                            <div class="form-group">
+                                <label>TERMINO DE GARANTIA</label>
+                                <input name="TERMINO DE GARANTIA" type="date">
+                            </div>
+                        </div>
+                    </div>
+                </details>
+
+                <details class="section">
+                    <summary>4) Mantenimiento, calibración y programación <span class="summary-hint">frecuencia, costos, anual</span></summary>
+                    <div class="section-body">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>TIPO DE MTTO</label>
+                                <input name="TIPO DE MTTO" type="text" placeholder="Ej: Preventivo / Correctivo / Calibración">
+                            </div>
+                            <div class="form-group">
+                                <label>COSTO DE MANTENIMIENTO</label>
+                                <input name="COSTO DE MANTENIMIENTO" type="number" step="1" placeholder="Ej: 450000">
+                            </div>
+                            <div class="form-group">
+                                <label>CALIBRABLE</label>
+                                <select name="CALIBRABLE">
+                                    <option value="">(Seleccionar)</option>
+                                    <option>SI</option>
+                                    <option>NO</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>N. CERTIFICADO</label>
+                                <input name="N. CERTIFICADO" type="text" placeholder="Ej: CAL-2025-009">
+                            </div>
+                            <div class="form-group">
+                                <label>FRECUENCIA DE MTTO PREVENTIVO</label>
+                                <select name="FRECUENCIA DE MTTO PREVENTIVO" id="invFreqSelect">
+                                    <option value="">(Seleccionar)</option>
+                                    <option value="Mensual">Mensual</option>
+                                    <option value="Bimestral">Bimestral</option>
+                                    <option value="Trimestral">Trimestral</option>
+                                    <option value="Cuatrimestral">Cuatrimestral</option>
+                                    <option value="Semestral">Semestral</option>
+                                    <option value="Anual">Anual</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>FECHA PROGRAMADA DE MANTENIMINETO</label>
+                                <input name="FECHA PROGRAMADA DE MANTENIMINETO" id="invStartDate" type="date">
+                                <div class="text-muted mt-3" style="margin-top:8px;">Usada como fecha inicial para generar programación anual (opcional).</div>
+                            </div>
+                            <div class="form-group">
+                                <label>FRECUENCIA DE MANTENIMIENTO</label>
+                                <input name="FRECUENCIA DE MANTENIMIENTO" type="text" placeholder="Ej: Cada 3 meses">
+                            </div>
+                            <div class="form-group">
+                                <label>PROGRAMACION DE MANTENIMIENTO ANUAL</label>
+                                <textarea name="PROGRAMACION DE MANTENIMIENTO ANUAL" id="invScheduleAnnual" rows="4" placeholder="Ej: 2026-03-01, 2026-06-01, 2026-09-01, 2026-12-01"></textarea>
+                                <div class="btn-row" style="margin-top:10px;">
+                                    <button type="button" class="btn btn-small btn-secondary" onclick="generateAnnualSchedule()">⚙️ Generar programación</button>
+                                    <button type="button" class="btn btn-small btn-secondary" onclick="clearAnnualSchedule()">🧹 Limpiar</button>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>MANUAL</label>
+                                <input name="MANUAL" type="url" placeholder="Pega un link público (Drive/OneDrive) o URL del manual">
+                                <div class="text-muted mt-3" style="margin-top:8px;">Si deseas adjuntar en Airtable, pega un enlace público (Airtable lo guarda como adjunto por URL).</div>
+                            </div>
+                        </div>
+                    </div>
+                </details>
+
+                <details class="section">
+                    <summary>5) Responsable / proveedor <span class="summary-hint">contacto, ciudad</span></summary>
+                    <div class="section-body">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>RESPONSABLE</label>
+                                <input name="RESPONSABLE" type="text" placeholder="Ej: Ing. Biomédico / Proveedor">
+                            </div>
+                            <div class="form-group">
+                                <label>NOMBRE</label>
+                                <input name="NOMBRE" type="text" placeholder="Ej: Proveedor S.A.S.">
+                            </div>
+                            <div class="form-group">
+                                <label>DIRECCION</label>
+                                <input name="DIRECCION" type="text" placeholder="Ej: Calle 1 #2-3">
+                            </div>
+                            <div class="form-group">
+                                <label>TELEFONO</label>
+                                <input name="TELEFONO" type="tel" placeholder="Ej: +57 300 000 0000">
+                            </div>
+                            <div class="form-group">
+                                <label>CIUDAD</label>
+                                <input name="CIUDAD" type="text" placeholder="Ej: Popayán">
+                            </div>
+                        </div>
+                    </div>
+                </details>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('newInventario')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar en Inventario</button>
+                </div>
+            </form>
+            </div>
+        </div>
+    </div>
+
+
+    <script src="js/app.js"></script>
+
+
+    <!-- MODAL: Formulario de Inventario Completo -->
+    <div id="equipoModal" class="inventario-modal">
+        <div class="inventario-modal-content">
+            <div class="inventario-modal-header">
+                <h2 class="inventario-modal-title">
+                    <span id="modalIcon">➕</span>
+                    <span id="modalTitleText">Nuevo Equipo</span>
+                </h2>
+                <button class="inventario-modal-close" onclick="closeModal()">×</button>
+            </div>
+            <form id="equipoForm" onsubmit="saveEquipo(event)">
+                <div class="inventario-modal-body">
+                    <div class="inventario-form-section">
+                        <div class="inventario-section-header">
+                            <div class="inventario-section-icon">🏷️</div>
+                            <h3 class="inventario-section-title">Identificación del Equipo</h3>
+                        </div>
+                        <div class="inventario-form-grid inventario-form-grid-3">
+                            <div class="inventario-form-group">
+                                <label class="inventario-form-label">Item <span class="required">*</span></label>
+                                <input type="text" name="Item" class="inventario-form-input" required>
+                            </div>
+                            <div class="inventario-form-group">
+                                <label class="inventario-form-label">Equipo <span class="required">*</span></label>
+                                <input type="text" name="Equipo" class="inventario-form-input" required>
+                            </div>
+                            <div class="inventario-form-group">
+                                <label class="inventario-form-label">Marca <span class="required">*</span></label>
+                                <input type="text" name="Marca" class="inventario-form-input" required>
+                            </div>
+                            <div class="inventario-form-group">
+                                <label class="inventario-form-label">Modelo <span class="required">*</span></label>
+                                <input type="text" name="Modelo" class="inventario-form-input" required>
+                            </div>
+                            <div class="inventario-form-group">
+                                <label class="inventario-form-label">Serie <span class="required">*</span></label>
+                                <input type="text" name="Serie" class="inventario-form-input" required>
+                            </div>
+                            <div class="inventario-form-group">
+                                <label class="inventario-form-label">Número de Placa <span class="required">*</span></label>
+                                <input type="text" name="Numero de Placa" class="inventario-form-input" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="inventario-form-section">
+                        <div class="inventario-section-header">
+                            <div class="inventario-section-icon">📋</div>
+                            <h3 class="inventario-section-title">Códigos y Registros</h3>
+                        </div>
+                        <div class="inventario-form-grid inventario-form-grid-3">
+                            <div class="inventario-form-group">
+                                <label class="inventario-form-label">Código ECRI</label>
+                                <input type="text" name="Codigo ECRI" class="inventario-form-input">
+                            </div>
+                            <div class="inventario-form-group">
+                                <label class="inventario-form-label">Registro INVIMA</label>
+                                <input type="text" name="Registro INVIMA" class="inventario-form-input">
+                            </div>
+                            <div class="inventario-form-group">
+                                <label class="inventario-form-label">Tipo de Adquisición</label>
+                                <select name="Tipo de Adquisicion" class="inventario-form-select">
+                                    <option value="">Seleccionar...</option>
+                                    <option value="Compra">Compra</option>
+                                    <option value="Donación">Donación</option>
+                                    <option value="Comodato">Comodato</option>
+                                    <option value="Arrendamiento">Arrendamiento</option>
+                                    <option value="Leasing">Leasing</option>
+                                </select>
+                            </div>
+                            <div class="inventario-form-group">
+                                <label class="inventario-form-label">No. de Contrato</label>
+                                <input type="text" name="No. de Contrato" class="inventario-form-input">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="inventario-form-section">
+                        <div class="inventario-section-header">
+                            <div class="inventario-section-icon">📍</div>
+                            <h3 class="inventario-section-title">Ubicación y Servicio</h3>
+                        </div>
+                        <div class="inventario-form-grid inventario-form-grid-2">
+                            <div class="inventario-form-group">
+                                <label class="inventario-form-label">Servicio <span class="required">*</span></label>
+                                <input type="text" name="Servicio" class="inventario-form-input" required>
+                            </div>
+                            <div class="inventario-form-group">
+                                <label class="inventario-form-label">Ubicación <span class="required">*</span></label>
+                                <input type="text" name="Ubicacion" class="inventario-form-input" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="inventario-form-section">
+                        <div class="inventario-section-header">
+                            <div class="inventario-section-icon">💰</div>
+                            <h3 class="inventario-section-title">Información Financiera</h3>
+                        </div>
+                        <div class="inventario-form-grid inventario-form-grid-3">
+                            <div class="inventario-form-group">
+                                <label class="inventario-form-label">Vida Útil (Años)</label>
+                                <input type="number" name="Vida Util" class="inventario-form-input" min="0" step="1">
+                            </div>
+                            <div class="inventario-form-group">
+                                <label class="inventario-form-label">Fecha de Compra</label>
+                                <input type="date" name="Fecha de Compra" class="inventario-form-input">
+                            </div>
+                            <div class="inventario-form-group">
+                                <label class="inventario-form-label">Costo del Equipo</label>
+                                <input type="number" name="Valor en Pesos" class="inventario-form-input" min="0" step="0.01" placeholder="$">
+                            </div>
+                            <div class="inventario-form-group">
+                                <label class="inventario-form-label">Fecha de Instalación</label>
+                                <input type="date" name="Fecha de Instalacion" class="inventario-form-input">
+                            </div>
+                            <div class="inventario-form-group">
+                                <label class="inventario-form-label">Inicio de Garantía</label>
+                                <input type="date" name="Inicio de Garantia" class="inventario-form-input">
+                            </div>
+                            <div class="inventario-form-group">
+                                <label class="inventario-form-label">Término de Garantía</label>
+                                <input type="date" name="Termino de Garantia" class="inventario-form-input">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="inventario-form-section">
+                        <div class="inventario-section-header">
+                            <div class="inventario-section-icon">🏥</div>
+                            <h3 class="inventario-section-title">Clasificación</h3>
+                        </div>
+                        <div class="inventario-form-grid inventario-form-grid-3">
+                            <div class="inventario-form-group">
+                                <label class="inventario-form-label">Clasificación Biomédica</label>
+                                <select name="Clasificacion Biomedica" class="inventario-form-select">
+                                    <option value="">Seleccionar...</option>
+                                    <option value="Apoyo">Apoyo</option>
+                                    <option value="Diagnóstico">Diagnóstico</option>
+                                    <option value="Tratamiento">Tratamiento</option>
+                                    <option value="Rehabilitación">Rehabilitación</option>
+                                    <option value="Prevención">Prevención</option>
+                                    <option value="Análisis de Laboratorio">Análisis de Laboratorio</option>
+                                </select>
+                            </div>
+                            <div class="inventario-form-group">
+                                <label class="inventario-form-label">Clasificación de Tecnología</label>
+                                <select name="Clasificacion de la Tecnologia" class="inventario-form-select">
+                                    <option value="">Seleccionar...</option>
+                                    <option value="Equipo Médico">Equipo Médico</option>
+                                    <option value="Equipo Industrial">Equipo Industrial</option>
+                                    <option value="Equipo de Laboratorio">Equipo de Laboratorio</option>
+                                    <option value="Equipo de Cómputo">Equipo de Cómputo</option>
+                                </select>
+                            </div>
+                            <div class="inventario-form-group">
+                                <label class="inventario-form-label">Clasificación del Riesgo</label>
+                                <select name="Clasificacion del Riesgo" class="inventario-form-select">
+                                    <option value="">Seleccionar...</option>
+                                    <option value="I">Clase I - Bajo Riesgo</option>
+                                    <option value="IIA">Clase IIA - Riesgo Moderado Bajo</option>
+                                    <option value="IIB">Clase IIB - Riesgo Moderado Alto</option>
+                                    <option value="III">Clase III - Alto Riesgo</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="inventario-form-section">
+                        <div class="inventario-section-header">
+                            <div class="inventario-section-icon">🔧</div>
+                            <h3 class="inventario-section-title">Mantenimiento</h3>
+                        </div>
+                        <div class="inventario-form-grid inventario-form-grid-3">
+                            <div class="inventario-form-group">
+                                <label class="inventario-form-label">Tipo de Mantenimiento</label>
+                                <select name="Tipo de MTTO" class="inventario-form-select">
+                                    <option value="">Seleccionar...</option>
+                                    <option value="Preventivo">Preventivo</option>
+                                    <option value="Correctivo">Correctivo</option>
+                                    <option value="Predictivo">Predictivo</option>
+                                    <option value="Mixto">Mixto</option>
+                                </select>
+                            </div>
+                            <div class="inventario-form-group">
+                                <label class="inventario-form-label">Frecuencia Mtto Preventivo</label>
+                                <select name="Frecuencia de Mantenimiento" class="inventario-form-select">
+                                    <option value="">Seleccionar...</option>
+                                    <option value="Mensual">Mensual</option>
+                                    <option value="Bimestral">Bimestral</option>
+                                    <option value="Trimestral">Trimestral</option>
+                                    <option value="Cuatrimestral">Cuatrimestral</option>
+                                    <option value="Semestral">Semestral</option>
+                                    <option value="Anual">Anual</option>
+                                </select>
+                            </div>
+                            <div class="inventario-form-group">
+                                <label class="inventario-form-label">Costo Mtto Preventivo</label>
+                                <input type="number" name="Costo de Mantenimiento" class="inventario-form-input" min="0" step="0.01" placeholder="$">
+                            </div>
+                            <div class="inventario-form-group">
+                                <label class="inventario-form-label">Fecha Programada Mtto</label>
+                                <input type="date" name="Fecha Programada de Mantenimiento" class="inventario-form-input">
+                            </div>
+                            <div class="inventario-form-group">
+                                <label class="inventario-form-label">Responsable</label>
+                                <input type="text" name="Responsable" class="inventario-form-input">
+                            </div>
+                        </div>
+                        <div class="inventario-form-grid inventario-form-grid-2" style="margin-top: 16px;">
+                            <div class="inventario-form-group full-width">
+                                <label class="inventario-form-label">Programación Anual</label>
+                                <input type="text" name="Programacion de Mantenimiento Anual" class="inventario-form-input" placeholder="Ej: Enero, Abril, Julio, Octubre">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="inventario-form-section">
+                        <div class="inventario-section-header">
+                            <div class="inventario-section-icon">⚖️</div>
+                            <h3 class="inventario-section-title">Calibración</h3>
+                        </div>
+                        <div class="inventario-form-checkbox">
+                            <input type="checkbox" name="Calibrable" id="calibrableCheckbox" onchange="toggleCalibracion()">
+                            <label for="calibrableCheckbox" style="margin: 0; cursor: pointer;"><strong>Este equipo requiere calibración</strong></label>
+                        </div>
+                        <div id="calibracionFields" style="display: none; margin-top: 16px;">
+                            <div class="inventario-form-grid inventario-form-grid-2">
+                                <div class="inventario-form-group">
+                                    <label class="inventario-form-label">N° Certificado</label>
+                                    <input type="text" name="N. Certificado" class="inventario-form-input">
+                                </div>
+                                <div class="inventario-form-group">
+                                    <label class="inventario-form-label">Frecuencia Calibración</label>
+                                    <select name="Frecuencia de MTTO Preventivo" class="inventario-form-select">
+                                        <option value="">Seleccionar...</option>
+                                        <option value="Anual">Anual</option>
+                                        <option value="Semestral">Semestral</option>
+                                        <option value="Según fabricante">Según fabricante</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="inventario-form-section">
+                        <div class="inventario-section-header">
+                            <div class="inventario-section-icon">🏢</div>
+                            <h3 class="inventario-section-title">Información del Proveedor</h3>
+                        </div>
+                        <div class="inventario-form-grid inventario-form-grid-2">
+                            <div class="inventario-form-group">
+                                <label class="inventario-form-label">Nombre Proveedor</label>
+                                <input type="text" name="Nombre" class="inventario-form-input">
+                            </div>
+                            <div class="inventario-form-group">
+                                <label class="inventario-form-label">Teléfono</label>
+                                <input type="tel" name="Telefono" class="inventario-form-input">
+                            </div>
+                            <div class="inventario-form-group">
+                                <label class="inventario-form-label">Dirección</label>
+                                <input type="text" name="Direccion" class="inventario-form-input">
+                            </div>
+                            <div class="inventario-form-group">
+                                <label class="inventario-form-label">Ciudad</label>
+                                <input type="text" name="Ciudad" class="inventario-form-input">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="inventario-form-section">
+                        <div class="inventario-section-header">
+                            <div class="inventario-section-icon">📄</div>
+                            <h3 class="inventario-section-title">Información Adicional</h3>
+                        </div>
+                        <div class="inventario-form-grid">
+                            <div class="inventario-form-group full-width">
+                                <label class="inventario-form-label">Manual (URL)</label>
+                                <input type="url" name="Manual" class="inventario-form-input" placeholder="https://">
+                            </div>
+                        </div>
+                    </div>
+                    <input type="hidden" name="recordId" id="recordId">
+                </div>
+                <div class="inventario-modal-footer">
+                    <button type="button" class="inventario-btn inventario-btn-secondary" onclick="closeModal()">Cancelar</button>
+                    <button type="submit" class="inventario-btn inventario-btn-primary" id="btnSave">💾 Guardar Equipo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/inventario-module.js"></script>
+
+</body>
+</html>
