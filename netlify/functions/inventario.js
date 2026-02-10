@@ -113,6 +113,48 @@ const FIELD_MAP = {
   'Ciudad': 'Ciudad',
 };
 
+// Reverse map (Title Case -> UPPERCASE) to soportar tablas en Airtable con columnas en mayúsculas
+const REVERSE_FIELD_MAP = (() => {
+  const rev = {};
+  for (const [k, v] of Object.entries(FIELD_MAP)) {
+    // Preferimos claves UPPERCASE como destino
+    if (/^[A-Z0-9 .ÁÉÍÓÚÜÑ-]+$/.test(k) && !rev[v]) rev[v] = k;
+  }
+  // Fallbacks comunes (si la tabla está en UPPERCASE)
+  const fallbacks = {
+    'Item': 'ITEM',
+    'Equipo': 'EQUIPO',
+    'Marca': 'MARCA',
+    'Modelo': 'MODELO',
+    'Serie': 'SERIE',
+    'Numero de Placa': 'PLACA',
+    'Codigo ECRI': 'CODIGO ECRI',
+    'Registro INVIMA': 'REGISTRO INVIMA',
+    'Servicio': 'SERVICIO',
+    'Ubicacion': 'UBICACIÓN',
+    'Vida Util': 'VIDA UTIL',
+    'Fecha Programada de Mantenimiento': 'PROX_MTTO'
+  };
+  for (const [k,v] of Object.entries(fallbacks)) if (!rev[k]) rev[k] = v;
+  return rev;
+})();
+
+function isUnknownFieldError(errData) {
+  const e = errData?.error || errData || {};
+  const type = (typeof e === 'object' && e.type) ? String(e.type) : String(errData?.error || '');
+  const msg = (typeof e === 'object' && e.message) ? String(e.message) : String(errData?.message || '');
+  return (type.includes('UNKNOWN_FIELD_NAME') || msg.includes('Unknown field name'));
+}
+
+function remapFieldsToUppercase(fields) {
+  const out = {};
+  for (const [k, v] of Object.entries(fields || {})) {
+    const alt = REVERSE_FIELD_MAP[k] || k;
+    out[alt] = v;
+  }
+  return out;
+}
+
 const NUMBER_FIELDS = new Set([
   'Valor en Pesos',
   'Costo de Mantenimiento',
@@ -320,6 +362,7 @@ exports.handler = async (event) => {
     if (event.httpMethod === 'POST') {
       let mapped = mapAndNormalizeFields(body.fields || {});
       let allRemoved = [];
+      let triedUppercase = false;
       
       // Intentar hasta 3 veces, removiendo campos desconocidos en cada intento
       let lastError = null;
@@ -338,6 +381,13 @@ exports.handler = async (event) => {
           console.log(`[inventario] POST attempt ${attempt+1} failed:`, JSON.stringify(data));
 
           if (status !== 422) break;
+
+          // Si la tabla en Airtable tiene columnas en UPPERCASE, reintenta una vez remapeando
+          if (!triedUppercase && isUnknownFieldError(data)) {
+            triedUppercase = true;
+            mapped = remapFieldsToUppercase(mapped);
+            continue;
+          }
 
           const { cleaned, removed } = removeUnknownFields(mapped, data);
           if (removed.length === 0) break;
@@ -379,6 +429,16 @@ exports.handler = async (event) => {
         
         // Retry on unknown fields
         if (status === 422) {
+          // Reintento si la tabla usa UPPERCASE
+          if (isUnknownFieldError(data)) {
+            try {
+              const alt = remapFieldsToUppercase(mapped);
+              const resp2 = await airtableRequest('PATCH', url, { fields: alt });
+              return json(200, { ok: true, record: resp2.data, warning: { remappedToUppercase: true } });
+            } catch (e2) {
+              // continua con limpieza/remoción de campos
+            }
+          }
           const { cleaned, removed } = removeUnknownFields(mapped, data);
           if (removed.length > 0) {
             try {
