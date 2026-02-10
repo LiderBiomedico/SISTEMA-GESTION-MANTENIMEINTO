@@ -139,6 +139,14 @@ const REVERSE_FIELD_MAP = (() => {
   return rev;
 })();
 
+
+function airtableErrorSummary(errData) {
+  const e = errData?.error || errData || {};
+  const type = (typeof e === 'object' && e.type) ? String(e.type) : (typeof errData?.error === 'string' ? String(errData.error) : '');
+  const message = (typeof e === 'object' && e.message) ? String(e.message) : (typeof errData?.message === 'string' ? String(errData.message) : '');
+  return { type: type || null, message: message || null };
+}
+
 function isUnknownFieldError(errData) {
   const e = errData?.error || errData || {};
   const type = (typeof e === 'object' && e.type) ? String(e.type) : String(errData?.error || '');
@@ -399,14 +407,18 @@ exports.handler = async (event) => {
         }
       }
       
+      const sum = airtableErrorSummary(lastError?.data);
       return json(lastError?.status || 422, { 
         ok: false, 
-        error: lastError?.data?.error || 'Airtable error', 
+        error: (sum.message || (typeof lastError?.data?.error === 'string' ? lastError.data.error : null) || 'Airtable error'),
+        airtableErrorType: sum.type,
+        airtableMessage: sum.message,
         details: lastError?.data,
         removedFields: allRemoved,
         mappedSent: mapped 
       });
     }
+
 
     // =========================================================================
     // PUT - Actualizar registro
@@ -462,7 +474,7 @@ exports.handler = async (event) => {
         
         return json(status, { 
           ok: false, 
-          error: data.error || 'Airtable error', 
+          error: (typeof data.error === 'object' && data.error && data.error.message) ? data.error.message : (data.error || 'Airtable error'), 
           details: data 
         });
       }
@@ -490,7 +502,7 @@ exports.handler = async (event) => {
         const data = e.response?.data || { error: 'Airtable error' };
         return json(status, { 
           ok: false, 
-          error: data.error || 'Error deleting record', 
+          error: (typeof data.error === 'object' && data.error && data.error.message) ? data.error.message : (data.error || 'Error deleting record'), 
           details: data 
         });
       }
@@ -503,7 +515,7 @@ exports.handler = async (event) => {
     const data = err.data || err.response?.data || { error: err.message || 'Server error' };
     return json(status, { 
       ok: false, 
-      error: data.error || 'Server error', 
+      error: (typeof data.error === 'object' && data.error && data.error.message) ? data.error.message : (data.error || 'Server error'), 
       details: data 
     });
   }

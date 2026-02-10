@@ -374,21 +374,36 @@ async function submitInventarioForm(e) {
     } else {
       throw new Error('Respuesta inesperada del servidor');
     }
+  
   } catch (err) {
-    console.error('Error guardando inventario:', (err && err.response && err.response.data) ? err.response.data : err);
+    const respData = (err && err.response && err.response.data) ? err.response.data : null;
+    console.error('Error guardando inventario (raw):', respData ? JSON.stringify(respData) : err);
+
     let msg = 'Error desconocido';
     try {
-      const data = (err && err.response && err.response.data) ? err.response.data : null;
-      msg =
-        (data && (data.error || (data.details && data.details.error && data.details.error.message) || data.message)) ||
-        (err && err.message) ||
-        msg;
-      if (typeof msg !== 'string') msg = JSON.stringify(msg);
+      if (respData) {
+        // Prioridad: mensaje explícito (si viene del backend)
+        msg =
+          respData.airtableMessage ||
+          (typeof respData.error === 'string' ? respData.error : null) ||
+          (respData.details && respData.details.error && respData.details.error.message) ||
+          respData.message ||
+          null;
+
+        // Si aún no tenemos string, serializamos el objeto completo para que sea visible
+        if (!msg || typeof msg !== 'string') {
+          msg = JSON.stringify(respData);
+        }
+      } else {
+        msg = (err && err.message) ? err.message : msg;
+      }
     } catch (e) {
       msg = (err && err.message) ? err.message : msg;
     }
+
     alert('Error guardando inventario: ' + msg);
   } finally {
+
     if (submitBtn) {
       submitBtn.disabled = false;
       submitBtn.textContent = originalText;
