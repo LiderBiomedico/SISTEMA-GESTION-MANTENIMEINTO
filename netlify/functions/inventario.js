@@ -27,65 +27,45 @@ function json(statusCode, body) {
 // Mapeo de campos del formulario a columnas de Airtable
 // Soporta: Title Case (del equipoModal), UPPERCASE (del newInventario form), y variantes con tildes
 const FIELD_MAP = {
-  // --- UPPERCASE (formulario principal newInventario) ---
+  // Identificación
   'ITEM': 'Item',
   'EQUIPO': 'Equipo',
   'MARCA': 'Marca',
   'MODELO': 'Modelo',
   'SERIE': 'Serie',
   'PLACA': 'Numero de Placa',
-  'NÚMERO DE PLACA': 'Numero de Placa',
   'NUMERO DE PLACA': 'Numero de Placa',
+  'NÚMERO DE PLACA': 'Numero de Placa',
+
+  // Ubicación / clasificación
+  'SERVICIO': 'Servicio',
+  'UBICACION': 'Ubicacion',
+  'UBICACIÓN': 'Ubicacion',
+  'VIDA UTIL': 'Vida Util en años',
+  'VIDA ÚTIL': 'Vida Util en años',
+
+  // Campos en Airtable (según tu base)
   'CODIGO ECRI': 'ECRI',
   'ECRI': 'ECRI',
-  // En Airtable aparecen variantes según la vista: "Registro Sanitario" y "Registro Invima"
-  'REGISTRO INVIMA': 'Registro Invima',
+  'REGISTRO INVIMA': 'Registro Sanitario',
   'REGISTRO SANITARIO': 'Registro Sanitario',
-  'REGISTRO SANITARIO (INVIMA)': 'Registro Sanitario',
+  // soporte alterno
+  'REGISTRO INVIMA ALT': 'Registro Invima',
+
   // Adquisición
   'TIPO DE ADQUISICION': 'Tipo de adquisicion',
   'TIPO DE ADQUISICIÓN': 'Tipo de adquisicion',
-  'TIPO DE ADQUISICION (COMPRA/DONACION/COMODATO)': 'Tipo de adquisicion',
   'NO. DE CONTRATO': 'N° de Contrato',
   'N° DE CONTRATO': 'N° de Contrato',
   'Nº DE CONTRATO': 'N° de Contrato',
-  'NUMERO DE CONTRATO': 'N° de Contrato',
-  'SEDE': 'Sede',
-  // Campos visibles en la vista principal de Airtable
-  'FOTO DEL EQUIPO': 'Foto del equipo',
-  'FOTO DE EQUIPO': 'Foto del equipo',
-  'TIPO': 'Tipo',
-  // Clasificaciones / permisos (los nombres exactos pueden variar por vista)
-  'PERMISO DE': 'Permiso de',
-  'PERMISO DE USO': 'Permiso de',
-  'PERMISO DE FUNCIONAMIENTO': 'Permiso de',
-  'CLASIFICACION POR': 'Clasificacion Por',
-  'CLASIFICACIÓN POR': 'Clasificacion Por',
-  'CLASIFICACION': 'Clasificación',
-  'CLASIFICACIÓN': 'Clasificación',
-  // Costos / vida útil
-  'COSTO DEL EQUIPO': 'Costo del equipo',
   'VALOR EN PESOS': 'Costo del equipo',
-  'VIDA UTIL': 'Vida Util en años',
-  'VIDA ÚTIL': 'Vida Util en años',
-  'VIDA UTIL EN AÑOS': 'Vida Util en años',
-  'SERVICIO': 'Servicio',
-  'UBICACIÓN': 'Ubicacion',
-  'UBICACION': 'Ubicacion',
-  'FECHA FABRICA': 'Fecha Fabrica',
-  'CERTIFICADO 2025': 'Certificado 2025',
-  'FECHA DE COMRPA': 'Fecha de compra',
+  'COSTO DEL EQUIPO': 'Costo del equipo',
   'FECHA DE COMPRA': 'Fecha de compra',
-  'FECHA DE RECEPCIÓN': 'Fecha de Recepcion',
-  'FECHA DE RECEPCION': 'Fecha de Recepcion',
-  'FECHA DE INSTALACIÓN': 'Fecha de instalacion',
+  'FECHA DE COMRPA': 'Fecha de compra',
   'FECHA DE INSTALACION': 'Fecha de instalacion',
-  'INICIO DE GARANTIA': 'Inicio de Garantia',
-  'TERMINO DE GARANTIA': 'Termino de Garantia',
-  'CLASIFICACION BIOMEDICA': 'Clasificacion Biomedica',
-  'CLASIFICACION DE LA TECNOLOGIA': 'Clasificacion de la Tecnologia',
-  'CLASIFICACION DEL RIESGO': 'Clasificacion del Riesgo',
-  'MANUAL': 'Manual',
+  'FECHA DE INSTALACIÓN': 'Fecha de instalacion',
+
+  // Mantenimiento
   'TIPO DE MTTO': 'Tipo de MTTO',
   'COSTO DE MANTENIMIENTO': 'Costo de Mantenimiento',
   'CALIBRABLE': 'Calibrable',
@@ -94,108 +74,31 @@ const FIELD_MAP = {
   'FECHA PROGRAMADA DE MANTENIMINETO': 'Fecha Programada de Mantenimiento',
   'FRECUENCIA DE MANTENIMIENTO': 'Frecuencia de Mantenimiento',
   'PROGRAMACION DE MANTENIMIENTO ANUAL': 'Programacion de Mantenimiento Anual',
+
+  // Responsable / proveedor
   'RESPONSABLE': 'Responsable',
   'NOMBRE': 'Nombre',
   'DIRECCION': 'Direccion',
   'TELEFONO': 'Telefono',
   'CIUDAD': 'Ciudad',
-  // --- Title Case (formulario equipoModal / inventario-module.js) ---
-  'Item': 'Item',
-  'Equipo': 'Equipo',
-  'Marca': 'Marca',
-  'Modelo': 'Modelo',
-  'Serie': 'Serie',
-  'Numero de Placa': 'Numero de Placa',
-  'Codigo ECRI': 'Codigo ECRI',
-  'Registro INVIMA': 'Registro INVIMA',
-  'Tipo de Adquisicion': 'Tipo de Adquisicion',
-  'No. de Contrato': 'No. de Contrato',
-  'Servicio': 'Servicio',
-  'Ubicacion': 'Ubicacion',
-  'Ubicación': 'Ubicacion',
-  'Vida Util': 'Vida Util',
-  'Fecha de Compra': 'Fecha de compra',
-  'Fecha de compra': 'Fecha de compra',
-  'Valor en Pesos': 'Valor en Pesos',
-  'Fecha de Instalacion': 'Fecha de instalacion',
-  'Fecha de Instalación': 'Fecha de instalacion',
-  'Fecha de instalacion': 'Fecha de instalacion',
-  'Inicio de Garantia': 'Inicio de Garantia',
-  'Termino de Garantia': 'Termino de Garantia',
-  'Clasificacion Biomedica': 'Clasificacion Biomedica',
-  'Clasificacion de la Tecnologia': 'Clasificacion de la Tecnologia',
-  'Clasificacion del Riesgo': 'Clasificacion del Riesgo',
-  'Manual': 'Manual',
-  'Tipo de MTTO': 'Tipo de MTTO',
-  'Costo de Mantenimiento': 'Costo de Mantenimiento',
-  'Calibrable': 'Calibrable',
-  'N. Certificado': 'N. Certificado',
-  'Frecuencia de MTTO Preventivo': 'Frecuencia de MTTO Preventivo',
-  'Frecuencia de Mantenimiento': 'Frecuencia de Mantenimiento',
-  'Fecha Programada de Mantenimiento': 'Fecha Programada de Mantenimiento',
-  'Programacion de Mantenimiento Anual': 'Programacion de Mantenimiento Anual',
-  'Responsable': 'Responsable',
-  'Nombre': 'Nombre',
-  'Direccion': 'Direccion',
-  'Telefono': 'Telefono',
-  'Ciudad': 'Ciudad',
-  // Campos adicionales (según vistas de Airtable)
-  'Sede': 'Sede',
-  'Foto del equipo': 'Foto del equipo',
-  'Tipo': 'Tipo',
-  'Registro Invima': 'Registro Invima',
-  'Registro Sanitario': 'Registro Sanitario',
-  'Costo del equipo': 'Costo del equipo',
-  'Vida Util en años': 'Vida Util en años',
-  'Permiso de': 'Permiso de',
-  'Clasificacion Por': 'Clasificacion Por',
-  'Clasificación': 'Clasificación',
 };
 
-function normalizeKey(key) {
-  return String(key || '')
-    .replace(/[\u200B-\u200D\uFEFF]/g, '') // zero-width chars
-    .replace(/\u00A0/g, ' ')                // NBSP
-    .trim();
-}
-
-// Mapa normalizado (case-insensitive, sin tildes) para máxima compatibilidad con formularios
-function stripAccents(s) {
-  return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-}
-
-const FIELD_MAP_NORM = (() => {
-  const out = {};
-  for (const [k, v] of Object.entries(FIELD_MAP)) {
-    const kk = stripAccents(normalizeKey(k)).toUpperCase();
-    out[kk] = v;
-  }
-  return out;
-})();
-
-
 const NUMBER_FIELDS = new Set([
-  // En Airtable el campo se llama "Costo del equipo" (en el formulario puede venir como "Valor en Pesos")
-  'Costo del equipo',
   'Valor en Pesos',
   'Costo de Mantenimiento',
-  'Vida Util',
-  'Vida Util en años'
+  'Vida Util'
 ]);
 
 const BOOL_FIELDS = new Set(['Calibrable']);
 
 const DATE_FIELDS = new Set([
   'Fecha de Compra',
-  'Fecha de compra',
   'Fecha de Instalacion',
-  'Fecha de instalacion',
   'Inicio de Garantia',
   'Termino de Garantia',
   'Fecha Programada de Mantenimiento',
   'Fecha Fabrica',
-  'Fecha de Recepcion',
-  'Fecha de recepción'
+  'Fecha de Recepcion'
 ]);
 
 function isUrl(s) {
@@ -267,9 +170,8 @@ function normalizeValue(fieldName, value) {
 function mapAndNormalizeFields(inputFields) {
   const out = {};
   for (const [k, v] of Object.entries(inputFields || {})) {
-    const keyRaw = normalizeKey(k);
-    const keyNorm = stripAccents(keyRaw).toUpperCase();
-    const mapped = FIELD_MAP[keyRaw] || FIELD_MAP[keyRaw.toUpperCase()] || FIELD_MAP_NORM[keyNorm] || keyRaw;
+    const key = String(k || '').trim();
+    const mapped = FIELD_MAP[key] || key;
     
     // Campo Manual como attachment si es URL
     if (mapped === 'Manual' && isUrl(v)) {
