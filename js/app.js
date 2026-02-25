@@ -269,92 +269,80 @@ async function loadKPIs() {
 async function submitInventarioForm(e) {
   e.preventDefault();
   var form = e.target;
-  var fd = new FormData(form);
+  var fd   = new FormData(form);
 
-  // Campos que NO se envían a Airtable (no existen como columnas)
-  var SKIP_FIELDS = { 'FECHA FABRICA': 1, 'CERTIFICADO 2025': 1, 'CODIGO ECRI': 1 };
+  // Campos que NO existen como columnas en Airtable → nunca enviar
+  var SKIP = { 'FECHA FABRICA': 1, 'CERTIFICADO 2025': 1, 'CODIGO ECRI': 1 };
 
-  // Mapeo UPPERCASE del formulario → nombre exacto de columna en Airtable
+  // Mapa UPPERCASE del formulario → nombre exacto de columna en Airtable
   var FIELD_MAP = {
-    'ITEM': 'Item',
-    'EQUIPO': 'Equipo',
-    'MARCA': 'Marca',
-    'MODELO': 'Modelo',
-    'SERIE': 'Serie',
-    'PLACA': 'Numero de Placa',
-    'NUMERO DE PLACA': 'Numero de Placa',
-    'REGISTRO INVIMA': 'Registro INVIMA',
-    'TIPO DE ADQUISICION': 'Tipo de Adquisicion',
-    'NO. DE CONTRATO': 'No. de Contrato',
-    'SERVICIO': 'Servicio',
-    'UBICACION': 'Ubicacion',
-    'UBICACIÓN': 'Ubicacion',
+    'ITEM': 'Item', 'EQUIPO': 'Equipo', 'MARCA': 'Marca', 'MODELO': 'Modelo',
+    'SERIE': 'Serie', 'PLACA': 'Numero de Placa', 'NUMERO DE PLACA': 'Numero de Placa',
+    'REGISTRO INVIMA': 'Registro INVIMA', 'TIPO DE ADQUISICION': 'Tipo de Adquisicion',
+    'NO. DE CONTRATO': 'No. de Contrato', 'SERVICIO': 'Servicio',
+    'UBICACION': 'Ubicacion', 'UBICACIÓN': 'Ubicacion',
     'VIDA UTIL': 'Vida Util',
-    'FECHA DE COMRPA': 'Fecha de Compra',
-    'FECHA DE COMPRA': 'Fecha de Compra',
+    'FECHA DE COMRPA': 'Fecha de Compra', 'FECHA DE COMPRA': 'Fecha de Compra',
     'VALOR EN PESOS': 'Valor en Pesos',
-    'FECHA DE RECEPCIÓN': 'Fecha de Recepcion',
-    'FECHA DE INSTALACIÓN': 'Fecha de Instalacion',
-    'INICIO DE GARANTIA': 'Inicio de Garantia',
-    'TERMINO DE GARANTIA': 'Termino de Garantia',
+    'FECHA DE RECEPCIÓN': 'Fecha de Recepcion', 'FECHA DE INSTALACIÓN': 'Fecha de Instalacion',
+    'INICIO DE GARANTIA': 'Inicio de Garantia', 'TERMINO DE GARANTIA': 'Termino de Garantia',
     'CLASIFICACION BIOMEDICA': 'Clasificacion Biomedica',
     'CLASIFICACION DE LA TECNOLOGIA': 'Clasificacion de la Tecnologia',
     'CLASIFICACION DEL RIESGO': 'Clasificacion del Riesgo',
-    'MANUAL': 'Manual',
-    'TIPO DE MTTO': 'Tipo de MTTO',
+    'MANUAL': 'Manual', 'TIPO DE MTTO': 'Tipo de MTTO',
     'COSTO DE MANTENIMIENTO': 'Costo de Mantenimiento',
-    'CALIBRABLE': 'Calibrable',
-    'N. CERTIFICADO': 'N. Certificado',
+    'CALIBRABLE': 'Calibrable', 'N. CERTIFICADO': 'N. Certificado',
     'FRECUENCIA DE MTTO PREVENTIVO': 'Frecuencia de MTTO Preventivo',
     'FECHA PROGRAMADA DE MANTENIMINETO': 'Fecha Programada de Mantenimiento',
     'FRECUENCIA DE MANTENIMIENTO': 'Frecuencia de Mantenimiento',
     'PROGRAMACION DE MANTENIMIENTO ANUAL': 'Programacion de Mantenimiento Anual',
-    'RESPONSABLE': 'Responsable',
-    'NOMBRE': 'Nombre',
-    'DIRECCION': 'Direccion',
-    'TELEFONO': 'Telefono',
-    'CIUDAD': 'Ciudad'
+    'RESPONSABLE': 'Responsable', 'NOMBRE': 'Nombre', 'DIRECCION': 'Direccion',
+    'TELEFONO': 'Telefono', 'CIUDAD': 'Ciudad'
   };
 
-  // Campos numéricos → Number; campos boolean → true/false
-  var NUMBER_FIELDS = { 'Valor en Pesos': 1, 'Costo de Mantenimiento': 1, 'Vida Util': 1 };
+  // Tipos estrictos de Airtable
+  var NUMBER_FIELDS = { 'Valor en Pesos': 1, 'Costo de Mantenimiento': 1 };
   var BOOL_FIELDS   = { 'Calibrable': 1 };
 
   var fields = {};
-
   for (var pair of fd.entries()) {
-    var k = pair[0];
+    var k   = pair[0];
     var val = String(pair[1]).trim();
-    if (val === '') continue;               // ignorar vacíos
-    if (SKIP_FIELDS[k]) continue;           // ignorar campos sin columna en Airtable
+    if (val === '')   continue;
+    if (SKIP[k])      continue;
 
     var mapped = FIELD_MAP[k] || k;
 
     if (BOOL_FIELDS[mapped]) {
       var s = val.toLowerCase();
-      fields[mapped] = (s === 'true' || s === '1' || s === 'si' || s === 'sí' || s === 'yes');
+      fields[mapped] = (['true','1','si','sí','yes'].indexOf(s) !== -1);
+
     } else if (NUMBER_FIELDS[mapped]) {
       var n = parseFloat(val.replace(/[^0-9.]/g, ''));
       if (!isNaN(n)) fields[mapped] = n;
+      // Si no es número válido, omitir el campo
+
     } else {
+      // Vida Util y texto libre: enviar como string siempre
       fields[mapped] = val;
     }
   }
 
-  if (!fields['Item']) { alert('El campo ITEM es obligatorio'); return; }
-  if (!fields['Equipo']) { alert('El campo EQUIPO es obligatorio'); return; }
+  if (!fields['Item'])  { alert('El campo ITEM es obligatorio');   return; }
+  if (!fields['Equipo'])  { alert('El campo EQUIPO es obligatorio'); return; }
 
   console.log('📤 Enviando campos mapeados:', fields);
 
-  var submitBtn = form.querySelector('button[type="submit"]');
+  var submitBtn    = form.querySelector('button[type="submit"]');
   var originalText = submitBtn ? submitBtn.textContent : '';
   if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = '⏳ Guardando...'; }
 
   try {
-    var url = API_BASE_URL + '/inventario';
-    var resp = await axios.post(url, { fields: fields }, {
-      headers: Object.assign({}, getAuthHeader(), { 'Content-Type': 'application/json' })
-    });
+    var resp = await axios.post(
+      API_BASE_URL + '/inventario',
+      { fields: fields },
+      { headers: Object.assign({}, getAuthHeader(), { 'Content-Type': 'application/json' }) }
+    );
 
     var d = resp.data || {};
     if (d.ok || d.success || d.record) {
@@ -366,26 +354,27 @@ async function submitInventarioForm(e) {
       if (typeof loadInventario === 'function') loadInventario();
       alert('✅ Registro guardado correctamente');
     } else {
-      var serverMsg = d.hint || d.error || 'Respuesta inesperada del servidor';
-      alert('❌ Error guardando en Inventario:\n\n' + serverMsg);
+      var errMsg = (typeof d.error === 'string') ? d.error : JSON.stringify(d.error || d);
+      alert('❌ Error guardando en Inventario:\n\n' + errMsg + (d.hint ? '\n\n💡 ' + d.hint : ''));
     }
+
   } catch (err) {
-    // Extraer mensaje legible del error - sin optional chaining
-    var msg = 'Error desconocido';
+    var msg  = 'Error desconocido';
     var hint = '';
     if (err.response && err.response.data) {
-      var rd = err.response.data;
+      var rd  = err.response.data;
       msg  = (typeof rd.error === 'string') ? rd.error : JSON.stringify(rd.error || rd);
-      hint = rd.hint || '';
-      if (rd.removedFields && rd.removedFields.length > 0) {
-        hint = hint || ('Campos no reconocidos: ' + rd.removedFields.join(', '));
+      hint = (typeof rd.hint  === 'string') ? rd.hint  : '';
+      if (rd.removedFields && rd.removedFields.length > 0 && !hint) {
+        hint = 'Campos rechazados por Airtable: ' + rd.removedFields.join(', ');
       }
       console.error('❌ Error respuesta Airtable:', rd);
-    } else if (err.message) {
-      msg = err.message;
-      console.error('❌ Error guardando:', err.message);
+    } else {
+      msg = err.message || msg;
+      console.error('❌ Error guardando:', msg);
     }
     alert('❌ Error guardando en Inventario:\n\n' + msg + (hint ? '\n\n💡 ' + hint : ''));
+
   } finally {
     if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = originalText; }
   }
@@ -399,34 +388,19 @@ function generateAnnualSchedule() {
   var startDateEl = document.getElementById('invStartDate');
   var freqEl      = document.getElementById('invFreqSelect');
   var scheduleEl  = document.getElementById('invScheduleAnnual');
-  if (!startDateEl || !freqEl || !scheduleEl) {
-    alert('No se encontraron los campos de fecha o frecuencia.');
-    return;
-  }
-  if (!startDateEl.value) {
-    alert('Ingresa primero la "Fecha Programada de Mantenimiento" como punto de inicio.');
-    startDateEl.focus();
-    return;
-  }
+  if (!startDateEl || !freqEl || !scheduleEl) { alert('No se encontraron los campos de fecha o frecuencia.'); return; }
+  if (!startDateEl.value) { alert('Ingresa primero la "Fecha Programada de Mantenimiento".'); startDateEl.focus(); return; }
   var freq = (freqEl.value || '').toLowerCase();
-  var monthInterval = 12;
-  if (freq.indexOf('mensual') !== -1)            monthInterval = 1;
-  else if (freq.indexOf('bimestral') !== -1)     monthInterval = 2;
-  else if (freq.indexOf('trimestral') !== -1)    monthInterval = 3;
-  else if (freq.indexOf('cuatrimestral') !== -1) monthInterval = 4;
-  else if (freq.indexOf('semestral') !== -1)     monthInterval = 6;
-
-  var start   = new Date(startDateEl.value + 'T00:00:00');
-  var endDate = new Date(start);
-  endDate.setFullYear(endDate.getFullYear() + 1);
-
-  var dates = [];
-  var current = new Date(start);
-  while (current <= endDate) {
-    dates.push(current.toISOString().slice(0, 10));
-    current = new Date(current);
-    current.setMonth(current.getMonth() + monthInterval);
-  }
+  var mi = 12;
+  if (freq.indexOf('mensual') !== -1)            mi = 1;
+  else if (freq.indexOf('bimestral') !== -1)     mi = 2;
+  else if (freq.indexOf('trimestral') !== -1)    mi = 3;
+  else if (freq.indexOf('cuatrimestral') !== -1) mi = 4;
+  else if (freq.indexOf('semestral') !== -1)     mi = 6;
+  var start = new Date(startDateEl.value + 'T00:00:00');
+  var end   = new Date(start); end.setFullYear(end.getFullYear() + 1);
+  var dates = []; var cur = new Date(start);
+  while (cur <= end) { dates.push(cur.toISOString().slice(0, 10)); cur = new Date(cur); cur.setMonth(cur.getMonth() + mi); }
   scheduleEl.value = dates.join(', ');
   console.log('📅 Programación generada:', dates);
 }
