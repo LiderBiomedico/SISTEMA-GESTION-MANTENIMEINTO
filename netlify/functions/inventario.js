@@ -1,6 +1,7 @@
 // =============================================================================
 // netlify/functions/inventario.js - VERSIÓN COMPLETA CON CRUD
-// v5 - Fix definitivo 422: normalización estricta de tipos + logs diagnóstico
+// Soporta: GET (list), POST (create), PUT (update), DELETE (delete)
+// Gestiona errores 422 de Airtable removiendo campos desconocidos (sin filtrar por muestreo de registros)
 // =============================================================================
 const axios = require('axios');
 
@@ -174,30 +175,26 @@ function toNumber(v) {
 function toBoolean(v) {
   if (typeof v === 'boolean') return v;
   if (typeof v === 'number') return v !== 0;
-  if (typeof v !== 'string') return false;
+  if (typeof v !== 'string') return v;
   const s = v.trim().toLowerCase();
-  // Cualquier valor truthy → true; todo lo demás → false
-  return ['true','1','si','sí','yes','y','on','x'].includes(s);
+  if (['true','1','si','sí','yes','y','on','x'].includes(s)) return true;
+  if (['false','0','no','off','n'].includes(s)) return false;
+  return v;
 }
 
 function normalizeValue(fieldName, value) {
-  if (value === null || typeof value === 'undefined') return null;
-  // No enviar strings vacíos: Airtable puede rechazar tipo incorrecto en campos tipados
-  if (typeof value === 'string' && value.trim() === '') return null;
-
-  if (NUMBER_FIELDS.has(fieldName)) {
-    const n = toNumber(value);
-    return (typeof n === 'number' && Number.isFinite(n)) ? n : null;
-  }
+  if (value === null || typeof value === 'undefined') return value;
+  
+  if (NUMBER_FIELDS.has(fieldName)) return toNumber(value);
   if (BOOL_FIELDS.has(fieldName)) return toBoolean(value);
-
+  
   if (DATE_FIELDS.has(fieldName)) {
-    if (value instanceof Date) return value.toISOString().slice(0, 10);
-    if (looksLikeISODate(value)) return String(value).trim().slice(0, 10);
-    return null; // fecha inválida → no enviar
+    if (value instanceof Date) return value.toISOString().slice(0,10);
+    if (looksLikeISODate(value)) return String(value).trim().slice(0,10);
+    return value;
   }
-
-  return String(value).trim();
+  
+  return value;
 }
 
 function mapAndNormalizeFields(inputFields) {
@@ -205,18 +202,14 @@ function mapAndNormalizeFields(inputFields) {
   for (const [k, v] of Object.entries(inputFields || {})) {
     const key = String(k || '').trim();
     const mapped = FIELD_MAP[key] || key;
-
+    
     // Campo Manual como attachment si es URL
     if (mapped === 'Manual' && isUrl(v)) {
       out[mapped] = [{ url: String(v).trim() }];
       continue;
     }
-
-    const normalized = normalizeValue(mapped, v);
-    // Solo incluir si el valor es válido (no null/undefined)
-    if (normalized !== null && typeof normalized !== 'undefined') {
-      out[mapped] = normalized;
-    }
+    
+    out[mapped] = normalizeValue(mapped, v);
   }
   console.log('[inventario] Mapped fields:', JSON.stringify(out));
   return out;
@@ -225,10 +218,10 @@ function mapAndNormalizeFields(inputFields) {
 function removeUnknownFields(fields, errData) {
   // Airtable devuelve errores como: { error: { type: 'UNKNOWN_FIELD_NAME', message: 'Unknown field name: "Xyz"' } }
   // o { error: 'UNKNOWN_FIELD_NAME', message: 'Unknown field name: "Xyz"' }
-  const errObj = errData?.error || errData || {};
-  const msg = typeof errObj === 'string' 
-    ? errObj 
-    : (errObj.message || errData?.message || JSON.stringify(errData || {}));
+  const errObj = (errData && errData.error) ? errData.error : (errData || {});
+  const msg = typeof errObj === 'string'
+    ? errObj
+    : (errObj.message || (errData && errData.message) || JSON.stringify(errData || {}));
   
   // Buscar nombres entre comillas
   const matches = String(msg).match(/"([^"]+)"/g) || [];
@@ -326,62 +319,93 @@ exports.handler = async (event) => {
     // =========================================================================
     if (event.httpMethod === 'POST') {
       let mapped = mapAndNormalizeFields(body.fields || {});
-      let allRemoved = [];
+      const allRemoved = [];
 
-      console.log('[inventario] POST iniciado. Campos a enviar:', Object.keys(mapped));
+      console.log('[inventario] POST - campos a enviar:', Object.keys(mapped));
 
-      // Intentar hasta 3 veces, removiendo campos desconocidos en cada intento
-      let lastError = null;
-      for (let attempt = 0; attempt < 3; attempt++) {
-        try {
-          const resp = await airtableRequest('POST', baseUrl, { fields: mapped });
-          const result = { ok: true, success: true, record: resp.data };
-          if (allRemoved.length > 0) {
-            result.warning = { removedUnknownFields: allRemoved };
-            console.warn('[inventario] Guardado con campos removidos:', allRemoved);
-          }
-          console.log('[inventario] POST exitoso en intento', attempt + 1);
-          return json(200, result);
-        } catch (e) {
-          const status = (e.response && e.response.status) ? e.response.status : 500;
-          const data = (e.response && e.response.data) ? e.response.data : { error: 'Airtable error' };
-          lastError = { status, data };
-          console.error(`[inventario] POST intento ${attempt + 1} falló (${status}):`, JSON.stringify(data));
+      // Intento 1: enviar todos los campos mapeados
+      try {
+        const resp = await airtableRequest('POST', baseUrl, { fields: mapped });
+        return json(200, { ok: true, success: true, record: resp.data });
+      } catch (e) {
+        const status = (e.response && e.response.status) ? e.response.status : 500;
+        const data   = (e.response && e.response.data)   ? e.response.data   : {};
+        console.error('[inventario] Intento 1 falló (' + status + '):', JSON.stringify(data));
 
-          // Solo reintentar en 422 (campo desconocido)
-          if (status !== 422) break;
+        // Si no es 422 (campo desconocido), error real → propagar
+        if (status !== 422) {
+          return json(status, {
+            ok: false,
+            error: data.error || 'Error de Airtable',
+            details: data
+          });
+        }
 
-          const { cleaned, removed } = removeUnknownFields(mapped, data);
-          if (removed.length === 0) {
-            console.error('[inventario] 422 pero no se identificaron campos desconocidos. Body completo:', JSON.stringify(data));
-            break;
-          }
-
-          console.warn('[inventario] Removiendo campos desconocidos:', removed);
+        // Es 422 → identificar y remover campos desconocidos, luego reintentar
+        const { cleaned, removed } = removeUnknownFields(mapped, data);
+        if (removed.length > 0) {
           allRemoved.push(...removed);
           mapped = cleaned;
-
-          if (Object.keys(mapped).length === 0) {
-            console.error('[inventario] Sin campos válidos después de limpiar. Abortando.');
-            break;
-          }
+          console.warn('[inventario] Campos removidos por 422:', removed);
+          console.log('[inventario] Campos restantes:', Object.keys(mapped));
+        } else {
+          // 422 pero no se pudo identificar el campo problemático → error real
+          return json(422, {
+            ok: false,
+            error: data.error || 'Airtable rechazó la petición',
+            hint: 'Airtable devolvió 422 pero no se pudo identificar el campo problemático. Revisa los logs de Netlify.',
+            details: data
+          });
         }
       }
 
-      // Construir mensaje de error amigable
-      const errMsg = (lastError && lastError.data)
-        ? (lastError.data.error || JSON.stringify(lastError.data))
-        : 'Error desconocido de Airtable';
+      // Intento 2 (y 3 si es necesario): con campos limpios
+      for (let attempt = 2; attempt <= 4; attempt++) {
+        if (Object.keys(mapped).length === 0) break;
 
-      const hint = allRemoved.length > 0
-        ? `Campos no reconocidos por Airtable (tabla: "${TABLE_NAME}"): ${allRemoved.join(', ')}. Verifica los nombres exactos de columnas en tu base.`
-        : `Airtable rechazó la petición. Verifica: 1) que la tabla "${TABLE_NAME}" exista, 2) nombres exactos de columnas, 3) tipos de datos (fechas en formato YYYY-MM-DD, números sin texto).`;
+        try {
+          const resp = await airtableRequest('POST', baseUrl, { fields: mapped });
+          console.log('[inventario] POST exitoso en intento', attempt, '| Campos removidos:', allRemoved);
+          return json(200, {
+            ok: true,
+            success: true,
+            record: resp.data,
+            warning: allRemoved.length > 0 ? {
+              removedUnknownFields: allRemoved,
+              message: 'Registro guardado. Los siguientes campos no existen en Airtable y fueron ignorados: ' + allRemoved.join(', ')
+            } : undefined
+          });
+        } catch (e) {
+          const status = (e.response && e.response.status) ? e.response.status : 500;
+          const data   = (e.response && e.response.data)   ? e.response.data   : {};
+          console.error('[inventario] Intento ' + attempt + ' falló (' + status + '):', JSON.stringify(data));
 
-      return json((lastError && lastError.status) ? lastError.status : 422, {
+          if (status !== 422) {
+            return json(status, { ok: false, error: data.error || 'Error de Airtable', details: data });
+          }
+
+          const { cleaned, removed } = removeUnknownFields(mapped, data);
+          if (removed.length === 0) break;
+          allRemoved.push(...removed);
+          mapped = cleaned;
+          console.warn('[inventario] Más campos removidos:', removed);
+        }
+      }
+
+      // Si llegamos aquí, todos los campos fueron removidos o todos los intentos fallaron
+      if (Object.keys(mapped).length === 0) {
+        return json(422, {
+          ok: false,
+          error: 'Ningún campo del formulario existe en la tabla de Airtable "' + TABLE_NAME + '"',
+          hint: 'Campos que no existen en Airtable: ' + allRemoved.join(', ') + '. Verifica los nombres exactos de columnas en tu base de datos.',
+          removedFields: allRemoved
+        });
+      }
+
+      return json(422, {
         ok: false,
-        error: errMsg,
-        hint,
-        details: lastError ? lastError.data : null,
+        error: 'No se pudo guardar el registro después de varios intentos',
+        hint: 'Campos removidos por no existir en Airtable: ' + allRemoved.join(', '),
         removedFields: allRemoved,
         mappedSent: mapped
       });
@@ -403,36 +427,36 @@ exports.handler = async (event) => {
         const resp = await airtableRequest('PATCH', url, { fields: mapped });
         return json(200, { ok: true, record: resp.data });
       } catch (e) {
-        const status = e.response?.status || 500;
-        const data = e.response?.data || { error: 'Airtable error' };
-        
+        const status = (e.response && e.response.status) ? e.response.status : 500;
+        const data   = (e.response && e.response.data)   ? e.response.data   : { error: 'Airtable error' };
+
         // Retry on unknown fields
         if (status === 422) {
           const { cleaned, removed } = removeUnknownFields(mapped, data);
           if (removed.length > 0) {
             try {
               const resp2 = await airtableRequest('PATCH', url, { fields: cleaned });
-              return json(200, { 
-                ok: true, 
-                record: resp2.data, 
-                warning: { removedUnknownFields: removed } 
+              return json(200, {
+                ok: true,
+                record: resp2.data,
+                warning: { removedUnknownFields: removed }
               });
             } catch (e2) {
-              const status2 = e2.response?.status || 500;
-              const data2 = e2.response?.data || { error: 'Airtable error after retry' };
-              return json(status2, { 
-                ok: false, 
-                error: data2.error || 'Airtable error', 
-                details: data2 
+              const status2 = (e2.response && e2.response.status) ? e2.response.status : 500;
+              const data2   = (e2.response && e2.response.data)   ? e2.response.data   : { error: 'Airtable error after retry' };
+              return json(status2, {
+                ok: false,
+                error: data2.error || 'Airtable error',
+                details: data2
               });
             }
           }
         }
-        
-        return json(status, { 
-          ok: false, 
-          error: data.error || 'Airtable error', 
-          details: data 
+
+        return json(status, {
+          ok: false,
+          error: data.error || 'Airtable error',
+          details: data
         });
       }
     }
@@ -455,12 +479,12 @@ exports.handler = async (event) => {
         await airtableRequest('DELETE', url);
         return json(200, { ok: true, deleted: true, id });
       } catch (e) {
-        const status = e.response?.status || 500;
-        const data = e.response?.data || { error: 'Airtable error' };
-        return json(status, { 
-          ok: false, 
-          error: data.error || 'Error deleting record', 
-          details: data 
+        const status = (e.response && e.response.status) ? e.response.status : 500;
+        const data   = (e.response && e.response.data)   ? e.response.data   : { error: 'Airtable error' };
+        return json(status, {
+          ok: false,
+          error: data.error || 'Error deleting record',
+          details: data
         });
       }
     }
@@ -468,11 +492,11 @@ exports.handler = async (event) => {
     return json(405, { ok: false, error: 'Method not allowed' });
 
   } catch (err) {
-    const status = err.status || err.response?.status || 500;
-    const data = err.data || err.response?.data || { error: err.message || 'Server error' };
-    return json(status, { 
-      ok: false, 
-      error: data.error || 'Server error', 
+    const status = err.status || (err.response && err.response.status ? err.response.status : 500);
+    const data   = err.data   || (err.response && err.response.data   ? err.response.data   : { error: err.message || 'Server error' });
+    return json(status, {
+      ok: false,
+      error: data.error || 'Server error',
       details: data 
     });
   }
