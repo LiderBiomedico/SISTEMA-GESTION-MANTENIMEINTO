@@ -274,12 +274,8 @@ async function submitInventarioForm(e) {
 
   for (const [k, v] of fd.entries()) {
     const val = String(v).trim();
-    if (val === '') continue;
-    if (k === 'CALIBRABLE' || k === 'Calibrable') {
-      rawFields[k] = (val === 'true' || val === 'Sí' || val === 'si');
-    } else {
-      rawFields[k] = val;
-    }
+    if (val === '') continue; // ignorar campos vacíos
+    rawFields[k] = val;
   }
 
   if (!rawFields['ITEM'] && !rawFields['Item']) {
@@ -336,11 +332,26 @@ async function submitInventarioForm(e) {
     'CIUDAD': 'Ciudad',
   };
 
-  // Convertir campos del formulario a nombres de Airtable
+  // Campos que Airtable trata como booleanos (checkbox)
+  const BOOL_FIELDS = new Set(['Calibrable', 'CALIBRABLE']);
+  // Campos que Airtable trata como número
+  const NUMBER_FIELDS = new Set(['Valor en Pesos', 'VALOR EN PESOS', 'Costo de Mantenimiento', 'COSTO DE MANTENIMIENTO', 'Vida Util', 'VIDA UTIL']);
+
   const fields = {};
   for (const [k, v] of Object.entries(rawFields)) {
     const mapped = FIELD_MAP[k] || k;
-    fields[mapped] = v;
+    
+    if (BOOL_FIELDS.has(k) || BOOL_FIELDS.has(mapped)) {
+      // Convertir a boolean real — nunca enviar string a campo checkbox
+      const s = v.toLowerCase();
+      fields[mapped] = ['true', '1', 'si', 'sí', 'yes'].includes(s);
+    } else if (NUMBER_FIELDS.has(k) || NUMBER_FIELDS.has(mapped)) {
+      // Convertir a número — nunca enviar string a campo numérico
+      const n = parseFloat(String(v).replace(/[^0-9.]/g, ''));
+      if (!isNaN(n)) fields[mapped] = n;
+    } else {
+      fields[mapped] = v;
+    }
   }
 
   console.log('📤 Enviando campos mapeados:', fields);
@@ -360,49 +371,36 @@ async function submitInventarioForm(e) {
 
     const d = resp.data || {};
 
-    if (d.ok || d.record || d.success) {
-      // Advertencia si el registro quedó vacío en Airtable
-      const recFields = (d.record && d.record.fields) ? d.record.fields : {};
-      const recCount = Object.keys(recFields).length;
-      if (Object.keys(fields).length > 0 && recCount === 0) {
-        console.warn('⚠️ Registro creado pero sin campos. Revisa nombres de columnas en Airtable.', { sent: fields });
-        alert('⚠️ Se creó el registro pero quedó vacío en Airtable.\nRevisa que los nombres de columnas en Airtable coincidan exactamente.');
-      } else {
-        // Si hubo campos removidos, avisar pero no bloquear
-        if (d.warning && d.warning.removedUnknownFields && d.warning.removedUnknownFields.length > 0) {
-          console.warn('⚠️ Campos no reconocidos por Airtable (ignorados):', d.warning.removedUnknownFields);
-        }
-        closeModal('newInventario');
-        form.reset();
-        if (typeof loadInventario === 'function') loadInventario();
-        alert('✅ Registro guardado correctamente');
+    if (d.ok || d.success || d.record) {
+      if (d.warning && d.warning.removedUnknownFields && d.warning.removedUnknownFields.length > 0) {
+        console.warn('⚠️ Campos no reconocidos por Airtable (se guardó sin ellos):', d.warning.removedUnknownFields);
       }
-    } else if (!d.ok && d.error) {
-      // El servidor retornó error estructurado (ej: 422 agotado)
-      const removedMsg = (d.removedFields && d.removedFields.length > 0)
-        ? `\n\nCampos no reconocidos por Airtable: ${d.removedFields.join(', ')}`
-        : '';
-      throw new Error((d.error || 'Error del servidor') + removedMsg);
+      closeModal('newInventario');
+      form.reset();
+      if (typeof loadInventario === 'function') loadInventario();
+      alert('✅ Registro guardado correctamente');
     } else {
-      throw new Error('Respuesta inesperada del servidor');
+      const msg = d.hint || d.error || 'Respuesta inesperada del servidor';
+      throw new Error(msg);
     }
   } catch (err) {
-    // axios lanza error en status >= 400; extraer mensaje del body de respuesta
-    const respData = (err.response && err.response.data) ? err.response.data : null;
-    let msg = err.message;
-    if (respData) {
-      const detail = (respData.details && respData.details.error && respData.details.error.message)
-        ? respData.details.error.message
-        : null;
-      msg = respData.error || detail || err.message;
-      if (respData.removedFields && respData.removedFields.length > 0) {
-        msg += `\n\nCampos no reconocidos por Airtable (eliminados en reintento): ${respData.removedFields.join(', ')}`;
+    // Extraer el mensaje de error del body de la respuesta HTTP (status 4xx/5xx)
+    let msg = err.message || 'Error desconocido';
+    let hint = '';
+
+    if (err.response && err.response.data) {
+      const d = err.response.data;
+      msg = d.error || msg;
+      hint = d.hint || '';
+      if (d.removedFields && d.removedFields.length > 0) {
+        hint = hint || `Campos no reconocidos por Airtable: ${d.removedFields.join(', ')}`;
       }
-      console.error('❌ Error guardando inventario:', respData);
+      console.error('❌ Error respuesta Airtable:', d);
     } else {
-      console.error('❌ Error guardando inventario:', err.message);
+      console.error('❌ Error guardando:', err.message);
     }
-    alert('Error guardando inventario:\n' + msg);
+
+    alert('❌ Error guardando en Inventario:\n\n' + msg + (hint ? '\n\n💡 ' + hint : ''));
   } finally {
     if (submitBtn) {
       submitBtn.disabled = false;
@@ -417,46 +415,34 @@ async function submitInventarioForm(e) {
 
 function generateAnnualSchedule() {
   const startDateEl = document.getElementById('invStartDate');
-  const freqEl = document.getElementById('invFreqSelect');
-  const scheduleEl = document.getElementById('invScheduleAnnual');
+  const freqEl      = document.getElementById('invFreqSelect');
+  const scheduleEl  = document.getElementById('invScheduleAnnual');
 
   if (!startDateEl || !freqEl || !scheduleEl) {
-    alert('No se encontraron los campos de fecha o frecuencia.');
+    alert('No se encontraron los campos de fecha o frecuencia en el formulario.');
     return;
   }
-
-  const startDateVal = startDateEl.value;
-  if (!startDateVal) {
-    alert('Por favor ingresa una Fecha Programada de Mantenimiento como fecha de inicio.');
+  if (!startDateEl.value) {
+    alert('Ingresa primero la "Fecha Programada de Mantenimiento" como punto de inicio.');
     startDateEl.focus();
     return;
   }
 
-  const freq = freqEl.value ? freqEl.value.toLowerCase() : '';
-
-  // Determinar cantidad de meses entre mantenimientos
+  const freq = (freqEl.value || '').toLowerCase();
   let monthInterval = 12; // default: anual
-  if (freq.includes('mensual') || freq === 'monthly') {
-    monthInterval = 1;
-  } else if (freq.includes('bimestral')) {
-    monthInterval = 2;
-  } else if (freq.includes('trimestral') || freq === 'quarterly') {
-    monthInterval = 3;
-  } else if (freq.includes('cuatrimestral')) {
-    monthInterval = 4;
-  } else if (freq.includes('semestral') || freq === 'biannual' || freq === 'semiannual') {
-    monthInterval = 6;
-  } else if (freq.includes('anual') || freq === 'annual' || freq === 'yearly') {
-    monthInterval = 12;
-  }
+  if (freq.includes('mensual'))           monthInterval = 1;
+  else if (freq.includes('bimestral'))    monthInterval = 2;
+  else if (freq.includes('trimestral'))   monthInterval = 3;
+  else if (freq.includes('cuatrimestral'))monthInterval = 4;
+  else if (freq.includes('semestral'))    monthInterval = 6;
+  else if (freq.includes('anual'))        monthInterval = 12;
 
-  // Generar fechas desde la fecha inicial hasta 12 meses después
-  const dates = [];
-  let current = new Date(startDateVal + 'T00:00:00');
-  // Incluir la fecha inicial y proyectar hacia adelante hasta completar el año
-  const endDate = new Date(current);
+  const start   = new Date(startDateEl.value + 'T00:00:00');
+  const endDate = new Date(start);
   endDate.setFullYear(endDate.getFullYear() + 1);
 
+  const dates = [];
+  let current = new Date(start);
   while (current <= endDate) {
     dates.push(current.toISOString().slice(0, 10));
     current = new Date(current);
@@ -464,7 +450,12 @@ function generateAnnualSchedule() {
   }
 
   scheduleEl.value = dates.join(', ');
-  console.log('📅 Programación generada:', dates);
+  console.log('📅 Programación anual generada:', dates);
+}
+
+function clearAnnualSchedule() {
+  const el = document.getElementById('invScheduleAnnual');
+  if (el) el.value = '';
 }
 
 // ============================================================================
@@ -565,6 +556,7 @@ window.switchModule = switchModule;
 window.openModal = openModal;
 window.closeModal = closeModal;
 window.generateAnnualSchedule = generateAnnualSchedule;
+window.clearAnnualSchedule = clearAnnualSchedule;
 window.debouncedInventarioSearch = debouncedInventarioSearch;
 window.inventarioNextPage = inventarioNextPage;
 window.inventarioPrevPage = inventarioPrevPage;
