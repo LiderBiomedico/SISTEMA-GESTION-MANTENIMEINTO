@@ -198,7 +198,7 @@ async function fetchDashboardData() {
     const response = await axios.get(`${API_BASE_URL}/kpis`, { headers: getAuthHeader() });
     const data = response.data || {};
 
-    const equiposTotal = data.equipos?.total ?? data.equiposTotal ?? 0;
+    const equiposTotal = (data.equipos && data.equipos.total != null) ? data.equipos.total : (data.equiposTotal != null ? data.equiposTotal : 0);
     const cumplimiento = data.cumplimiento ?? 0;
     const pendientes = data.pendientes ?? 0;
     const mtbf = data.mtbf ?? 0;
@@ -268,36 +268,14 @@ async function loadKPIs() {
 
 async function submitInventarioForm(e) {
   e.preventDefault();
-  const form = e.target;
-  const fd = new FormData(form);
-  const rawFields = {};
+  var form = e.target;
+  var fd = new FormData(form);
 
-  // Construir set de campos marcados como data-skip-airtable="true"
-  const skipFields = new Set();
-  form.querySelectorAll('[data-skip-airtable="true"]').forEach(el => {
-    if (el.name) skipFields.add(el.name);
-  });
+  // Campos que NO se envían a Airtable (no existen como columnas)
+  var SKIP_FIELDS = { 'FECHA FABRICA': 1, 'CERTIFICADO 2025': 1, 'CODIGO ECRI': 1 };
 
-  for (const [k, v] of fd.entries()) {
-    // Ignorar campos vacíos
-    const val = String(v).trim();
-    if (val === '') continue;
-    // Ignorar campos marcados explícitamente para no enviar a Airtable
-    if (skipFields.has(k)) continue;
-    rawFields[k] = val;
-  }
-
-  if (!rawFields['ITEM'] && !rawFields['Item']) {
-    alert('El campo ITEM es obligatorio');
-    return;
-  }
-  if (!rawFields['EQUIPO'] && !rawFields['Equipo']) {
-    alert('El campo EQUIPO es obligatorio');
-    return;
-  }
-
-  // Mapeo UPPERCASE → nombres exactos de columnas Airtable
-  const FIELD_MAP = {
+  // Mapeo UPPERCASE del formulario → nombre exacto de columna en Airtable
+  var FIELD_MAP = {
     'ITEM': 'Item',
     'EQUIPO': 'Equipo',
     'MARCA': 'Marca',
@@ -305,16 +283,13 @@ async function submitInventarioForm(e) {
     'SERIE': 'Serie',
     'PLACA': 'Numero de Placa',
     'NUMERO DE PLACA': 'Numero de Placa',
-    'CODIGO ECRI': 'Codigo ECRI',
     'REGISTRO INVIMA': 'Registro INVIMA',
     'TIPO DE ADQUISICION': 'Tipo de Adquisicion',
     'NO. DE CONTRATO': 'No. de Contrato',
     'SERVICIO': 'Servicio',
-    'UBICACIÓN': 'Ubicacion',
     'UBICACION': 'Ubicacion',
+    'UBICACIÓN': 'Ubicacion',
     'VIDA UTIL': 'Vida Util',
-    'FECHA FABRICA': 'Fecha Fabrica',
-    'CERTIFICADO 2025': 'Certificado 2025',
     'FECHA DE COMRPA': 'Fecha de Compra',
     'FECHA DE COMPRA': 'Fecha de Compra',
     'VALOR EN PESOS': 'Valor en Pesos',
@@ -338,57 +313,127 @@ async function submitInventarioForm(e) {
     'NOMBRE': 'Nombre',
     'DIRECCION': 'Direccion',
     'TELEFONO': 'Telefono',
-    'CIUDAD': 'Ciudad',
+    'CIUDAD': 'Ciudad'
   };
 
-  // Convertir campos del formulario a nombres de Airtable
-  const fields = {};
-  for (const [k, v] of Object.entries(rawFields)) {
-    const mapped = FIELD_MAP[k] || k;
-    fields[mapped] = v;
+  // Campos numéricos → Number; campos boolean → true/false
+  var NUMBER_FIELDS = { 'Valor en Pesos': 1, 'Costo de Mantenimiento': 1, 'Vida Util': 1 };
+  var BOOL_FIELDS   = { 'Calibrable': 1 };
+
+  var fields = {};
+
+  for (var pair of fd.entries()) {
+    var k = pair[0];
+    var val = String(pair[1]).trim();
+    if (val === '') continue;               // ignorar vacíos
+    if (SKIP_FIELDS[k]) continue;           // ignorar campos sin columna en Airtable
+
+    var mapped = FIELD_MAP[k] || k;
+
+    if (BOOL_FIELDS[mapped]) {
+      var s = val.toLowerCase();
+      fields[mapped] = (s === 'true' || s === '1' || s === 'si' || s === 'sí' || s === 'yes');
+    } else if (NUMBER_FIELDS[mapped]) {
+      var n = parseFloat(val.replace(/[^0-9.]/g, ''));
+      if (!isNaN(n)) fields[mapped] = n;
+    } else {
+      fields[mapped] = val;
+    }
   }
+
+  if (!fields['Item']) { alert('El campo ITEM es obligatorio'); return; }
+  if (!fields['Equipo']) { alert('El campo EQUIPO es obligatorio'); return; }
 
   console.log('📤 Enviando campos mapeados:', fields);
 
-  const submitBtn = form.querySelector('button[type="submit"]');
-  const originalText = submitBtn ? submitBtn.textContent : '';
-  if (submitBtn) {
-    submitBtn.disabled = true;
-    submitBtn.textContent = '⏳ Guardando...';
-  }
+  var submitBtn = form.querySelector('button[type="submit"]');
+  var originalText = submitBtn ? submitBtn.textContent : '';
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = '⏳ Guardando...'; }
 
   try {
-    const url = `${API_BASE_URL}/inventario`;
-    const resp = await axios.post(url, { fields }, {
-      headers: { ...getAuthHeader(), 'Content-Type': 'application/json' }
+    var url = API_BASE_URL + '/inventario';
+    var resp = await axios.post(url, { fields: fields }, {
+      headers: Object.assign({}, getAuthHeader(), { 'Content-Type': 'application/json' })
     });
 
-    if (resp.data && (resp.data.ok || resp.data.record)) {
-      // Validación extra: si Airtable creó el registro pero sin campos visibles, avisar (suele pasar por filtros de campos)
-      const sentCount = Object.keys(fields || {}).length;
-      const recFields = resp.data.record && resp.data.record.fields ? resp.data.record.fields : {};
-      const recCount = Object.keys(recFields || {}).length;
-      if (sentCount > 0 && recCount === 0) {
-        console.warn('⚠️ Registro creado pero sin campos. Revisa nombres de columnas en Airtable.', { sent: fields, record: resp.data.record });
-        alert('⚠️ Se creó el registro pero quedó vacío en Airtable. Esto suele ocurrir por nombres de columnas diferentes. Te recomiendo revisar el nombre exacto de las columnas en Airtable.');
+    var d = resp.data || {};
+    if (d.ok || d.success || d.record) {
+      if (d.warning && d.warning.removedUnknownFields && d.warning.removedUnknownFields.length > 0) {
+        console.warn('⚠️ Campos ignorados por Airtable:', d.warning.removedUnknownFields);
       }
       closeModal('newInventario');
       form.reset();
       if (typeof loadInventario === 'function') loadInventario();
       alert('✅ Registro guardado correctamente');
     } else {
-      throw new Error('Respuesta inesperada del servidor');
+      var serverMsg = d.hint || d.error || 'Respuesta inesperada del servidor';
+      alert('❌ Error guardando en Inventario:\n\n' + serverMsg);
     }
   } catch (err) {
-    console.error('Error guardando inventario:', err?.response?.data || err.message);
-    const msg = err?.response?.data?.error || err?.response?.data?.details?.error?.message || err.message;
-    alert('Error guardando inventario: ' + msg);
-  } finally {
-    if (submitBtn) {
-      submitBtn.disabled = false;
-      submitBtn.textContent = originalText;
+    // Extraer mensaje legible del error - sin optional chaining
+    var msg = 'Error desconocido';
+    var hint = '';
+    if (err.response && err.response.data) {
+      var rd = err.response.data;
+      msg  = (typeof rd.error === 'string') ? rd.error : JSON.stringify(rd.error || rd);
+      hint = rd.hint || '';
+      if (rd.removedFields && rd.removedFields.length > 0) {
+        hint = hint || ('Campos no reconocidos: ' + rd.removedFields.join(', '));
+      }
+      console.error('❌ Error respuesta Airtable:', rd);
+    } else if (err.message) {
+      msg = err.message;
+      console.error('❌ Error guardando:', err.message);
     }
+    alert('❌ Error guardando en Inventario:\n\n' + msg + (hint ? '\n\n💡 ' + hint : ''));
+  } finally {
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = originalText; }
   }
+}
+
+// ============================================================================
+// GENERADOR DE PROGRAMACIÓN ANUAL DE MANTENIMIENTO
+// ============================================================================
+
+function generateAnnualSchedule() {
+  var startDateEl = document.getElementById('invStartDate');
+  var freqEl      = document.getElementById('invFreqSelect');
+  var scheduleEl  = document.getElementById('invScheduleAnnual');
+  if (!startDateEl || !freqEl || !scheduleEl) {
+    alert('No se encontraron los campos de fecha o frecuencia.');
+    return;
+  }
+  if (!startDateEl.value) {
+    alert('Ingresa primero la "Fecha Programada de Mantenimiento" como punto de inicio.');
+    startDateEl.focus();
+    return;
+  }
+  var freq = (freqEl.value || '').toLowerCase();
+  var monthInterval = 12;
+  if (freq.indexOf('mensual') !== -1)            monthInterval = 1;
+  else if (freq.indexOf('bimestral') !== -1)     monthInterval = 2;
+  else if (freq.indexOf('trimestral') !== -1)    monthInterval = 3;
+  else if (freq.indexOf('cuatrimestral') !== -1) monthInterval = 4;
+  else if (freq.indexOf('semestral') !== -1)     monthInterval = 6;
+
+  var start   = new Date(startDateEl.value + 'T00:00:00');
+  var endDate = new Date(start);
+  endDate.setFullYear(endDate.getFullYear() + 1);
+
+  var dates = [];
+  var current = new Date(start);
+  while (current <= endDate) {
+    dates.push(current.toISOString().slice(0, 10));
+    current = new Date(current);
+    current.setMonth(current.getMonth() + monthInterval);
+  }
+  scheduleEl.value = dates.join(', ');
+  console.log('📅 Programación generada:', dates);
+}
+
+function clearAnnualSchedule() {
+  var el = document.getElementById('invScheduleAnnual');
+  if (el) el.value = '';
 }
 
 // ============================================================================
@@ -488,6 +533,8 @@ document.addEventListener('DOMContentLoaded', () => {
 window.switchModule = switchModule;
 window.openModal = openModal;
 window.closeModal = closeModal;
+window.generateAnnualSchedule = generateAnnualSchedule;
+window.clearAnnualSchedule = clearAnnualSchedule;
 window.debouncedInventarioSearch = debouncedInventarioSearch;
 window.inventarioNextPage = inventarioNextPage;
 window.inventarioPrevPage = inventarioPrevPage;

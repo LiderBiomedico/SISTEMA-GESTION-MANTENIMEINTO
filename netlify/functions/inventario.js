@@ -1,503 +1,274 @@
 // =============================================================================
-// netlify/functions/inventario.js - VERSIÓN COMPLETA CON CRUD
-// Soporta: GET (list), POST (create), PUT (update), DELETE (delete)
-// Gestiona errores 422 de Airtable removiendo campos desconocidos (sin filtrar por muestreo de registros)
+// netlify/functions/inventario.js - v6 DEFINITIVO
+// Fix 422: retry automático removiendo campos desconocidos, sin optional chaining
 // =============================================================================
 const axios = require('axios');
 
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY || process.env.AIRTABLE_TOKEN || '';
 const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID || '';
-const TABLE_NAME = process.env.AIRTABLE_INVENTARIO_TABLE || 'Inventario';
-const AIRTABLE_API = 'https://api.airtable.com/v0';
+const TABLE_NAME       = process.env.AIRTABLE_INVENTARIO_TABLE || 'Inventario';
+const AIRTABLE_API     = 'https://api.airtable.com/v0';
 
-
-function json(statusCode, body) {
+function json(code, body) {
   return {
-    statusCode,
+    statusCode: code,
     headers: {
       'Content-Type': 'application/json; charset=utf-8',
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-      'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
+      'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify(body)
   };
 }
 
-// Mapeo de campos del formulario a columnas de Airtable
-// Soporta: Title Case (del equipoModal), UPPERCASE (del newInventario form), y variantes con tildes
+// ─── FIELD MAP ───────────────────────────────────────────────────────────────
 const FIELD_MAP = {
-  // --- UPPERCASE (formulario principal newInventario) ---
-  'ITEM': 'Item',
-  'EQUIPO': 'Equipo',
-  'MARCA': 'Marca',
-  'MODELO': 'Modelo',
-  'SERIE': 'Serie',
-  'PLACA': 'Numero de Placa',
-  'NÚMERO DE PLACA': 'Numero de Placa',
-  'NUMERO DE PLACA': 'Numero de Placa',
-  'CODIGO ECRI': 'Codigo ECRI',
-  'REGISTRO INVIMA': 'Registro INVIMA',
-  'TIPO DE ADQUISICION': 'Tipo de Adquisicion',
-  'NO. DE CONTRATO': 'No. de Contrato',
-  'SERVICIO': 'Servicio',
-  'UBICACIÓN': 'Ubicacion',
-  'UBICACION': 'Ubicacion',
-  'VIDA UTIL': 'Vida Util',
-  'VIDA ÚTIL': 'Vida Util',
-  'FECHA FABRICA': 'Fecha Fabrica',
-  'CERTIFICADO 2025': 'Certificado 2025',
-  'FECHA DE COMRPA': 'Fecha de Compra',
-  'FECHA DE COMPRA': 'Fecha de Compra',
-  'VALOR EN PESOS': 'Valor en Pesos',
-  'FECHA DE RECEPCIÓN': 'Fecha de Recepcion',
-  'FECHA DE RECEPCION': 'Fecha de Recepcion',
-  'FECHA DE INSTALACIÓN': 'Fecha de Instalacion',
-  'FECHA DE INSTALACION': 'Fecha de Instalacion',
-  'INICIO DE GARANTIA': 'Inicio de Garantia',
-  'TERMINO DE GARANTIA': 'Termino de Garantia',
+  // UPPERCASE (formulario newInventario)
+  'ITEM': 'Item', 'EQUIPO': 'Equipo', 'MARCA': 'Marca', 'MODELO': 'Modelo',
+  'SERIE': 'Serie', 'PLACA': 'Numero de Placa', 'NUMERO DE PLACA': 'Numero de Placa',
+  'REGISTRO INVIMA': 'Registro INVIMA', 'TIPO DE ADQUISICION': 'Tipo de Adquisicion',
+  'NO. DE CONTRATO': 'No. de Contrato', 'SERVICIO': 'Servicio',
+  'UBICACION': 'Ubicacion', 'UBICACIÓN': 'Ubicacion',
+  'VIDA UTIL': 'Vida Util', 'FECHA DE COMRPA': 'Fecha de Compra',
+  'FECHA DE COMPRA': 'Fecha de Compra', 'VALOR EN PESOS': 'Valor en Pesos',
+  'FECHA DE RECEPCIÓN': 'Fecha de Recepcion', 'FECHA DE RECEPCION': 'Fecha de Recepcion',
+  'FECHA DE INSTALACIÓN': 'Fecha de Instalacion', 'FECHA DE INSTALACION': 'Fecha de Instalacion',
+  'INICIO DE GARANTIA': 'Inicio de Garantia', 'TERMINO DE GARANTIA': 'Termino de Garantia',
   'CLASIFICACION BIOMEDICA': 'Clasificacion Biomedica',
   'CLASIFICACION DE LA TECNOLOGIA': 'Clasificacion de la Tecnologia',
   'CLASIFICACION DEL RIESGO': 'Clasificacion del Riesgo',
-  'MANUAL': 'Manual',
-  'TIPO DE MTTO': 'Tipo de MTTO',
-  'COSTO DE MANTENIMIENTO': 'Costo de Mantenimiento',
-  'CALIBRABLE': 'Calibrable',
+  'MANUAL': 'Manual', 'TIPO DE MTTO': 'Tipo de MTTO',
+  'COSTO DE MANTENIMIENTO': 'Costo de Mantenimiento', 'CALIBRABLE': 'Calibrable',
   'N. CERTIFICADO': 'N. Certificado',
   'FRECUENCIA DE MTTO PREVENTIVO': 'Frecuencia de MTTO Preventivo',
   'FECHA PROGRAMADA DE MANTENIMINETO': 'Fecha Programada de Mantenimiento',
   'FRECUENCIA DE MANTENIMIENTO': 'Frecuencia de Mantenimiento',
   'PROGRAMACION DE MANTENIMIENTO ANUAL': 'Programacion de Mantenimiento Anual',
-  'RESPONSABLE': 'Responsable',
-  'NOMBRE': 'Nombre',
-  'DIRECCION': 'Direccion',
-  'TELEFONO': 'Telefono',
-  'CIUDAD': 'Ciudad',
-  // --- Title Case (formulario equipoModal / inventario-module.js) ---
-  'Item': 'Item',
-  'Equipo': 'Equipo',
-  'Marca': 'Marca',
-  'Modelo': 'Modelo',
-  'Serie': 'Serie',
-  'Numero de Placa': 'Numero de Placa',
-  'Codigo ECRI': 'Codigo ECRI',
-  'Registro INVIMA': 'Registro INVIMA',
-  'Tipo de Adquisicion': 'Tipo de Adquisicion',
-  'No. de Contrato': 'No. de Contrato',
-  'Servicio': 'Servicio',
-  'Ubicacion': 'Ubicacion',
-  'Ubicación': 'Ubicacion',
-  'Vida Util': 'Vida Util',
-  'Fecha de Compra': 'Fecha de Compra',
-  'Valor en Pesos': 'Valor en Pesos',
-  'Fecha de Instalacion': 'Fecha de Instalacion',
-  'Fecha de Instalación': 'Fecha de Instalacion',
-  'Inicio de Garantia': 'Inicio de Garantia',
+  'RESPONSABLE': 'Responsable', 'NOMBRE': 'Nombre', 'DIRECCION': 'Direccion',
+  'TELEFONO': 'Telefono', 'CIUDAD': 'Ciudad',
+  // Title Case (equipoModal / inventario-module.js)
+  'Item': 'Item', 'Equipo': 'Equipo', 'Marca': 'Marca', 'Modelo': 'Modelo',
+  'Serie': 'Serie', 'Numero de Placa': 'Numero de Placa',
+  'Registro INVIMA': 'Registro INVIMA', 'Tipo de Adquisicion': 'Tipo de Adquisicion',
+  'No. de Contrato': 'No. de Contrato', 'Servicio': 'Servicio',
+  'Ubicacion': 'Ubicacion', 'Ubicación': 'Ubicacion',
+  'Vida Util': 'Vida Util', 'Fecha de Compra': 'Fecha de Compra',
+  'Valor en Pesos': 'Valor en Pesos', 'Fecha de Recepcion': 'Fecha de Recepcion',
+  'Fecha de Instalacion': 'Fecha de Instalacion', 'Inicio de Garantia': 'Inicio de Garantia',
   'Termino de Garantia': 'Termino de Garantia',
   'Clasificacion Biomedica': 'Clasificacion Biomedica',
   'Clasificacion de la Tecnologia': 'Clasificacion de la Tecnologia',
   'Clasificacion del Riesgo': 'Clasificacion del Riesgo',
-  'Manual': 'Manual',
-  'Tipo de MTTO': 'Tipo de MTTO',
-  'Costo de Mantenimiento': 'Costo de Mantenimiento',
-  'Calibrable': 'Calibrable',
+  'Manual': 'Manual', 'Tipo de MTTO': 'Tipo de MTTO',
+  'Costo de Mantenimiento': 'Costo de Mantenimiento', 'Calibrable': 'Calibrable',
   'N. Certificado': 'N. Certificado',
   'Frecuencia de MTTO Preventivo': 'Frecuencia de MTTO Preventivo',
-  'Frecuencia de Mantenimiento': 'Frecuencia de Mantenimiento',
   'Fecha Programada de Mantenimiento': 'Fecha Programada de Mantenimiento',
+  'Frecuencia de Mantenimiento': 'Frecuencia de Mantenimiento',
   'Programacion de Mantenimiento Anual': 'Programacion de Mantenimiento Anual',
-  'Responsable': 'Responsable',
-  'Nombre': 'Nombre',
-  'Direccion': 'Direccion',
-  'Telefono': 'Telefono',
-  'Ciudad': 'Ciudad',
+  'Responsable': 'Responsable', 'Nombre': 'Nombre', 'Direccion': 'Direccion',
+  'Telefono': 'Telefono', 'Ciudad': 'Ciudad'
 };
 
-const NUMBER_FIELDS = new Set([
-  'Valor en Pesos',
-  'Costo de Mantenimiento',
-  'Vida Util'
+const NUMBER_FIELDS = new Set(['Valor en Pesos', 'Costo de Mantenimiento', 'Vida Util']);
+const BOOL_FIELDS   = new Set(['Calibrable']);
+const DATE_FIELDS   = new Set([
+  'Fecha de Compra', 'Fecha de Instalacion', 'Inicio de Garantia',
+  'Termino de Garantia', 'Fecha Programada de Mantenimiento', 'Fecha de Recepcion'
 ]);
 
-const BOOL_FIELDS = new Set(['Calibrable']);
-
-const DATE_FIELDS = new Set([
-  'Fecha de Compra',
-  'Fecha de Instalacion',
-  'Inicio de Garantia',
-  'Termino de Garantia',
-  'Fecha Programada de Mantenimiento',
-  'Fecha Fabrica',
-  'Fecha de Recepcion'
-]);
-
-function isUrl(s) {
-  return typeof s === 'string' && /^https?:\/\/\S+/i.test(s.trim());
-}
-
-function looksLikeISODate(s) {
-  return typeof s === 'string' && /^\d{4}-\d{2}-\d{2}/.test(s.trim());
-}
+function isUrl(s) { return typeof s === 'string' && /^https?:\/\/\S+/i.test(s.trim()); }
+function isISODate(s) { return typeof s === 'string' && /^\d{4}-\d{2}-\d{2}/.test(s.trim()); }
 
 function toNumber(v) {
   if (typeof v === 'number') return v;
-  if (typeof v !== 'string') return v;
-  const s = v.trim();
-  if (!s) return v;
-  
-  const cleaned = s.replace(/[^\d.,-]/g, '');
-  if (!cleaned) return v;
-  
-  let norm = cleaned;
-  const hasDot = cleaned.includes('.');
-  const hasComma = cleaned.includes(',');
-  
-  if (hasDot && hasComma) {
-    const lastDot = cleaned.lastIndexOf('.');
-    const lastComma = cleaned.lastIndexOf(',');
-    if (lastComma > lastDot) {
-      norm = cleaned.replace(/\./g,'').replace(',', '.');
-    } else {
-      norm = cleaned.replace(/,/g,'');
-    }
-  } else if (hasComma && !hasDot) {
-    const parts = cleaned.split(',');
-    if (parts.length > 2) norm = parts.join('');
-    else norm = parts[0] + '.' + parts[1];
-  } else {
-    norm = cleaned.replace(/,/g,'');
-  }
-  
-  const n = Number(norm);
-  return Number.isFinite(n) ? n : v;
+  var n = parseFloat(String(v).replace(/[^0-9.]/g, ''));
+  return isFinite(n) ? n : null;
 }
 
 function toBoolean(v) {
   if (typeof v === 'boolean') return v;
-  if (typeof v === 'number') return v !== 0;
-  if (typeof v !== 'string') return v;
-  const s = v.trim().toLowerCase();
-  if (['true','1','si','sí','yes','y','on','x'].includes(s)) return true;
-  if (['false','0','no','off','n'].includes(s)) return false;
-  return v;
+  var s = String(v).trim().toLowerCase();
+  return ['true', '1', 'si', 'sí', 'yes', 'y', 'on', 'x'].indexOf(s) !== -1;
 }
 
-function normalizeValue(fieldName, value) {
-  if (value === null || typeof value === 'undefined') return value;
-  
-  if (NUMBER_FIELDS.has(fieldName)) return toNumber(value);
-  if (BOOL_FIELDS.has(fieldName)) return toBoolean(value);
-  
-  if (DATE_FIELDS.has(fieldName)) {
-    if (value instanceof Date) return value.toISOString().slice(0,10);
-    if (looksLikeISODate(value)) return String(value).trim().slice(0,10);
-    return value;
+function normalizeValue(field, value) {
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'string' && value.trim() === '') return null;
+  if (NUMBER_FIELDS.has(field)) { var n = toNumber(value); return n !== null ? n : null; }
+  if (BOOL_FIELDS.has(field))   return toBoolean(value);
+  if (DATE_FIELDS.has(field)) {
+    if (value instanceof Date) return value.toISOString().slice(0, 10);
+    if (isISODate(value)) return String(value).trim().slice(0, 10);
+    return null;
   }
-  
-  return value;
+  return String(value).trim();
 }
 
-function mapAndNormalizeFields(inputFields) {
-  const out = {};
-  for (const [k, v] of Object.entries(inputFields || {})) {
-    const key = String(k || '').trim();
-    const mapped = FIELD_MAP[key] || key;
-    
-    // Campo Manual como attachment si es URL
-    if (mapped === 'Manual' && isUrl(v)) {
-      out[mapped] = [{ url: String(v).trim() }];
-      continue;
-    }
-    
-    out[mapped] = normalizeValue(mapped, v);
+function mapFields(inputFields) {
+  var out = {};
+  var keys = Object.keys(inputFields || {});
+  for (var i = 0; i < keys.length; i++) {
+    var k      = String(keys[i]).trim();
+    var v      = inputFields[keys[i]];
+    var mapped = FIELD_MAP[k] || k;
+    if (mapped === 'Manual' && isUrl(v)) { out[mapped] = [{ url: String(v).trim() }]; continue; }
+    var norm = normalizeValue(mapped, v);
+    if (norm !== null && norm !== undefined) out[mapped] = norm;
   }
-  console.log('[inventario] Mapped fields:', JSON.stringify(out));
+  console.log('[inventario] mapFields result:', JSON.stringify(out));
   return out;
 }
 
-function removeUnknownFields(fields, errData) {
-  // Airtable devuelve errores como: { error: { type: 'UNKNOWN_FIELD_NAME', message: 'Unknown field name: "Xyz"' } }
-  // o { error: 'UNKNOWN_FIELD_NAME', message: 'Unknown field name: "Xyz"' }
-  const errObj = (errData && errData.error) ? errData.error : (errData || {});
-  const msg = typeof errObj === 'string'
-    ? errObj
-    : (errObj.message || (errData && errData.message) || JSON.stringify(errData || {}));
-  
-  // Buscar nombres entre comillas
-  const matches = String(msg).match(/"([^"]+)"/g) || [];
-  const unknown = new Set(matches.map(m => m.replace(/"/g,'').trim()).filter(Boolean));
-  
-  // También buscar después de "Unknown field name:" sin comillas
-  const plainMatch = String(msg).match(/Unknown field name:\s*(\S+)/gi) || [];
-  plainMatch.forEach(m => {
-    const name = m.replace(/Unknown field name:\s*/i, '').replace(/"/g,'').trim();
-    if (name) unknown.add(name);
-  });
-  
-  if (unknown.size === 0) return { cleaned: fields, removed: [] };
-  
-  const cleaned = { ...fields };
-  const removed = [];
-  for (const u of unknown) {
-    if (u in cleaned) { 
-      delete cleaned[u]; 
-      removed.push(u); 
-    }
-  }
-  return { cleaned, removed };
+// Extrae el nombre del campo desconocido del mensaje de error de Airtable
+function extractUnknownField(errData) {
+  var msg = '';
+  if (!errData) return null;
+  if (typeof errData === 'string') { msg = errData; }
+  else if (errData.error && typeof errData.error === 'object' && errData.error.message) { msg = errData.error.message; }
+  else if (errData.error && typeof errData.error === 'string') { msg = errData.error; }
+  else if (errData.message) { msg = errData.message; }
+  else { msg = JSON.stringify(errData); }
+
+  // Airtable: 'Unknown field name: "NombreCampo"'
+  var match = msg.match(/Unknown field name[^"]*"([^"]+)"/i);
+  if (match) return match[1];
+  // Fallback: primer token entre comillas
+  var q = msg.match(/"([^"]+)"/);
+  if (q) return q[1];
+  return null;
 }
 
-async function airtableRequest(method, url, data) {
+function airtableReq(method, url, data) {
   if (!AIRTABLE_API_KEY || !AIRTABLE_BASE_ID) {
-    throw { status: 500, data: { error: 'Missing AIRTABLE_API_KEY/TOKEN or AIRTABLE_BASE_ID' } };
+    return Promise.reject({ status: 500, message: 'Faltan variables de entorno AIRTABLE_API_KEY y AIRTABLE_BASE_ID' });
   }
-  const headers = { Authorization: `Bearer ${AIRTABLE_API_KEY}` };
-  return axios({ method, url, headers, data });
+  return axios({ method: method, url: url, headers: { Authorization: 'Bearer ' + AIRTABLE_API_KEY }, data: data });
 }
 
+// POST con retry automático: remueve campos desconocidos y reintenta hasta 5 veces
+async function postWithRetry(baseUrl, fields) {
+  var mapped   = mapFields(fields);
+  var removed  = [];
 
-exports.handler = async (event) => {
+  for (var attempt = 1; attempt <= 5; attempt++) {
+    if (Object.keys(mapped).length === 0) break;
+    try {
+      var resp = await airtableReq('POST', baseUrl, { fields: mapped });
+      return { ok: true, record: resp.data, removedFields: removed };
+    } catch (e) {
+      var status = (e.response && e.response.status) ? e.response.status : 500;
+      var data   = (e.response && e.response.data)   ? e.response.data   : {};
+      console.error('[inventario] POST intento ' + attempt + ' falló (' + status + '):', JSON.stringify(data));
+
+      if (status !== 422) return { ok: false, status: status, error: data.error || 'Error de Airtable', details: data };
+
+      var badField = extractUnknownField(data);
+      if (!badField) return { ok: false, status: 422, error: data.error || 'Campo inválido no identificado', details: data };
+
+      console.warn('[inventario] Removiendo campo desconocido:', badField);
+      removed.push(badField);
+      delete mapped[badField];
+    }
+  }
+
+  if (Object.keys(mapped).length === 0) {
+    return {
+      ok: false, status: 422,
+      error: 'Ningún campo del formulario existe en Airtable (tabla: "' + TABLE_NAME + '")',
+      hint:  'Campos rechazados: ' + removed.join(', ') + '. Verifica los nombres exactos en tu base de Airtable.',
+      removedFields: removed
+    };
+  }
+  return { ok: false, status: 422, error: 'Error persistente después de ' + removed.length + ' reintentos', removedFields: removed };
+}
+
+// ─── HANDLER ─────────────────────────────────────────────────────────────────
+exports.handler = async function(event) {
   try {
-    // CORS preflight
-    if (event.httpMethod === 'OPTIONS') {
-      return json(204, { ok: true });
-    }
+    if (event.httpMethod === 'OPTIONS') return json(204, { ok: true });
 
-    const qs = event.queryStringParameters || {};
-    const debug = !!qs.debug;
+    var qs       = event.queryStringParameters || {};
+    var baseUrl  = AIRTABLE_API + '/' + AIRTABLE_BASE_ID + '/' + encodeURIComponent(TABLE_NAME);
 
-    // Debug mode
-    if (debug && event.httpMethod === 'GET') {
-      return json(200, { 
-        ok: true, 
-        table: TABLE_NAME, 
-        hasApiKey: !!AIRTABLE_API_KEY, 
-        hasBaseId: !!AIRTABLE_BASE_ID 
-      });
-    }
-
-    const baseUrl = `${AIRTABLE_API}/${AIRTABLE_BASE_ID}/${encodeURIComponent(TABLE_NAME)}`;
-
-    // =========================================================================
-    // GET - Listar registros
-    // =========================================================================
+    // ── GET ──────────────────────────────────────────────────────────────────
     if (event.httpMethod === 'GET') {
-      const pageSize = Math.min(parseInt(qs.pageSize || '50', 10) || 50, 100);
-      let offset = qs.offset ? String(qs.offset) : null;
+      if (qs.debug) return json(200, { ok: true, table: TABLE_NAME, hasKey: !!AIRTABLE_API_KEY, hasBase: !!AIRTABLE_BASE_ID });
 
-      // Fix: ignorar offsets inválidos
-      if (offset && (offset === 'true' || offset === 'false' || offset === '0')) {
-        offset = null;
-      }
+      var pageSize = Math.min(parseInt(qs.pageSize || '50', 10) || 50, 100);
+      var offset   = qs.offset && qs.offset !== 'true' && qs.offset !== 'false' ? qs.offset : null;
+      var params   = 'pageSize=' + pageSize + (offset ? '&offset=' + offset : '');
+      if (qs.q) params += '&filterByFormula=SEARCH("' + qs.q.replace(/"/g,'') + '",CONCATENATE(Item,Equipo,Marca,Serie))';
 
-      const params = new URLSearchParams();
-      params.set('pageSize', String(pageSize));
-      if (offset) params.set('offset', offset);
-
-      const url = `${baseUrl}?${params.toString()}`;
-      const resp = await airtableRequest('GET', url);
-      const records = resp.data.records || [];
-      
-      return json(200, { 
-        ok: true, 
-        data: records, 
-        count: records.length, 
-        offset: resp.data.offset || null 
-      });
+      var r = await airtableReq('GET', baseUrl + '?' + params);
+      return json(200, { ok: true, data: r.data.records || [], count: (r.data.records || []).length, offset: r.data.offset || null });
     }
 
-    // Parse body para POST/PUT/DELETE
-    let body = {};
-    try { 
-      body = JSON.parse(event.body || '{}'); 
-    } catch { 
-      body = {}; 
-    }
+    var body = {};
+    try { body = JSON.parse(event.body || '{}'); } catch(e) { body = {}; }
 
-    // =========================================================================
-    // POST - Crear registro
-    // =========================================================================
+    // ── POST ─────────────────────────────────────────────────────────────────
     if (event.httpMethod === 'POST') {
-      let mapped = mapAndNormalizeFields(body.fields || {});
-      const allRemoved = [];
-
-      console.log('[inventario] POST - campos a enviar:', Object.keys(mapped));
-
-      // Intento 1: enviar todos los campos mapeados
-      try {
-        const resp = await airtableRequest('POST', baseUrl, { fields: mapped });
-        return json(200, { ok: true, success: true, record: resp.data });
-      } catch (e) {
-        const status = (e.response && e.response.status) ? e.response.status : 500;
-        const data   = (e.response && e.response.data)   ? e.response.data   : {};
-        console.error('[inventario] Intento 1 falló (' + status + '):', JSON.stringify(data));
-
-        // Si no es 422 (campo desconocido), error real → propagar
-        if (status !== 422) {
-          return json(status, {
-            ok: false,
-            error: data.error || 'Error de Airtable',
-            details: data
-          });
+      var result = await postWithRetry(baseUrl, body.fields || {});
+      if (result.ok) {
+        var res = { ok: true, success: true, record: result.record };
+        if (result.removedFields && result.removedFields.length > 0) {
+          res.warning = { removedUnknownFields: result.removedFields, message: 'Guardado sin los campos: ' + result.removedFields.join(', ') };
         }
-
-        // Es 422 → identificar y remover campos desconocidos, luego reintentar
-        const { cleaned, removed } = removeUnknownFields(mapped, data);
-        if (removed.length > 0) {
-          allRemoved.push(...removed);
-          mapped = cleaned;
-          console.warn('[inventario] Campos removidos por 422:', removed);
-          console.log('[inventario] Campos restantes:', Object.keys(mapped));
-        } else {
-          // 422 pero no se pudo identificar el campo problemático → error real
-          return json(422, {
-            ok: false,
-            error: data.error || 'Airtable rechazó la petición',
-            hint: 'Airtable devolvió 422 pero no se pudo identificar el campo problemático. Revisa los logs de Netlify.',
-            details: data
-          });
-        }
+        return json(200, res);
       }
-
-      // Intento 2 (y 3 si es necesario): con campos limpios
-      for (let attempt = 2; attempt <= 4; attempt++) {
-        if (Object.keys(mapped).length === 0) break;
-
-        try {
-          const resp = await airtableRequest('POST', baseUrl, { fields: mapped });
-          console.log('[inventario] POST exitoso en intento', attempt, '| Campos removidos:', allRemoved);
-          return json(200, {
-            ok: true,
-            success: true,
-            record: resp.data,
-            warning: allRemoved.length > 0 ? {
-              removedUnknownFields: allRemoved,
-              message: 'Registro guardado. Los siguientes campos no existen en Airtable y fueron ignorados: ' + allRemoved.join(', ')
-            } : undefined
-          });
-        } catch (e) {
-          const status = (e.response && e.response.status) ? e.response.status : 500;
-          const data   = (e.response && e.response.data)   ? e.response.data   : {};
-          console.error('[inventario] Intento ' + attempt + ' falló (' + status + '):', JSON.stringify(data));
-
-          if (status !== 422) {
-            return json(status, { ok: false, error: data.error || 'Error de Airtable', details: data });
-          }
-
-          const { cleaned, removed } = removeUnknownFields(mapped, data);
-          if (removed.length === 0) break;
-          allRemoved.push(...removed);
-          mapped = cleaned;
-          console.warn('[inventario] Más campos removidos:', removed);
-        }
-      }
-
-      // Si llegamos aquí, todos los campos fueron removidos o todos los intentos fallaron
-      if (Object.keys(mapped).length === 0) {
-        return json(422, {
-          ok: false,
-          error: 'Ningún campo del formulario existe en la tabla de Airtable "' + TABLE_NAME + '"',
-          hint: 'Campos que no existen en Airtable: ' + allRemoved.join(', ') + '. Verifica los nombres exactos de columnas en tu base de datos.',
-          removedFields: allRemoved
-        });
-      }
-
-      return json(422, {
-        ok: false,
-        error: 'No se pudo guardar el registro después de varios intentos',
-        hint: 'Campos removidos por no existir en Airtable: ' + allRemoved.join(', '),
-        removedFields: allRemoved,
-        mappedSent: mapped
-      });
+      return json(result.status || 422, { ok: false, error: result.error, hint: result.hint || '', details: result.details, removedFields: result.removedFields || [] });
     }
 
-    // =========================================================================
-    // PUT - Actualizar registro
-    // =========================================================================
+    // ── PUT ──────────────────────────────────────────────────────────────────
     if (event.httpMethod === 'PUT') {
-      const id = body.id;
-      if (!id) {
-        return json(400, { ok: false, error: 'Missing record id' });
-      }
-      
-      const mapped = mapAndNormalizeFields(body.fields || {});
-      const url = `${baseUrl}/${encodeURIComponent(id)}`;
-      
+      if (!body.id) return json(400, { ok: false, error: 'Falta el ID del registro' });
+      var mapped2 = mapFields(body.fields || {});
+      var putUrl  = baseUrl + '/' + encodeURIComponent(body.id);
       try {
-        const resp = await airtableRequest('PATCH', url, { fields: mapped });
-        return json(200, { ok: true, record: resp.data });
-      } catch (e) {
-        const status = (e.response && e.response.status) ? e.response.status : 500;
-        const data   = (e.response && e.response.data)   ? e.response.data   : { error: 'Airtable error' };
-
-        // Retry on unknown fields
-        if (status === 422) {
-          const { cleaned, removed } = removeUnknownFields(mapped, data);
-          if (removed.length > 0) {
-            try {
-              const resp2 = await airtableRequest('PATCH', url, { fields: cleaned });
-              return json(200, {
-                ok: true,
-                record: resp2.data,
-                warning: { removedUnknownFields: removed }
-              });
-            } catch (e2) {
-              const status2 = (e2.response && e2.response.status) ? e2.response.status : 500;
-              const data2   = (e2.response && e2.response.data)   ? e2.response.data   : { error: 'Airtable error after retry' };
-              return json(status2, {
-                ok: false,
-                error: data2.error || 'Airtable error',
-                details: data2
-              });
-            }
+        var pr = await airtableReq('PATCH', putUrl, { fields: mapped2 });
+        return json(200, { ok: true, record: pr.data });
+      } catch (pe) {
+        var ps = (pe.response && pe.response.status) ? pe.response.status : 500;
+        var pd = (pe.response && pe.response.data)   ? pe.response.data   : {};
+        if (ps === 422) {
+          var badF = extractUnknownField(pd);
+          if (badF) { delete mapped2[badF]; }
+          try {
+            var pr2 = await airtableReq('PATCH', putUrl, { fields: mapped2 });
+            return json(200, { ok: true, record: pr2.data, warning: badF ? { removedUnknownFields: [badF] } : undefined });
+          } catch (pe2) {
+            var ps2 = (pe2.response && pe2.response.status) ? pe2.response.status : 500;
+            var pd2 = (pe2.response && pe2.response.data)   ? pe2.response.data   : {};
+            return json(ps2, { ok: false, error: pd2.error || 'Error actualizando', details: pd2 });
           }
         }
-
-        return json(status, {
-          ok: false,
-          error: data.error || 'Airtable error',
-          details: data
-        });
+        return json(ps, { ok: false, error: pd.error || 'Error actualizando', details: pd });
       }
     }
 
-    // =========================================================================
-    // DELETE - Eliminar registro
-    // =========================================================================
+    // ── DELETE ───────────────────────────────────────────────────────────────
     if (event.httpMethod === 'DELETE') {
-      // El ID viene en el path: /inventario/recXXX
-      const pathParts = event.path.split('/');
-      const id = pathParts[pathParts.length - 1];
-      
-      if (!id || id === 'inventario') {
-        return json(400, { ok: false, error: 'Missing record id in path' });
-      }
-      
-      const url = `${baseUrl}/${encodeURIComponent(id)}`;
-      
+      var parts = event.path.split('/');
+      var recId = parts[parts.length - 1];
+      if (!recId || recId === 'inventario') return json(400, { ok: false, error: 'Falta el ID en la URL' });
       try {
-        await airtableRequest('DELETE', url);
-        return json(200, { ok: true, deleted: true, id });
-      } catch (e) {
-        const status = (e.response && e.response.status) ? e.response.status : 500;
-        const data   = (e.response && e.response.data)   ? e.response.data   : { error: 'Airtable error' };
-        return json(status, {
-          ok: false,
-          error: data.error || 'Error deleting record',
-          details: data
-        });
+        await airtableReq('DELETE', baseUrl + '/' + encodeURIComponent(recId));
+        return json(200, { ok: true, deleted: true, id: recId });
+      } catch (de) {
+        var ds = (de.response && de.response.status) ? de.response.status : 500;
+        var dd = (de.response && de.response.data)   ? de.response.data   : {};
+        return json(ds, { ok: false, error: dd.error || 'Error eliminando', details: dd });
       }
     }
 
-    return json(405, { ok: false, error: 'Method not allowed' });
+    return json(405, { ok: false, error: 'Método no permitido' });
 
   } catch (err) {
-    const status = err.status || (err.response && err.response.status ? err.response.status : 500);
-    const data   = err.data   || (err.response && err.response.data   ? err.response.data   : { error: err.message || 'Server error' });
-    return json(status, {
-      ok: false,
-      error: data.error || 'Server error',
-      details: data 
-    });
+    var es = (err.response && err.response.status) ? err.response.status : (err.status || 500);
+    var ed = (err.response && err.response.data)   ? err.response.data   : { error: err.message || 'Error interno' };
+    console.error('[inventario] Error global:', err.message || err);
+    return json(es, { ok: false, error: ed.error || err.message || 'Error interno', details: ed });
   }
 };
