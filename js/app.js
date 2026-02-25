@@ -358,32 +358,113 @@ async function submitInventarioForm(e) {
       headers: { ...getAuthHeader(), 'Content-Type': 'application/json' }
     });
 
-    if (resp.data && (resp.data.ok || resp.data.record)) {
-      // Validación extra: si Airtable creó el registro pero sin campos visibles, avisar (suele pasar por filtros de campos)
-      const sentCount = Object.keys(fields || {}).length;
-      const recFields = resp.data.record && resp.data.record.fields ? resp.data.record.fields : {};
-      const recCount = Object.keys(recFields || {}).length;
-      if (sentCount > 0 && recCount === 0) {
-        console.warn('⚠️ Registro creado pero sin campos. Revisa nombres de columnas en Airtable.', { sent: fields, record: resp.data.record });
-        alert('⚠️ Se creó el registro pero quedó vacío en Airtable. Esto suele ocurrir por nombres de columnas diferentes. Te recomiendo revisar el nombre exacto de las columnas en Airtable.');
+    const d = resp.data || {};
+
+    if (d.ok || d.record || d.success) {
+      // Advertencia si el registro quedó vacío en Airtable
+      const recFields = (d.record && d.record.fields) ? d.record.fields : {};
+      const recCount = Object.keys(recFields).length;
+      if (Object.keys(fields).length > 0 && recCount === 0) {
+        console.warn('⚠️ Registro creado pero sin campos. Revisa nombres de columnas en Airtable.', { sent: fields });
+        alert('⚠️ Se creó el registro pero quedó vacío en Airtable.\nRevisa que los nombres de columnas en Airtable coincidan exactamente.');
+      } else {
+        // Si hubo campos removidos, avisar pero no bloquear
+        if (d.warning && d.warning.removedUnknownFields && d.warning.removedUnknownFields.length > 0) {
+          console.warn('⚠️ Campos no reconocidos por Airtable (ignorados):', d.warning.removedUnknownFields);
+        }
+        closeModal('newInventario');
+        form.reset();
+        if (typeof loadInventario === 'function') loadInventario();
+        alert('✅ Registro guardado correctamente');
       }
-      closeModal('newInventario');
-      form.reset();
-      if (typeof loadInventario === 'function') loadInventario();
-      alert('✅ Registro guardado correctamente');
+    } else if (!d.ok && d.error) {
+      // El servidor retornó error estructurado (ej: 422 agotado)
+      const removedMsg = (d.removedFields && d.removedFields.length > 0)
+        ? `\n\nCampos no reconocidos por Airtable: ${d.removedFields.join(', ')}`
+        : '';
+      throw new Error((d.error || 'Error del servidor') + removedMsg);
     } else {
       throw new Error('Respuesta inesperada del servidor');
     }
   } catch (err) {
-    console.error('Error guardando inventario:', err?.response?.data || err.message);
-    const msg = err?.response?.data?.error || err?.response?.data?.details?.error?.message || err.message;
-    alert('Error guardando inventario: ' + msg);
+    // axios lanza error en status >= 400; extraer mensaje del body de respuesta
+    const respData = (err.response && err.response.data) ? err.response.data : null;
+    let msg = err.message;
+    if (respData) {
+      const detail = (respData.details && respData.details.error && respData.details.error.message)
+        ? respData.details.error.message
+        : null;
+      msg = respData.error || detail || err.message;
+      if (respData.removedFields && respData.removedFields.length > 0) {
+        msg += `\n\nCampos no reconocidos por Airtable (eliminados en reintento): ${respData.removedFields.join(', ')}`;
+      }
+      console.error('❌ Error guardando inventario:', respData);
+    } else {
+      console.error('❌ Error guardando inventario:', err.message);
+    }
+    alert('Error guardando inventario:\n' + msg);
   } finally {
     if (submitBtn) {
       submitBtn.disabled = false;
       submitBtn.textContent = originalText;
     }
   }
+}
+
+// ============================================================================
+// GENERADOR DE PROGRAMACIÓN ANUAL DE MANTENIMIENTO
+// ============================================================================
+
+function generateAnnualSchedule() {
+  const startDateEl = document.getElementById('invStartDate');
+  const freqEl = document.getElementById('invFreqSelect');
+  const scheduleEl = document.getElementById('invScheduleAnnual');
+
+  if (!startDateEl || !freqEl || !scheduleEl) {
+    alert('No se encontraron los campos de fecha o frecuencia.');
+    return;
+  }
+
+  const startDateVal = startDateEl.value;
+  if (!startDateVal) {
+    alert('Por favor ingresa una Fecha Programada de Mantenimiento como fecha de inicio.');
+    startDateEl.focus();
+    return;
+  }
+
+  const freq = freqEl.value ? freqEl.value.toLowerCase() : '';
+
+  // Determinar cantidad de meses entre mantenimientos
+  let monthInterval = 12; // default: anual
+  if (freq.includes('mensual') || freq === 'monthly') {
+    monthInterval = 1;
+  } else if (freq.includes('bimestral')) {
+    monthInterval = 2;
+  } else if (freq.includes('trimestral') || freq === 'quarterly') {
+    monthInterval = 3;
+  } else if (freq.includes('cuatrimestral')) {
+    monthInterval = 4;
+  } else if (freq.includes('semestral') || freq === 'biannual' || freq === 'semiannual') {
+    monthInterval = 6;
+  } else if (freq.includes('anual') || freq === 'annual' || freq === 'yearly') {
+    monthInterval = 12;
+  }
+
+  // Generar fechas desde la fecha inicial hasta 12 meses después
+  const dates = [];
+  let current = new Date(startDateVal + 'T00:00:00');
+  // Incluir la fecha inicial y proyectar hacia adelante hasta completar el año
+  const endDate = new Date(current);
+  endDate.setFullYear(endDate.getFullYear() + 1);
+
+  while (current <= endDate) {
+    dates.push(current.toISOString().slice(0, 10));
+    current = new Date(current);
+    current.setMonth(current.getMonth() + monthInterval);
+  }
+
+  scheduleEl.value = dates.join(', ');
+  console.log('📅 Programación generada:', dates);
 }
 
 // ============================================================================
@@ -483,6 +564,7 @@ document.addEventListener('DOMContentLoaded', () => {
 window.switchModule = switchModule;
 window.openModal = openModal;
 window.closeModal = closeModal;
+window.generateAnnualSchedule = generateAnnualSchedule;
 window.debouncedInventarioSearch = debouncedInventarioSearch;
 window.inventarioNextPage = inventarioNextPage;
 window.inventarioPrevPage = inventarioPrevPage;
