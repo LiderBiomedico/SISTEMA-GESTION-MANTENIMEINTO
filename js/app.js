@@ -269,15 +269,35 @@ async function loadKPIs() {
 async function submitInventarioForm(e) {
   e.preventDefault();
   const form = e.target;
+
+  // Helper para poder buscar inputs por name aunque tengan espacios / tildes
+  const cssEscape = (s) => {
+    try { return (window.CSS && CSS.escape) ? CSS.escape(s) : String(s).replace(/["\\]/g, '\\$&'); }
+    catch (err) { return String(s).replace(/["\\]/g, '\\$&'); }
+  };
+
+  // Detectar si es creación o edición
+  const hiddenIdEl = document.getElementById('recordId');
+  const state = window.__HSLV_INVENTARIO_STATE || {};
+  const editId = String((hiddenIdEl && hiddenIdEl.value) ? hiddenIdEl.value : (state.currentEditId || '')).trim();
+
   const fd = new FormData(form);
   const rawFields = {};
 
   for (const [k, v] of fd.entries()) {
+    // Ignorar recordId del form
+    if (k === 'recordId' || k === 'id' || k === '_id') continue;
+
+    // Ignorar campos marcados como "no guardar en Airtable"
+    const el = form.querySelector(`[name="${cssEscape(k)}"]`);
+    if (el && el.dataset && String(el.dataset.skipAirtable || '').toLowerCase() === 'true') continue;
+
     const val = String(v).trim();
     if (val === '') continue;
+
     // CALIBRABLE se envía como string — el tipo real en Airtable determina cómo interpretarlo
-    // Si en Airtable es Checkbox: cambiar a boolean en el backend
-    // Si en Airtable es Single line text / Single select: se envía "SI" o "NO" tal cual
+    // Si en Airtable es Checkbox: convertir a boolean en el backend
+    // Si en Airtable es Single line text / Single select: se envía "SI/NO" tal cual
     rawFields[k] = val;
   }
 
@@ -342,40 +362,52 @@ async function submitInventarioForm(e) {
     fields[mapped] = v;
   }
 
-  console.log('📤 Enviando campos mapeados:', fields);
+  console.log('📤 Enviando campos mapeados:', fields, editId ? `(UPDATE ${editId})` : '(CREATE)');
 
   const submitBtn = form.querySelector('button[type="submit"]');
   const originalText = submitBtn ? submitBtn.textContent : '';
   if (submitBtn) {
     submitBtn.disabled = true;
-    submitBtn.textContent = '⏳ Guardando...';
+    submitBtn.textContent = editId ? '⏳ Actualizando...' : '⏳ Guardando...';
   }
 
   try {
-    const url = `${API_BASE_URL}/inventario`;
-    const resp = await axios.post(url, { fields }, {
+    const url = editId ? `${API_BASE_URL}/inventario/${editId}` : `${API_BASE_URL}/inventario`;
+    const method = editId ? 'put' : 'post';
+
+    const resp = await axios[method](url, { fields }, {
       headers: { ...getAuthHeader(), 'Content-Type': 'application/json' }
     });
 
     if (resp.data && (resp.data.ok || resp.data.record)) {
-      // Validación extra: si Airtable creó el registro pero sin campos visibles, avisar (suele pasar por filtros de campos)
+      // Validación extra: si Airtable creó/actualizó pero sin campos visibles, avisar
       const sentCount = Object.keys(fields || {}).length;
       const recFields = resp.data.record && resp.data.record.fields ? resp.data.record.fields : {};
       const recCount = Object.keys(recFields || {}).length;
       if (sentCount > 0 && recCount === 0) {
-        console.warn('⚠️ Registro creado pero sin campos. Revisa nombres de columnas en Airtable.', { sent: fields, record: resp.data.record });
-        alert('⚠️ Se creó el registro pero quedó vacío en Airtable. Esto suele ocurrir por nombres de columnas diferentes. Te recomiendo revisar el nombre exacto de las columnas en Airtable.');
+        console.warn('⚠️ Registro ok pero sin campos. Revisa nombres de columnas en Airtable.', { sent: fields, record: resp.data.record });
+        alert('⚠️ Se procesó el registro pero quedó vacío en Airtable. Esto suele ocurrir por nombres de columnas diferentes. Revisa los nombres exactos de columnas en Airtable.');
+      } else {
+        alert(editId ? '✅ Registro actualizado correctamente' : '✅ Registro guardado correctamente');
       }
+
+      // Limpiar estado de edición
+      if (hiddenIdEl) hiddenIdEl.value = '';
+      if (window.__HSLV_INVENTARIO_STATE) window.__HSLV_INVENTARIO_STATE.currentEditId = null;
+
       closeModal('newInventario');
       form.reset();
       if (typeof loadInventario === 'function') loadInventario();
-      alert('✅ Registro guardado correctamente');
     } else {
       throw new Error('Respuesta inesperada del servidor');
     }
   } catch (err) {
-    console.error('Error guardando inventario:', err?.response?.data || err.message);
-    const msg = err?.response?.data?.error || err?.response?.data?.details?.error?.message || err.message;
+    console.error('Error guardando inventario:', (err && err.response && err.response.data) ? err.response.data : (err && err.message));
+    const msg =
+      (err && err.response && err.response.data && err.response.data.error) ||
+      (err && err.response && err.response.data && err.response.data.details && err.response.data.details.error && err.response.data.details.error.message) ||
+      (err && err.message) ||
+      'Error desconocido';
     alert('Error guardando inventario: ' + msg);
   } finally {
     if (submitBtn) {
@@ -385,7 +417,8 @@ async function submitInventarioForm(e) {
   }
 }
 
-// ============================================================================
+ // ============================================================================
+
 // BÚSQUEDA DE INVENTARIO (para el módulo principal, no inventario-module.js)
 // ============================================================================
 

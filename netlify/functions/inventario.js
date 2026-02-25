@@ -1,452 +1,399 @@
-// =============================================================================
-// netlify/functions/inventario.js - VERSIÓN COMPLETA CON CRUD
-// Soporta: GET (list), POST (create), PUT (update), DELETE (delete)
-// Gestiona errores 422 de Airtable removiendo campos desconocidos (sin filtrar por muestreo de registros)
-// =============================================================================
-const axios = require('axios');
+// ============================================================================
+// MÓDULO DE INVENTARIO - JavaScript Logic (HSLV) - PATCH V4
+// - Evita doble carga del módulo (no redeclare)
+// - Estado persistente en window.__HSLV_INVENTARIO_STATE
+// - Headers auth unificados (getAuthHeader si existe)
+// - Manejo de error compatible sin optional chaining
+// ============================================================================
 
-const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY || process.env.AIRTABLE_TOKEN || '';
-const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID || '';
-const TABLE_NAME = process.env.AIRTABLE_INVENTARIO_TABLE || 'Inventario';
-const AIRTABLE_API = 'https://api.airtable.com/v0';
-
-
-function json(statusCode, body) {
-  return {
-    statusCode,
-    headers: {
-      'Content-Type': 'application/json; charset=utf-8',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-      'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
-    },
-    body: JSON.stringify(body),
-  };
-}
-
-// Mapeo de campos del formulario a columnas de Airtable
-// Soporta: Title Case (del equipoModal), UPPERCASE (del newInventario form), y variantes con tildes
-const FIELD_MAP = {
-  // --- UPPERCASE (formulario principal newInventario) ---
-  'ITEM': 'Item',
-  'EQUIPO': 'Equipo',
-  'MARCA': 'Marca',
-  'MODELO': 'Modelo',
-  'SERIE': 'Serie',
-  'PLACA': 'Numero de Placa',
-  'NÚMERO DE PLACA': 'Numero de Placa',
-  'NUMERO DE PLACA': 'Numero de Placa',
-  'CODIGO ECRI': 'Codigo ECRI',
-  'REGISTRO INVIMA': 'Registro INVIMA',
-  'TIPO DE ADQUISICION': 'Tipo de Adquisicion',
-  'NO. DE CONTRATO': 'No. de Contrato',
-  'SERVICIO': 'Servicio',
-  'UBICACIÓN': 'Ubicacion',
-  'UBICACION': 'Ubicacion',
-  'VIDA UTIL': 'Vida Util',
-  'VIDA ÚTIL': 'Vida Util',
-  'FECHA FABRICA': 'Fecha Fabrica',
-  'CERTIFICADO 2025': 'Certificado 2025',
-  'FECHA DE COMRPA': 'Fecha de Compra',
-  'FECHA DE COMPRA': 'Fecha de Compra',
-  'VALOR EN PESOS': 'Valor en Pesos',
-  'FECHA DE RECEPCIÓN': 'Fecha de Recepcion',
-  'FECHA DE RECEPCION': 'Fecha de Recepcion',
-  'FECHA DE INSTALACIÓN': 'Fecha de Instalacion',
-  'FECHA DE INSTALACION': 'Fecha de Instalacion',
-  'INICIO DE GARANTIA': 'Inicio de Garantia',
-  'TERMINO DE GARANTIA': 'Termino de Garantia',
-  'CLASIFICACION BIOMEDICA': 'Clasificacion Biomedica',
-  'CLASIFICACION DE LA TECNOLOGIA': 'Clasificacion de la Tecnologia',
-  'CLASIFICACION DEL RIESGO': 'Clasificacion del Riesgo',
-  'MANUAL': 'Manual',
-  'TIPO DE MTTO': 'Tipo de MTTO',
-  'COSTO DE MANTENIMIENTO': 'Costo de Mantenimiento',
-  'CALIBRABLE': 'Calibrable',
-  'N. CERTIFICADO': 'N. Certificado',
-  'FRECUENCIA DE MTTO PREVENTIVO': 'Frecuencia de MTTO Preventivo',
-  'FECHA PROGRAMADA DE MANTENIMINETO': 'Fecha Programada de Mantenimiento',
-  'FRECUENCIA DE MANTENIMIENTO': 'Frecuencia de Mantenimiento',
-  'PROGRAMACION DE MANTENIMIENTO ANUAL': 'Programacion de Mantenimiento Anual',
-  'RESPONSABLE': 'Responsable',
-  'NOMBRE': 'Nombre',
-  'DIRECCION': 'Direccion',
-  'TELEFONO': 'Telefono',
-  'CIUDAD': 'Ciudad',
-  // --- Title Case (formulario equipoModal / inventario-module.js) ---
-  'Item': 'Item',
-  'Equipo': 'Equipo',
-  'Marca': 'Marca',
-  'Modelo': 'Modelo',
-  'Serie': 'Serie',
-  'Numero de Placa': 'Numero de Placa',
-  'Codigo ECRI': 'Codigo ECRI',
-  'Registro INVIMA': 'Registro INVIMA',
-  'Tipo de Adquisicion': 'Tipo de Adquisicion',
-  'No. de Contrato': 'No. de Contrato',
-  'Servicio': 'Servicio',
-  'Ubicacion': 'Ubicacion',
-  'Ubicación': 'Ubicacion',
-  'Vida Util': 'Vida Util',
-  'Fecha de Compra': 'Fecha de Compra',
-  'Valor en Pesos': 'Valor en Pesos',
-  'Fecha de Instalacion': 'Fecha de Instalacion',
-  'Fecha de Instalación': 'Fecha de Instalacion',
-  'Inicio de Garantia': 'Inicio de Garantia',
-  'Termino de Garantia': 'Termino de Garantia',
-  'Clasificacion Biomedica': 'Clasificacion Biomedica',
-  'Clasificacion de la Tecnologia': 'Clasificacion de la Tecnologia',
-  'Clasificacion del Riesgo': 'Clasificacion del Riesgo',
-  'Manual': 'Manual',
-  'Tipo de MTTO': 'Tipo de MTTO',
-  'Costo de Mantenimiento': 'Costo de Mantenimiento',
-  'Calibrable': 'Calibrable',
-  'N. Certificado': 'N. Certificado',
-  'Frecuencia de MTTO Preventivo': 'Frecuencia de MTTO Preventivo',
-  'Frecuencia de Mantenimiento': 'Frecuencia de Mantenimiento',
-  'Fecha Programada de Mantenimiento': 'Fecha Programada de Mantenimiento',
-  'Programacion de Mantenimiento Anual': 'Programacion de Mantenimiento Anual',
-  'Responsable': 'Responsable',
-  'Nombre': 'Nombre',
-  'Direccion': 'Direccion',
-  'Telefono': 'Telefono',
-  'Ciudad': 'Ciudad',
-};
-
-const NUMBER_FIELDS = new Set([
-  'Valor en Pesos',
-  'Costo de Mantenimiento',
-  'Vida Util'
-]);
-
-// Calibrable NO está aquí: el campo en Airtable es texto/select, no checkbox
-// Si en el futuro se cambia a Checkbox en Airtable, agregar 'Calibrable' de nuevo
-const BOOL_FIELDS = new Set([]);
-
-const DATE_FIELDS = new Set([
-  'Fecha de Compra',
-  'Fecha de Instalacion',
-  'Inicio de Garantia',
-  'Termino de Garantia',
-  'Fecha Programada de Mantenimiento',
-  'Fecha Fabrica',
-  'Fecha de Recepcion'
-]);
-
-function isUrl(s) {
-  return typeof s === 'string' && /^https?:\/\/\S+/i.test(s.trim());
-}
-
-function looksLikeISODate(s) {
-  return typeof s === 'string' && /^\d{4}-\d{2}-\d{2}/.test(s.trim());
-}
-
-function toNumber(v) {
-  if (typeof v === 'number') return v;
-  if (typeof v !== 'string') return v;
-  const s = v.trim();
-  if (!s) return v;
-  
-  const cleaned = s.replace(/[^\d.,-]/g, '');
-  if (!cleaned) return v;
-  
-  let norm = cleaned;
-  const hasDot = cleaned.includes('.');
-  const hasComma = cleaned.includes(',');
-  
-  if (hasDot && hasComma) {
-    const lastDot = cleaned.lastIndexOf('.');
-    const lastComma = cleaned.lastIndexOf(',');
-    if (lastComma > lastDot) {
-      norm = cleaned.replace(/\./g,'').replace(',', '.');
-    } else {
-      norm = cleaned.replace(/,/g,'');
-    }
-  } else if (hasComma && !hasDot) {
-    const parts = cleaned.split(',');
-    if (parts.length > 2) norm = parts.join('');
-    else norm = parts[0] + '.' + parts[1];
-  } else {
-    norm = cleaned.replace(/,/g,'');
+(function () {
+  if (window.__HSLV_INVENTARIO_MODULE_LOADED) {
+    console.warn('Inventario module already loaded; skipping re-execution.');
+    return;
   }
-  
-  const n = Number(norm);
-  return Number.isFinite(n) ? n : v;
-}
+  window.__HSLV_INVENTARIO_MODULE_LOADED = true;
 
-function toBoolean(v) {
-  if (typeof v === 'boolean') return v;
-  if (typeof v === 'number') return v !== 0;
-  if (typeof v !== 'string') return v;
-  const s = v.trim().toLowerCase();
-  if (['true','1','si','sí','yes','y','on','x'].includes(s)) return true;
-  if (['false','0','no','off','n'].includes(s)) return false;
-  return v;
-}
-
-function normalizeValue(fieldName, value) {
-  if (value === null || typeof value === 'undefined') return value;
-  
-  if (NUMBER_FIELDS.has(fieldName)) return toNumber(value);
-  if (BOOL_FIELDS.has(fieldName)) return toBoolean(value);
-  
-  if (DATE_FIELDS.has(fieldName)) {
-    if (value instanceof Date) return value.toISOString().slice(0,10);
-    if (looksLikeISODate(value)) return String(value).trim().slice(0,10);
-    return value;
-  }
-  
-  return value;
-}
-
-function mapAndNormalizeFields(inputFields) {
-  const out = {};
-  for (const [k, v] of Object.entries(inputFields || {})) {
-    const key = String(k || '').trim();
-    const mapped = FIELD_MAP[key] || key;
-    
-    // Campo Manual como attachment si es URL
-    if (mapped === 'Manual' && isUrl(v)) {
-      out[mapped] = [{ url: String(v).trim() }];
-      continue;
-    }
-    
-    out[mapped] = normalizeValue(mapped, v);
-  }
-  console.log('[inventario] Mapped fields:', JSON.stringify(out));
-  return out;
-}
-
-function removeUnknownFields(fields, errData) {
-  // Airtable devuelve errores como: { error: { type: 'UNKNOWN_FIELD_NAME', message: 'Unknown field name: "Xyz"' } }
-  // o { error: 'UNKNOWN_FIELD_NAME', message: 'Unknown field name: "Xyz"' }
-  const errObj = errData?.error || errData || {};
-  const msg = typeof errObj === 'string' 
-    ? errObj 
-    : (errObj.message || errData?.message || JSON.stringify(errData || {}));
-  
-  // Buscar nombres entre comillas
-  const matches = String(msg).match(/"([^"]+)"/g) || [];
-  const unknown = new Set(matches.map(m => m.replace(/"/g,'').trim()).filter(Boolean));
-  
-  // También buscar después de "Unknown field name:" sin comillas
-  const plainMatch = String(msg).match(/Unknown field name:\s*(\S+)/gi) || [];
-  plainMatch.forEach(m => {
-    const name = m.replace(/Unknown field name:\s*/i, '').replace(/"/g,'').trim();
-    if (name) unknown.add(name);
+  const state = window.__HSLV_INVENTARIO_STATE || (window.__HSLV_INVENTARIO_STATE = {
+    currentPage: 0,
+    totalRecords: 0,
+    currentOffset: null,
+    searchQuery: '',
+    searchTimeout: null,
+    allRecords: [],
+    currentEditId: null,
+    pageSize: 50
   });
-  
-  if (unknown.size === 0) return { cleaned: fields, removed: [] };
-  
-  const cleaned = { ...fields };
-  const removed = [];
-  for (const u of unknown) {
-    if (u in cleaned) { 
-      delete cleaned[u]; 
-      removed.push(u); 
-    }
+
+  function getHeaders() {
+    try {
+      if (typeof getAuthHeader === 'function') return getAuthHeader();
+    } catch (e) {}
+    // Fallback: sin auth
+    return {};
   }
-  return { cleaned, removed };
+
+  function safeErr(error) {
+    try {
+      if (error && error.response && error.response.data) {
+        return error.response.data.error || JSON.stringify(error.response.data);
+      }
+    } catch (e) {}
+    return (error && error.message) ? error.message : 'Error desconocido';
+  }
+
+
+// ============================================================================
+// MÓDULO DE INVENTARIO - JavaScript Logic
+// Sistema HSLV - Hospital San Luis de Valencia
+// Adaptado a los IDs reales del index.html
+// ============================================================================
+
+// API_BASE_URL ya definido en app.js
+if (typeof API_BASE_URL === 'undefined') {
+  var API_BASE_URL = '/.netlify/functions';
 }
 
-async function airtableRequest(method, url, data) {
-  if (!AIRTABLE_API_KEY || !AIRTABLE_BASE_ID) {
-    throw { status: 500, data: { error: 'Missing AIRTABLE_API_KEY/TOKEN or AIRTABLE_BASE_ID' } };
-  }
-  const headers = { Authorization: `Bearer ${AIRTABLE_API_KEY}` };
-  return axios({ method, url, headers, data });
+// ============================================================================
+// INICIALIZACIÓN
+// ============================================================================
+
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('🚀 Módulo de Inventario iniciado');
+    // Solo cargar si el módulo inventario está activo
+    const invMod = document.getElementById('inventario');
+    if (invMod && invMod.classList.contains('active')) {
+        loadInventario();
+    }
+});
+
+// ============================================================================
+// CARGA DE DATOS
+// ============================================================================
+
+async function loadInventario() {
+    // Buscar tbody con cualquiera de los IDs posibles
+    const tbody = document.getElementById('inventarioTbody') 
+                || document.getElementById('tableBody')
+                || document.getElementById('inventarioTableBody');
+    if (!tbody) {
+        console.warn('⚠️ No se encontró tbody para inventario (inventarioTbody/tableBody/inventarioTableBody)');
+        return;
+    }
+
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="11" style="text-align:center; padding:18px; color:#607d8b;">
+                Cargando inventario...
+            </td>
+        </tr>
+    `;
+
+    try {
+        const params = new URLSearchParams();
+        params.set('pageSize', '50');
+        if (state.currentOffset) params.set('offset', state.currentOffset);
+        if (state.searchQuery) params.set('q', state.searchQuery);
+
+        const url = `${API_BASE_URL}/inventario?${params.toString()}`;
+        const response = await axios.get(url, {
+            headers: getHeaders()
+        });
+
+        const data = response.data;
+        state.allRecords = data.data || [];
+        state.currentOffset = data.offset || null;
+        state.totalRecords = data.count || state.allRecords.length;
+
+        console.log('✅ Inventario cargado:', state.allRecords.length, 'registros');
+
+        // Actualizar contador
+        const countEl = document.getElementById('inventarioCount');
+        if (countEl) countEl.textContent = `${state.totalRecords} registros`;
+
+        renderTable();
+        updatePagination();
+
+    } catch (error) {
+        console.error('❌ Error cargando inventario:', error);
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="11" style="text-align:center; padding:18px; color:#c62828;">
+                    ⚠️ Error al cargar el inventario<br>
+                    <small>${safeErr(error) || error.message || 'Error desconocido'}</small><br>
+                    <button class="btn btn-primary" onclick="loadInventario()" style="margin-top:10px">
+                        🔄 Reintentar
+                    </button>
+                </td>
+            </tr>
+        `;
+    }
 }
 
+// ============================================================================
+// RENDERIZADO DE TABLA
+// ============================================================================
 
-exports.handler = async (event) => {
-  try {
-    // CORS preflight
-    if (event.httpMethod === 'OPTIONS') {
-      return json(204, { ok: true });
+function renderTable() {
+    const tbody = document.getElementById('inventarioTbody') 
+                || document.getElementById('tableBody')
+                || document.getElementById('inventarioTableBody');
+    if (!tbody) return;
+
+    if (state.allRecords.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="11" style="text-align:center; padding:18px; color:#607d8b;">
+                    📦 No hay equipos registrados.<br>
+                    <small>Comienza agregando tu primer equipo al inventario.</small>
+                </td>
+            </tr>
+        `;
+        return;
     }
 
-    const qs = event.queryStringParameters || {};
-    const debug = !!qs.debug;
+    tbody.innerHTML = state.allRecords.map(record => {
+        const f = record.fields || {};
+        const item = f['Item'] || f['ITEM'] || '';
+        const equipo = f['Equipo'] || f['EQUIPO'] || '';
+        const marca = f['Marca'] || f['MARCA'] || '';
+        const modelo = f['Modelo'] || f['MODELO'] || '';
+        const serie = f['Serie'] || f['SERIE'] || '';
+        const placa = f['Numero de Placa'] || f['PLACA'] || f['Número de Placa'] || '';
+        const servicio = f['Servicio'] || f['SERVICIO'] || '';
+        const ubicacion = f['Ubicacion'] || f['Ubicación'] || f['UBICACIÓN'] || '';
+        const vidaUtil = f['Vida Util'] || f['VIDA UTIL'] || '';
+        const fechaMtto = f['Fecha Programada de Mantenimiento'] || f['FECHA PROGRAMADA DE MANTENIMINETO'] || '';
 
-    // Debug mode
-    if (debug && event.httpMethod === 'GET') {
-      return json(200, { 
-        ok: true, 
-        table: TABLE_NAME, 
-        hasApiKey: !!AIRTABLE_API_KEY, 
-        hasBaseId: !!AIRTABLE_BASE_ID 
-      });
-    }
-
-    const baseUrl = `${AIRTABLE_API}/${AIRTABLE_BASE_ID}/${encodeURIComponent(TABLE_NAME)}`;
-
-    // =========================================================================
-    // GET - Listar registros
-    // =========================================================================
-    if (event.httpMethod === 'GET') {
-      const pageSize = Math.min(parseInt(qs.pageSize || '50', 10) || 50, 100);
-      let offset = qs.offset ? String(qs.offset) : null;
-
-      // Fix: ignorar offsets inválidos
-      if (offset && (offset === 'true' || offset === 'false' || offset === '0')) {
-        offset = null;
-      }
-
-      const params = new URLSearchParams();
-      params.set('pageSize', String(pageSize));
-      if (offset) params.set('offset', offset);
-
-      const url = `${baseUrl}?${params.toString()}`;
-      const resp = await airtableRequest('GET', url);
-      const records = resp.data.records || [];
-      
-      return json(200, { 
-        ok: true, 
-        data: records, 
-        count: records.length, 
-        offset: resp.data.offset || null 
-      });
-    }
-
-    // Parse body para POST/PUT/DELETE
-    let body = {};
-    try { 
-      body = JSON.parse(event.body || '{}'); 
-    } catch { 
-      body = {}; 
-    }
-
-    // =========================================================================
-    // POST - Crear registro
-    // =========================================================================
-    if (event.httpMethod === 'POST') {
-      let mapped = mapAndNormalizeFields(body.fields || {});
-      let allRemoved = [];
-      
-      // Intentar hasta 3 veces, removiendo campos desconocidos en cada intento
-      let lastError = null;
-      for (let attempt = 0; attempt < 3; attempt++) {
-        try {
-          const resp = await airtableRequest('POST', baseUrl, { fields: mapped });
-          const result = { ok: true, success: true, record: resp.data };
-          if (allRemoved.length > 0) {
-            result.warning = { removedUnknownFields: allRemoved };
-          }
-          return json(200, result);
-        } catch (e) {
-          const status = e.response?.status || 500;
-          const data = e.response?.data || { error: 'Airtable error' };
-          lastError = { status, data };
-          console.log(`[inventario] POST attempt ${attempt+1} failed:`, JSON.stringify(data));
-
-          if (status !== 422) break;
-
-          const { cleaned, removed } = removeUnknownFields(mapped, data);
-          if (removed.length === 0) break;
-
-          allRemoved.push(...removed);
-          mapped = cleaned;
-          
-          if (Object.keys(mapped).length === 0) break;
+        // Estado basado en fecha
+        let estadoText = '—';
+        if (fechaMtto) {
+            const d = new Date(fechaMtto);
+            estadoText = d.toLocaleDateString('es-CO', { year: 'numeric', month: 'short', day: 'numeric' });
         }
-      }
-      
-      return json(lastError?.status || 422, { 
-        ok: false, 
-        error: lastError?.data?.error || 'Airtable error', 
-        details: lastError?.data,
-        removedFields: allRemoved,
-        mappedSent: mapped 
-      });
-    }
 
-    // =========================================================================
-    // PUT - Actualizar registro
-    // =========================================================================
-    if (event.httpMethod === 'PUT') {
-      const id = body.id;
-      if (!id) {
-        return json(400, { ok: false, error: 'Missing record id' });
-      }
-      
-      const mapped = mapAndNormalizeFields(body.fields || {});
-      const url = `${baseUrl}/${encodeURIComponent(id)}`;
-      
-      try {
-        const resp = await airtableRequest('PATCH', url, { fields: mapped });
-        return json(200, { ok: true, record: resp.data });
-      } catch (e) {
-        const status = e.response?.status || 500;
-        const data = e.response?.data || { error: 'Airtable error' };
-        
-        // Retry on unknown fields
-        if (status === 422) {
-          const { cleaned, removed } = removeUnknownFields(mapped, data);
-          if (removed.length > 0) {
-            try {
-              const resp2 = await airtableRequest('PATCH', url, { fields: cleaned });
-              return json(200, { 
-                ok: true, 
-                record: resp2.data, 
-                warning: { removedUnknownFields: removed } 
-              });
-            } catch (e2) {
-              const status2 = e2.response?.status || 500;
-              const data2 = e2.response?.data || { error: 'Airtable error after retry' };
-              return json(status2, { 
-                ok: false, 
-                error: data2.error || 'Airtable error', 
-                details: data2 
-              });
-            }
-          }
+        return `<tr>
+            <td>${esc(item)}</td>
+            <td>${esc(equipo)}</td>
+            <td>${esc(marca)}</td>
+            <td>${esc(modelo)}</td>
+            <td>${esc(serie)}</td>
+            <td>${esc(placa)}</td>
+            <td>${esc(servicio)}</td>
+            <td>${esc(ubicacion)}</td>
+            <td>${esc(String(vidaUtil))}</td>
+            <td>${estadoText}</td>
+            <td>
+                <button class="btn btn-small btn-secondary" onclick="editEquipo('${record.id}')" title="Editar">✏️</button>
+                <button class="btn btn-small" onclick="deleteEquipo('${record.id}', '${esc(equipo)}')" title="Eliminar" style="color:#c62828;">🗑️</button>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+// ============================================================================
+// PAGINACIÓN
+// ============================================================================
+
+function updatePagination() {
+    const prevBtn = document.getElementById('inventarioPrevBtn');
+    const nextBtn = document.getElementById('inventarioNextBtn');
+
+    if (prevBtn) prevBtn.disabled = state.currentPage === 0;
+    if (nextBtn) nextBtn.disabled = !state.currentOffset;
+}
+
+function inventarioNextPage() {
+    if (state.currentOffset) {
+        state.currentPage++;
+        loadInventario();
+    }
+}
+
+function inventarioPrevPage() {
+    if (state.currentPage > 0) {
+        state.currentPage--;
+        state.currentOffset = null;
+        loadInventario();
+    }
+}
+
+// ============================================================================
+// BÚSQUEDA
+// ============================================================================
+
+function debouncedInventarioSearch() {
+    clearTimeout(state.searchTimeout);
+    state.searchTimeout = setTimeout(() => {
+        const el = document.getElementById('inventarioSearch');
+        state.searchQuery = el ? el.value.trim() : '';
+        state.currentOffset = null;
+        state.currentPage = 0;
+        loadInventario();
+    }, 500);
+}
+
+// ============================================================================
+// EDITAR EQUIPO
+// ============================================================================
+
+async function editEquipo(recordId) {
+    const record = state.allRecords.find(r => r.id === recordId);
+    if (!record) { alert('Equipo no encontrado'); return; }
+
+    // Abrir modal y preparar modo edición
+    openModal('newInventario');
+    const form = document.getElementById('inventarioForm');
+    if (!form) return;
+
+    const fields = record.fields || {};
+
+    // Mapear nombres del formulario (UPPERCASE) hacia nombres reales en Airtable (Title Case)
+    const FORM_TO_AIRTABLE = {
+        'ITEM': 'Item',
+        'EQUIPO': 'Equipo',
+        'MARCA': 'Marca',
+        'MODELO': 'Modelo',
+        'SERIE': 'Serie',
+        'PLACA': 'Numero de Placa',
+        'NUMERO DE PLACA': 'Numero de Placa',
+        'CODIGO ECRI': 'Codigo ECRI',
+        'REGISTRO INVIMA': 'Registro INVIMA',
+        'TIPO DE ADQUISICION': 'Tipo de Adquisicion',
+        'NO. DE CONTRATO': 'No. de Contrato',
+        'SERVICIO': 'Servicio',
+        'UBICACIÓN': 'Ubicacion',
+        'UBICACION': 'Ubicacion',
+        'VIDA UTIL': 'Vida Util',
+        'FECHA DE COMPRA': 'Fecha de Compra',
+        'FECHA DE COMRPA': 'Fecha de Compra',
+        'VALOR EN PESOS': 'Valor en Pesos',
+        'FECHA DE RECEPCIÓN': 'Fecha de Recepcion',
+        'FECHA DE RECEPCION': 'Fecha de Recepcion',
+        'FECHA DE INSTALACIÓN': 'Fecha de Instalacion',
+        'FECHA DE INSTALACION': 'Fecha de Instalacion',
+        'INICIO DE GARANTIA': 'Inicio de Garantia',
+        'TERMINO DE GARANTIA': 'Termino de Garantia',
+        'CLASIFICACION BIOMEDICA': 'Clasificacion Biomedica',
+        'CLASIFICACION DE LA TECNOLOGIA': 'Clasificacion de la Tecnologia',
+        'CLASIFICACION DEL RIESGO': 'Clasificacion del Riesgo',
+        'MANUAL': 'Manual',
+        'TIPO DE MTTO': 'Tipo de MTTO',
+        'COSTO DE MANTENIMIENTO': 'Costo de Mantenimiento',
+        'CALIBRABLE': 'Calibrable',
+        'N. CERTIFICADO': 'N. Certificado',
+        'FRECUENCIA DE MTTO PREVENTIVO': 'Frecuencia de MTTO Preventivo',
+        'FECHA PROGRAMADA DE MANTENIMINETO': 'Fecha Programada de Mantenimiento',
+        'FRECUENCIA DE MANTENIMIENTO': 'Frecuencia de Mantenimiento',
+        'PROGRAMACION DE MANTENIMIENTO ANUAL': 'Programacion de Mantenimiento Anual',
+        'RESPONSABLE': 'Responsable',
+        'NOMBRE': 'Nombre',
+        'DIRECCION': 'Direccion',
+        'TELEFONO': 'Telefono',
+        'CIUDAD': 'Ciudad'
+    };
+
+    // Llenar campos del formulario
+    for (const input of form.querySelectorAll('input, select, textarea')) {
+        const name = input.name;
+        if (!name) continue;
+
+        // Ignorar campos marcados para no guardarse
+        if (input.dataset && String(input.dataset.skipAirtable || '').toLowerCase() === 'true') continue;
+
+        // Buscar valor por el nombre del input y, si no existe, por el mapeo hacia Airtable
+        const atName = FORM_TO_AIRTABLE[name] || name;
+        let val = (fields[name] !== undefined) ? fields[name] : fields[atName];
+
+        if (val === undefined || val === null) val = '';
+
+        if (input.type === 'checkbox') {
+            input.checked = (val === true || val === 'true' || val === 'SI' || val === 'Sí');
+        } else {
+            input.value = String(val);
         }
-        
-        return json(status, { 
-          ok: false, 
-          error: data.error || 'Airtable error', 
-          details: data 
-        });
-      }
     }
 
-    // =========================================================================
-    // DELETE - Eliminar registro
-    // =========================================================================
-    if (event.httpMethod === 'DELETE') {
-      // El ID viene en el path: /inventario/recXXX
-      const pathParts = event.path.split('/');
-      const id = pathParts[pathParts.length - 1];
-      
-      if (!id || id === 'inventario') {
-        return json(400, { ok: false, error: 'Missing record id in path' });
-      }
-      
-      const url = `${baseUrl}/${encodeURIComponent(id)}`;
-      
-      try {
-        await airtableRequest('DELETE', url);
-        return json(200, { ok: true, deleted: true, id });
-      } catch (e) {
-        const status = e.response?.status || 500;
-        const data = e.response?.data || { error: 'Airtable error' };
-        return json(status, { 
-          ok: false, 
-          error: data.error || 'Error deleting record', 
-          details: data 
+    // Guardar id para UPDATE
+    state.currentEditId = recordId;
+
+    // También en hidden input si existe
+    const rid = document.getElementById('recordId');
+    if (rid) rid.value = recordId;
+
+    // Ajustar texto del botón si existe
+    const btn = document.getElementById('btnSave');
+    if (btn) btn.textContent = '💾 Actualizar Equipo';
+}
+
+// ============================================================================
+// ELIMINAR EQUIPO
+// ============================================================================
+
+async function deleteEquipo(recordId, equipoName) {
+    if (!confirm(`¿Eliminar el equipo "${equipoName}"?\n\nEsta acción no se puede deshacer.`)) return;
+
+    try {
+        await axios.delete(`${API_BASE_URL}/inventario/${recordId}`, {
+            headers: getHeaders()
         });
-      }
+        console.log('✅ Equipo eliminado');
+        state.currentOffset = null;
+        state.currentPage = 0;
+        await loadInventario();
+    } catch (error) {
+        console.error('❌ Error eliminando:', error);
+        alert('Error al eliminar: ' + (safeErr(error) || error.message));
     }
+}
 
-    return json(405, { ok: false, error: 'Method not allowed' });
+// ============================================================================
+// EXPORTAR CSV
+// ============================================================================
 
-  } catch (err) {
-    const status = err.status || err.response?.status || 500;
-    const data = err.data || err.response?.data || { error: err.message || 'Server error' };
-    return json(status, { 
-      ok: false, 
-      error: data.error || 'Server error', 
-      details: data 
+function exportInventarioCSV() {
+    if (state.allRecords.length === 0) { alert('No hay datos para exportar'); return; }
+
+    const headers = ['Item','Equipo','Marca','Modelo','Serie','Numero de Placa','Servicio','Ubicacion','Vida Util','Fecha Programada de Mantenimiento'];
+    const rows = [headers.join(',')];
+
+    state.allRecords.forEach(record => {
+        const f = record.fields || {};
+        const row = headers.map(h => {
+            const v = String(f[h] || '').replace(/"/g, '""');
+            return v.includes(',') ? `"${v}"` : v;
+        });
+        rows.push(row.join(','));
     });
-  }
-};
+
+    const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `inventario_${new Date().toISOString().slice(0,10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+}
+
+// ============================================================================
+// UTILIDADES
+// ============================================================================
+
+function esc(str) {
+    return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+// Exponer funciones
+window.loadInventario = loadInventario;
+window.inventarioNextPage = inventarioNextPage;
+window.inventarioPrevPage = inventarioPrevPage;
+window.debouncedInventarioSearch = debouncedInventarioSearch;
+window.exportInventarioCSV = exportInventarioCSV;
+window.editEquipo = editEquipo;
+window.deleteEquipo = deleteEquipo;
+
+})();
