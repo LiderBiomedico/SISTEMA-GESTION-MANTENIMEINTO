@@ -329,6 +329,10 @@ function mapAndNormalizeFields(inputFields) {
   for (const [k, v] of Object.entries(inputFields || {})) {
     const key = String(k || '').trim();
     const mapped = FIELD_MAP[key] || key;
+
+    // Omitir vacíos (Airtable suele responder 422 si se envían "" a Number/Select/Date)
+    if (v === '' || v === null || typeof v === 'undefined') continue;
+    if (typeof v === 'string' && v.trim() === '') continue;
     
     // Campo Manual como attachment si es URL
     if (mapped === 'Manual' && isUrl(v)) {
@@ -339,6 +343,39 @@ function mapAndNormalizeFields(inputFields) {
     out[mapped] = normalizeValue(mapped, v);
   }
   console.log('[inventario] Mapped fields:', JSON.stringify(out));
+  return out;
+}
+
+// Para campos Select: intenta hacer match exacto con opciones conocidas (case-insensitive)
+async function normalizeSelectFields(mappedFields, baseUrl) {
+  const out = { ...mappedFields };
+  // Obtener opciones (meta -> records -> fallback)
+  let options = null;
+  try { options = await readOptionsFromMeta(); } catch (e) { options = null; }
+  if (!options || Object.keys(options).length === 0) {
+    try { options = await inferOptionsFromRecords(baseUrl); } catch (e) { options = null; }
+  }
+  const merged = {};
+  for (const f of SELECT_FIELDS) {
+    const fromApi = options && Array.isArray(options[f]) ? options[f] : [];
+    const fb = FALLBACK_SELECT_OPTIONS[f] || [];
+    merged[f] = uniqClean([ ...fromApi, ...fb ]);
+  }
+
+  for (const f of SELECT_FIELDS) {
+    if (!(f in out)) continue;
+    const val = out[f];
+    if (val === null || typeof val === 'undefined') continue;
+    const s = String(val).trim();
+    if (!s) { delete out[f]; continue; }
+    // Si ya existe exacto, ok
+    if (merged[f].includes(s)) { out[f] = s; continue; }
+    // Buscar match case-insensitive
+    const hit = merged[f].find(opt => String(opt).trim().toLowerCase() === s.toLowerCase());
+    if (hit) { out[f] = hit; continue; }
+    // Si no hay match, no lo enviamos para evitar INVALID_MULTIPLE_CHOICE_OPTIONS
+    delete out[f];
+  }
   return out;
 }
 
@@ -473,6 +510,8 @@ exports.handler = async (event) => {
     // =========================================================================
     if (event.httpMethod === 'POST') {
       let mapped = mapAndNormalizeFields(body.fields || {});
+      // Normalizar selects para que coincidan con las opciones existentes (evita 422 INVALID_MULTIPLE_CHOICE_OPTIONS)
+      mapped = await normalizeSelectFields(mapped, baseUrl);
       const certificates = Array.isArray(body.certificates) ? body.certificates : [];
       let allRemoved = [];
       
@@ -534,7 +573,7 @@ exports.handler = async (event) => {
       
       return json(lastError?.status || 422, { 
         ok: false, 
-        error: lastError?.data?.error || 'Airtable error', 
+        error: (typeof lastError?.data?.error === 'object' ? (lastError?.data?.error?.message || lastError?.data?.error?.type) : lastError?.data?.error) || 'Airtable error', 
         details: lastError?.data,
         removedFields: allRemoved,
         mappedSent: mapped 
@@ -552,7 +591,8 @@ exports.handler = async (event) => {
 
       const certificates = Array.isArray(body.certificates) ? body.certificates : [];
       
-      const mapped = mapAndNormalizeFields(body.fields || {});
+      let mapped = mapAndNormalizeFields(body.fields || {});
+      mapped = await normalizeSelectFields(mapped, baseUrl);
       const url = `${baseUrl}/${encodeURIComponent(id)}`;
       
       try {

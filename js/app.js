@@ -439,7 +439,14 @@ async function submitInventarioForm(e) {
     }
   } catch (err) {
     console.error('Error guardando inventario:', err?.response?.data || err.message);
-    const msg = err?.response?.data?.error || err?.response?.data?.details?.error?.message || err.message;
+    let msg = err?.response?.data?.error || err?.response?.data?.details?.error?.message || err.message;
+    if (msg && typeof msg === 'object') {
+      msg = msg.message || msg.type || JSON.stringify(msg);
+    }
+    const more = err?.response?.data?.details?.error?.type || err?.response?.data?.details?.error?.message;
+    if (more && typeof more === 'string' && !String(msg).includes(more)) {
+      msg = `${msg} (${more})`;
+    }
     alert('Error guardando inventario: ' + msg);
   } finally {
     if (submitBtn) {
