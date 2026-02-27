@@ -396,6 +396,10 @@ async function submitInventarioForm(e) {
     fields[mapped] = v;
   }
 
+  // "Item" en Airtable es Autonumber (solo lectura). Se muestra en la UI,
+  // pero NO se debe enviar al backend en POST/PUT porque provoca error 422.
+  if ('Item' in fields) delete fields['Item'];
+
   // Guardar años de calibración (texto) si hay certificados
   if (certificates.length > 0) {
     const years = Array.from(new Set(certificates.map(c => c.year))).sort();
@@ -457,8 +461,11 @@ async function submitInventarioForm(e) {
     }
   } catch (err) {
     console.error('Error guardando inventario:', err?.response?.data || err.message);
-    const msg = err?.response?.data?.error || err?.response?.data?.details?.error?.message || err.message;
-    alert('Error guardando inventario: ' + msg);
+    let msg = err?.response?.data?.error || err?.response?.data?.details?.error?.message || err?.response?.data?.details?.error || err.message;
+    if (typeof msg === 'object') {
+      msg = msg?.message || JSON.stringify(msg);
+    }
+    alert('Error guardando inventario: ' + String(msg));
   } finally {
     if (submitBtn) {
       submitBtn.disabled = false;

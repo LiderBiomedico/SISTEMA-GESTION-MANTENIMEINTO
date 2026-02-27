@@ -360,6 +360,11 @@ exports.handler = async (event) => {
     // =========================================================================
     if (event.httpMethod === 'POST') {
       let mapped = mapAndNormalizeFields(body.fields || {});
+
+      // "Item" en Airtable es Autonumber (solo lectura). Aunque el frontend lo muestre,
+      // NO se debe enviar en creación porque genera error 422.
+      if ('Item' in mapped) delete mapped['Item'];
+
       const certificates = Array.isArray(body.certificates) ? body.certificates : [];
       let allRemoved = [];
       
@@ -440,6 +445,9 @@ exports.handler = async (event) => {
       const certificates = Array.isArray(body.certificates) ? body.certificates : [];
       
       const mapped = mapAndNormalizeFields(body.fields || {});
+
+      // "Item" es Autonumber (solo lectura). Nunca se debe actualizar.
+      if ('Item' in mapped) delete mapped['Item'];
       const url = `${baseUrl}/${encodeURIComponent(id)}`;
       
       try {
