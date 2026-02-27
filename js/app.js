@@ -561,50 +561,64 @@ function removeCalCertRow(btn) {
 }
 
 // ============================================================================
-// INICIALIZACIÓN
+// LISTAS DESPLEGABLES (Inventario) - evita errores 422 en Airtable
 // ============================================================================
 
-
-// =======================
-// Cargar opciones de selects (Servicio / Clasificaciones / Riesgo)
-// =======================
-async function loadInventarioSelectOptions() {
-  const map = {
-    'SERVICIO': 'invServicio',
-    'CLASIFICACION BIOMEDICA': 'invClasBio',
-    'CLASIFICACION DE LA TECNOLOGIA': 'invClasTec',
-    'CLASIFICACION DEL RIESGO': 'invClasRiesgo'
-  };
-
-  try {
-    const res = await fetch('/.netlify/functions/inventario?selectOptions=1');
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok || !data || !data.options) {
-      console.warn('No se pudieron cargar opciones de Airtable, usando fallback local.', data);
-      return;
-    }
-
-    Object.entries(map).forEach(([field, selectId]) => {
-      const el = document.getElementById(selectId);
-      const opts = (data.options[field] || []).filter(Boolean);
-      if (!el || !opts.length) return;
-
-      // preserve first placeholder option
-      const first = el.querySelector('option[value=""]');
-      el.innerHTML = '';
-      if (first) el.appendChild(first);
-
-      opts.forEach(v => {
-        const opt = document.createElement('option');
-        opt.value = v;
-        opt.textContent = v;
-        el.appendChild(opt);
-      });
-    });
-  } catch (e) {
-    console.warn('Error cargando opciones de selects:', e);
-  }
+function fillSelectOptions(selectEl, options) {
+  if (!selectEl) return;
+  // Si ya tiene opciones (más de 1 contando "Seleccione..."), no duplicar
+  if (selectEl.options && selectEl.options.length > 1) return;
+  options.forEach(opt => {
+    const o = document.createElement('option');
+    o.value = opt;
+    o.textContent = opt;
+    selectEl.appendChild(o);
+  });
 }
+
+function initInventarioDropdowns() {
+  const servicio = document.getElementById('invServicio');
+  const clasBio = document.getElementById('invClasBio');
+  const clasTec = document.getElementById('invClasTec');
+  const clasRiesgo = document.getElementById('invClasRiesgo');
+
+  // Opciones EXACTAS como están en Airtable (según capturas)
+  fillSelectOptions(servicio, [
+    'Cirugia Adulto',
+    'Consulta Externa',
+    'Urgencias Adulto',
+    'Urgencias Pediatria',
+    'Laboratorio Clinico',
+    'Imagenes Diagnosticas',
+    'Uci Adultos'
+  ]);
+
+  fillSelectOptions(clasBio, [
+    'Diagnostico',
+    'Terapéuticos/Tratamiento',
+    'Soporte Vital',
+    'Laboratorio/Análisis',
+    'NO APLICA'
+  ]);
+
+  fillSelectOptions(clasTec, [
+    'Equipo Biomedico',
+    'Equipo Industrial',
+    'Equipo de apoyo',
+    'Equipo Electrico'
+  ]);
+
+  fillSelectOptions(clasRiesgo, [
+    'Clase I (Riesgo Bajo)',
+    'Clase IIa (Riesgo Moderado)',
+    'Clase IIb (Riesgo Alto)',
+    'Clase III (Riesgo muy alto)'
+  ]);
+}
+
+// ============================================================================
+// INICIALIZACIÓN
+// ============================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
   console.log('✅ Sistema de Gestión de Mantenimiento Hospitalario iniciado');
@@ -617,14 +631,15 @@ document.addEventListener('DOMContentLoaded', () => {
   // Formulario inventario (modal newInventario con campos UPPERCASE)
   const inventarioForm = document.getElementById('inventarioForm');
   if (inventarioForm) {
+    // Inicializar listas desplegables (servicio / clasificaciones)
+    initInventarioDropdowns();
+
     // Quitar "required" de inputs dentro de <details> para evitar error "not focusable"
     // La validación se hace en JS (submitInventarioForm)
     inventarioForm.querySelectorAll('details input[required], details select[required], details textarea[required]').forEach(el => {
       el.removeAttribute('required');
       el.dataset.jsRequired = 'true'; // marcamos para validar por JS
     });
-
-    loadInventarioSelectOptions();
 
     inventarioForm.addEventListener('submit', submitInventarioForm);
   }
