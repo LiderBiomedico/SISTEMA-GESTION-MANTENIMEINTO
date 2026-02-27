@@ -143,38 +143,87 @@ const NUMBER_FIELDS = new Set([
   'Vida Util'
 ]);
 
-// Calibrable = Seleccion unica en Airtable (SI/NO), NO checkbox booleano
-const BOOL_FIELDS = new Set([]);
+// =============================================================
+// CAMPOS DE SELECCION UNICA - Valores exactos de Airtable
+// Airtable rechaza (422) cualquier valor que no exista en la
+// lista configurada Y no permite crear nuevas opciones via API
+// =============================================================
+const BOOL_FIELDS = new Set([]); // Calibrable es Single Select, no checkbox
 
-// Mapa de valores del formulario al valor EXACTO configurado en Airtable
+// Valores EXACTOS tal como están en Airtable para cada campo Single Select
 const SINGLE_SELECT_MAP = {
   'Calibrable': {
     'SI': 'SI', 'si': 'SI', 'yes': 'SI', 'true': 'SI',
     'NO': 'NO', 'no': 'NO', 'false': 'NO',
   },
+  'Servicio': {
+    'Cirugia Adulto':        'Cirugia Adulto',
+    'Cirugía Adulto':        'Cirugia Adulto',
+    'Consulta Externa':      'Consulta Externa',
+    'Urgencias Adulto':      'Urgencias Adulto',
+    'Urgencias Pediatria':   'Urgencias Pediatria',
+    'Urgencias Pediatría':   'Urgencias Pediatria',
+    'Laboratorio Clinico':   'Laboratorio Clinico',
+    'Laboratorio Clínico':   'Laboratorio Clinico',
+    'Imagenes Diagnosticas': 'Imagenes Diagnosticas',
+    'Imágenes Diagnósticas': 'Imagenes Diagnosticas',
+    'Uci Adultos':           'Uci Adultos',
+    'UCI Adultos':           'Uci Adultos',
+  },
   'Clasificacion Biomedica': {
-    'Diagnostico':              'Diagnostico',
-    'Diagnostico':              'Diagnostico',
-    'Terapeuticos/Tratamiento': 'Ter\u00e9uticos/Tratamiento',
-    'Ter\u00e9uticos/Tratamiento': 'Ter\u00e9uticos/Tratamiento',
-    'Soporte Vital':            'Soporte Vital',
-    'Laboratorio/Analisis':     'Laboratorio/An\u00e1lisis',
-    'Laboratorio/An\u00e1lisis': 'Laboratorio/An\u00e1lisis',
-    'NO APLICA':                'NO APLICA',
-    'No Aplica':                'NO APLICA',
+    'Diagnostico':               'Diagnostico',
+    'Terapeuticos/Tratamiento':  'Terapeuticos/Tratamiento',
+    'Ter\u00e9uticos/Tratamiento': 'Terapeuticos/Tratamiento',
+    'Soporte Vital':             'Soporte Vital',
+    'Laboratorio/Analisis':      'Laboratorio/Analisis',
+    'Laboratorio/An\u00e1lisis': 'Laboratorio/Analisis',
+    'NO APLICA':                 'NO APLICA',
+    'No Aplica':                 'NO APLICA',
   },
   'Clasificacion de la Tecnologia': {
-    'Equipo Biomedico':  'Equipo Biomedico',
-    'Equipo Industrial': 'Equipo Industrial',
-    'Equipo de apoyo':   'Equipo de apoyo',
-    'Equipo Electrico':  'Equipo Electrico',
+    'Equipo Biomedico':   'Equipo Biomedico',
+    'Equipo Biom\u00e9dico': 'Equipo Biomedico',
+    'Equipo Industrial':  'Equipo Industrial',
+    'Equipo de apoyo':    'Equipo de apoyo',
+    'Equipo Electrico':   'Equipo Electrico',
+    'Equipo El\u00e9ctrico': 'Equipo Electrico',
   },
   'Clasificacion del Riesgo': {
-    'Clase I (Riesgo Bajo)':        'Clase I (Riesgo Bajo)',
-    'Clase IIa (Riesgo Moderado)':  'Clase IIa (Riesgo Moderado)',
-    'Clase IIb (Riesgo Alto)':      'Clase IIb (Riesgo Alto)',
-    'Clase III (Riesgo muy alto)':  'Clase III (Riesgo muy alto)',
-    'Clase III (Riesgo Muy Alto)':  'Clase III (Riesgo muy alto)',
+    'Clase I (Riesgo Bajo)':         'Clase I (Riesgo Bajo)',
+    'Clase IIa (Riesgo Moderado)':   'Clase IIa (Riesgo Moderado)',
+    'Clase IIb (Riesgo Alto)':       'Clase IIb (Riesgo Alto)',
+    'Clase III (Riesgo muy alto)':   'Clase III (Riesgo muy alto)',
+    'Clase III (Riesgo Muy Alto)':   'Clase III (Riesgo muy alto)',
+  },
+  'Tipo de Adquisicion': {
+    'Compra':          'Compra',
+    'Donacion':        'Donacion',
+    'Donaci\u00f3n':  'Donacion',
+    'Comodato':        'Comodato',
+    'Arrendamiento':   'Arrendamiento',
+    'Leasing':         'Leasing',
+  },
+  'Tipo de MTTO': {
+    'Preventivo':  'Preventivo',
+    'Correctivo':  'Correctivo',
+    'Predictivo':  'Predictivo',
+    'Mixto':       'Mixto',
+  },
+  'Frecuencia de MTTO Preventivo': {
+    'Mensual':        'Mensual',
+    'Bimestral':      'Bimestral',
+    'Trimestral':     'Trimestral',
+    'Cuatrimestral':  'Cuatrimestral',
+    'Semestral':      'Semestral',
+    'Anual':          'Anual',
+  },
+  'Frecuencia de Mantenimiento': {
+    'Mensual':        'Mensual',
+    'Bimestral':      'Bimestral',
+    'Trimestral':     'Trimestral',
+    'Cuatrimestral':  'Cuatrimestral',
+    'Semestral':      'Semestral',
+    'Anual':          'Anual',
   },
 };
 
@@ -183,15 +232,17 @@ function toSingleSelect(fieldName, value) {
   var s = String(value).trim();
   if (!s) return null;
   var map = SINGLE_SELECT_MAP[fieldName];
-  if (!map) return s;
+  if (!map) return s; // campo no mapeado: pasar tal cual
+  // Coincidencia exacta
   if (map[s] !== undefined) return map[s];
+  // Coincidencia case-insensitive
   var lower = s.toLowerCase();
   var keys = Object.keys(map);
   for (var i = 0; i < keys.length; i++) {
     if (keys[i].toLowerCase() === lower) return map[keys[i]];
   }
-  // Valor no reconocido: omitir campo para evitar error 422
-  console.warn('[inventario] Valor "' + s + '" no reconocido para campo "' + fieldName + '" - omitido');
+  // Sin coincidencia: omitir para evitar error 422
+  console.warn('[inventario] valor no reconocido para "' + fieldName + '": "' + s + '" - omitido');
   return null;
 }
 
@@ -284,8 +335,8 @@ function mapAndNormalizeFields(inputFields) {
       continue;
     }
     
-    var _norm = normalizeValue(mapped, v);
-    if (_norm !== null && _norm !== undefined) out[mapped] = _norm;
+    var _nv = normalizeValue(mapped, v);
+    if (_nv !== null && _nv !== undefined) out[mapped] = _nv;
   }
   console.log('[inventario] Mapped fields:', JSON.stringify(out));
   return out;
