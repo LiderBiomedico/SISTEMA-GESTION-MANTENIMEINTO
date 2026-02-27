@@ -294,43 +294,33 @@ async function submitInventarioForm(e) {
   const fd = new FormData(form);
   const rawFields = {};
 
-  // Determinar si el equipo es calibrable (Sí/No) antes de validar certificados
-  const calRaw = String(fd.get('CALIBRABLE') || fd.get('Calibrable') || '').trim();
-  const isCalibrable = (calRaw === 'true' || calRaw === 'Sí' || calRaw === 'si' || calRaw === 'SI' || calRaw === 'sí');
   // Certificados de calibración (PDF) - se envían aparte, no dentro de fields
   const certificates = [];
-
-  // Si NO es calibrable, no se exige adjuntar PDFs (no debe bloquear el guardado)
-  if (isCalibrable) {
-    try {
-      const rows = form.querySelectorAll('#calCertList .cal-cert-row');
-      rows.forEach((row) => {
-        const yearEl = row.querySelector('input[name="CAL_CERT_YEAR"]');
-        const fileEl = row.querySelector('input[name="CAL_CERT_FILE"]');
-        const year = yearEl ? String(yearEl.value || '').trim() : '';
-        const file = fileEl && fileEl.files ? fileEl.files[0] : null;
-
-        // Permitir filas vacías
-        if (!year && !file) return;
-
-        if (!year || !/^[0-9]{4}$/.test(year)) {
-          throw new Error('El año de calibración debe ser un número de 4 dígitos (ej: 2025).');
-        }
-        if (!file) {
-          throw new Error(`Falta adjuntar el PDF del certificado para el año ${year}.`);
-        }
-        if (file.size > 5 * 1024 * 1024) {
-          throw new Error(`El PDF de ${year} supera 5MB. Airtable solo permite carga directa hasta 5MB por archivo.`);
-        }
-        if (file.type && file.type !== 'application/pdf') {
-          throw new Error(`El archivo de ${year} debe ser PDF.`);
-        }
-        certificates.push({ year, file });
-      });
-    } catch (e) {
-      alert(e.message || String(e));
-      return;
-    }
+  try {
+    const rows = form.querySelectorAll('#calCertList .cal-cert-row');
+    rows.forEach((row) => {
+      const yearEl = row.querySelector('input[name="CAL_CERT_YEAR"]');
+      const fileEl = row.querySelector('input[name="CAL_CERT_FILE"]');
+      const year = yearEl ? String(yearEl.value || '').trim() : '';
+      const file = fileEl && fileEl.files ? fileEl.files[0] : null;
+      if (!year && !file) return;
+      if (!year || !/^[0-9]{4}$/.test(year)) {
+        throw new Error('El año de calibración debe ser un número de 4 dígitos (ej: 2025).');
+      }
+      if (!file) {
+        throw new Error(`Falta adjuntar el PDF del certificado para el año ${year}.`);
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        throw new Error(`El PDF de ${year} supera 5MB. Airtable solo permite carga directa hasta 5MB por archivo.`);
+      }
+      if (file.type && file.type !== 'application/pdf') {
+        throw new Error(`El archivo de ${year} debe ser PDF.`);
+      }
+      certificates.push({ year, file });
+    });
+  } catch (e) {
+    alert(e.message || String(e));
+    return;
   }
 
   for (const [k, v] of fd.entries()) {
@@ -343,7 +333,7 @@ async function submitInventarioForm(e) {
     const val = String(v).trim();
     if (val === '') continue;
     if (k === 'CALIBRABLE' || k === 'Calibrable') {
-      rawFields[k] = (val === 'true' || val === 'Sí' || val === 'si');
+      if (val === "SI" || val === "si" || val === "Sí" || val === "true") { rawFields[k] = "SI"; } else if (val === "NO" || val === "no" || val === "false") { rawFields[k] = "NO"; }
     } else {
       rawFields[k] = val;
     }
@@ -410,8 +400,8 @@ async function submitInventarioForm(e) {
   // pero NO se debe enviar al backend en POST/PUT porque provoca error 422.
   if ('Item' in fields) delete fields['Item'];
 
-  // Guardar años de calibración (texto) si hay certificados y el equipo es calibrable
-  if (isCalibrable && certificates.length > 0) {
+  // Guardar años de calibración (texto) si hay certificados
+  if (certificates.length > 0) {
     const years = Array.from(new Set(certificates.map(c => c.year))).sort();
     fields['Años de Calibracion'] = years.join(', ');
   }
@@ -454,13 +444,6 @@ async function submitInventarioForm(e) {
       }
       closeModal('newInventario');
       form.reset();
-
-      // Al resetear, asegurar que CALIBRABLE quede en 'No' y ocultar certificados
-      try {
-        const calSel = form.querySelector('#invCalibrable') || form.querySelector('[name="CALIBRABLE"]');
-        if (calSel) calSel.value = 'No';
-        updateCalCertVisibility();
-      } catch (e) {}
 
       // Reset visual de certificados: dejar 1 fila vacía
       try {
@@ -602,38 +585,6 @@ function removeCalCertRow(btn) {
   } catch (e) {}
 }
 
-
-// ============================================================================
-// CALIBRABLE (Sí/No) - Mostrar/Ocultar certificados de calibración
-// ============================================================================
-
-function parseCalibrableValue(v) {
-  const s = String(v || '').trim().toLowerCase();
-  return (s === 'true' || s === 'si' || s === 'sí' || s === 'yes' || s === '1');
-}
-
-function updateCalCertVisibility() {
-  const form = document.getElementById('inventarioForm');
-  if (!form) return;
-
-  const sel = form.querySelector('#invCalibrable') || form.querySelector('[name="CALIBRABLE"]') || form.querySelector('[name="Calibrable"]');
-  const container = document.getElementById('calCertContainer');
-  if (!sel || !container) return;
-
-  const isCal = parseCalibrableValue(sel.value);
-  container.style.display = isCal ? '' : 'none';
-
-  // Si NO es calibrable, limpiamos archivos seleccionados para evitar confusiones
-  if (!isCal) {
-    try {
-      const list = document.getElementById('calCertList');
-      if (list) {
-        list.querySelectorAll('input[name="CAL_CERT_FILE"]').forEach(f => { try { f.value = ''; } catch (e) {} });
-      }
-    } catch (e) {}
-  }
-}
-
 // ============================================================================
 // INICIALIZACIÓN
 // ============================================================================
@@ -657,13 +608,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     inventarioForm.addEventListener('submit', submitInventarioForm);
-
-    // Toggle de certificados según CALIBRABLE
-    const calSel = inventarioForm.querySelector('#invCalibrable') || inventarioForm.querySelector('[name="CALIBRABLE"]') || inventarioForm.querySelector('[name="Calibrable"]');
-    if (calSel) {
-      calSel.addEventListener('change', updateCalCertVisibility);
-      updateCalCertVisibility();
-    }
   }
 
   // Refresh dashboard cada 5 min
