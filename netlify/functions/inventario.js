@@ -138,11 +138,11 @@ const SINGLE_SELECT_MAP = {
   'Clasificacion Biomedica': {
     'Diagnostico':               'Diagnostico',
     'Diagnóstico':               'Diagnostico',
-    'Terapeuticos/Tratamiento':  'Terapeuticos/Tratamiento',
-    'Terapéuticos/Tratamiento':  'Terapeuticos/Tratamiento',
+    'Terapeuticos/Tratamiento':  'Terapéuticos/Tratamiento',
+    'Terapéuticos/Tratamiento':  'Terapéuticos/Tratamiento',
     'Soporte Vital':             'Soporte Vital',
-    'Laboratorio/Analisis':      'Laboratorio/Analisis',
-    'Laboratorio/Análisis':      'Laboratorio/Analisis',
+    'Laboratorio/Analisis':      'Laboratorio/Análisis',
+    'Laboratorio/Análisis':      'Laboratorio/Análisis',
     'NO APLICA':                 'NO APLICA',
     'No Aplica':                 'NO APLICA',
   },
@@ -185,54 +185,38 @@ const SINGLE_SELECT_MAP = {
   },
 };
 
+// Limpieza robusta de strings que pueden venir doble-stringify, con escapes, o
+// con comillas repetidas. Ejemplos que hemos visto en producción:
+//   "\"\"Consulta Externa\"\""  -> Consulta Externa
+//   "\"Consulta Externa\""      -> Consulta Externa
+//   "\\\"Consulta Externa\\\""  -> Consulta Externa
+function cleanInputString(v) {
+  if (v === null || v === undefined) return v;
+  let s = String(v).trim();
+  if (!s) return s;
 
-function cleanSelectValue(value) {
-  if (value === null || value === undefined) return '';
-  // Convert to string safely
-  var s = String(value);
-  // Replace non‑breaking spaces and trim
-  s = s.replace(/\u00A0/g, ' ').trim();
+  // Des-escapar comillas comunes (por doble stringify o escapes del cliente)
+  s = s.replace(/\\"/g, '"').replace(/\\'/g, "'");
 
-  // Unescape common JSON-escaped quotes (e.g. \"text\" or \'text\')
-  // Do it a few times in case of double-stringify
-  for (var i = 0; i < 3; i++) {
-    s = s.replace(/\\\"/g, '"').replace(/\\\'/g, "'").trim();
+  // Quitar comillas/escapes en bordes varias veces
+  for (let i = 0; i < 3; i++) {
+    s = s.trim();
+    s = s.replace(/^\\+(["'])+/, '');
+    s = s.replace(/(["'])+\\+$/, '');
+    s = s.replace(/^(["'])+/, '');
+    s = s.replace(/(["'])+$/, '');
   }
 
-  // Remove wrapping quotes repeatedly: ""text"", "text", 'text'
-  for (var j = 0; j < 5; j++) {
-    var t = s.trim();
-    if ((t.startsWith('""') && t.endsWith('""') && t.length >= 4)) {
-      s = t.slice(2, -2).trim();
-      continue;
-    }
-    if ((t.startsWith("''") && t.endsWith("''") && t.length >= 4)) {
-      s = t.slice(2, -2).trim();
-      continue;
-    }
-    if ((t.startsWith('"') && t.endsWith('"') && t.length >= 2)) {
-      s = t.slice(1, -1).trim();
-      continue;
-    }
-    if ((t.startsWith("'") && t.endsWith("'") && t.length >= 2)) {
-      s = t.slice(1, -1).trim();
-      continue;
-    }
-    break;
-  }
-
-  // If still has doubled quotes inside like ""Consulta Externa"" -> remove them
-  s = s.replace(/(^"+|"+$)/g, '').trim();
-  return s;
+  return String(s).trim();
 }
 
 function toSingleSelect(fieldName, value) {
   if (value === null || value === undefined) return null;
-  var s = cleanSelectValue(value);
-  // Debug: detect quoted select values
-  if (fieldName === 'Servicio' && (String(value).includes('"') || String(value).includes('\"'))) {
-    console.log('[inventario] Servicio raw=', String(value), ' cleaned=', s);
-  }
+  // Limpieza fuerte (caso comillas dobles y escapes)
+  var s = cleanInputString(value);
+  // Por seguridad, elimina cualquier comilla remanente dentro del string
+  // (las opciones de Airtable no deberían contener comillas)
+  s = String(s).replace(/["']/g, '').trim();
   if (!s) return null;
   var map = SINGLE_SELECT_MAP[fieldName];
   if (!map) return s;
@@ -316,6 +300,8 @@ function toBoolean(v) {
 
 function normalizeValue(fieldName, value) {
   if (value === null || typeof value === 'undefined') return value;
+  // Limpieza defensiva robusta (comillas repetidas / escapes / doble stringify)
+  if (typeof value === 'string') value = cleanInputString(value);
   if (NUMBER_FIELDS.has(fieldName)) return toNumber(value);
   if (BOOL_FIELDS.has(fieldName))   return toBoolean(value);
   // Single Select: normalizar o devolver null (se omitirá)
@@ -334,12 +320,16 @@ function mapAndNormalizeFields(inputFields) {
     const key    = String(k || '').trim();
     const mapped = FIELD_MAP[key] || key;
 
-    if (mapped === 'Manual' && isUrl(v)) {
-      out[mapped] = [{ url: String(v).trim() }];
+    // Limpieza previa (especialmente para selects)
+    let vv = v;
+    if (typeof vv === 'string') vv = cleanInputString(vv);
+
+    if (mapped === 'Manual' && isUrl(vv)) {
+      out[mapped] = [{ url: String(vv).trim() }];
       continue;
     }
 
-    const normalized = normalizeValue(mapped, v);
+    const normalized = normalizeValue(mapped, vv);
     // null = valor no reconocido para Single Select -> NO enviar (evita 422)
     if (normalized !== null && normalized !== undefined) {
       out[mapped] = normalized;
