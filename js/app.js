@@ -5,6 +5,29 @@
 
 var API_BASE_URL = '/.netlify/functions';
 
+
+async function loadNextItemIntoForm() {
+  try {
+    const res = await fetch(`${API_BASE_URL}/inventario?nextItem=1`, {
+      headers: { ...getAuthHeader() },
+    });
+    const data = await res.json().catch(() => ({}));
+    const el = document.getElementById('invItem') || document.querySelector('input[name="Item"]');
+    if (!el) return;
+    if (res.ok && data && (data.nextItem || data.nextItem === 0)) {
+      el.value = String(data.nextItem);
+      el.readOnly = true;
+    } else {
+      // Si no se puede consultar, deja el campo vacío pero readonly
+      el.value = '';
+      el.readOnly = true;
+    }
+  } catch (e) {
+    const el = document.getElementById('invItem') || document.querySelector('input[name="Item"]');
+    if (el) el.readOnly = true;
+  }
+}
+
 // Token para autenticación con Netlify Functions
 function getAuthHeader() {
   const token =
@@ -378,6 +401,9 @@ async function submitInventarioForm(e) {
     fields[mapped] = v;
   }
 
+  // Item es autonumérico en Airtable: no se envía al crear
+  if ('Item' in fields) delete fields['Item'];
+
   // Guardar años de calibración (texto) si hay certificados
   if (certificates.length > 0) {
     const years = Array.from(new Set(certificates.map(c => c.year))).sort();
@@ -422,6 +448,7 @@ async function submitInventarioForm(e) {
       }
       closeModal('newInventario');
       form.reset();
+    loadNextItemIntoForm();
 
       // Reset visual de certificados: dejar 1 fila vacía
       try {
@@ -583,6 +610,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     inventarioForm.addEventListener('submit', submitInventarioForm);
+
+    // Cargar Item autonumérico (vista previa)
+    loadNextItemIntoForm();
   }
 
   // Refresh dashboard cada 5 min
