@@ -143,7 +143,9 @@ const NUMBER_FIELDS = new Set([
   'Vida Util'
 ]);
 
-const BOOL_FIELDS = new Set(['Calibrable']);
+const BOOL_FIELDS = new Set([
+  // 'Calibrable' removido: en Airtable es Selección única (SI/NO), no checkbox booleano
+]);
 
 const DATE_FIELDS = new Set([
   'Fecha de Compra',
@@ -206,11 +208,27 @@ function toBoolean(v) {
   return v;
 }
 
+// Campos de Selección única — deben enviarse como string exacto de la opción
+const SINGLE_SELECT_FIELDS = new Set(['Calibrable']);
+
+function toSingleSelect(fieldName, value) {
+  if (typeof value !== 'string') return value;
+  const s = value.trim();
+  if (fieldName === 'Calibrable') {
+    if (['si','sí','yes','true','1'].includes(s.toLowerCase())) return 'SI';
+    if (['no','false','0'].includes(s.toLowerCase())) return 'NO';
+    // Si ya viene como "SI" o "NO" exacto, respetar
+    if (s === 'SI' || s === 'NO') return s;
+  }
+  return s;
+}
+
 function normalizeValue(fieldName, value) {
   if (value === null || typeof value === 'undefined') return value;
   
   if (NUMBER_FIELDS.has(fieldName)) return toNumber(value);
   if (BOOL_FIELDS.has(fieldName)) return toBoolean(value);
+  if (SINGLE_SELECT_FIELDS.has(fieldName)) return toSingleSelect(fieldName, value);
   
   if (DATE_FIELDS.has(fieldName)) {
     if (value instanceof Date) return value.toISOString().slice(0,10);
