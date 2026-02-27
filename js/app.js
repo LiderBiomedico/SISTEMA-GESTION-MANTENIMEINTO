@@ -294,6 +294,21 @@ async function submitInventarioForm(e) {
   const fd = new FormData(form);
   const rawFields = {};
 
+  function sanitizeSelectValue(v) {
+    if (v === null || typeof v === 'undefined') return v;
+    let s = String(v).replace(/\u00A0/g,' ').trim();
+    // Remove wrapping quotes repeatedly
+    for (let i=0;i<5;i++){
+      const t = s.trim();
+      if (t.startsWith('""') && t.endsWith('""') && t.length>=4) { s = t.slice(2,-2).trim(); continue; }
+      if ((t.startsWith('"') && t.endsWith('"')) || (t.startsWith("'") && t.endsWith("'"))) { s = t.slice(1,-1).trim(); continue; }
+      break;
+    }
+    s = s.replace(/(^"+|"+$)/g,'').trim();
+    return s;
+  }
+
+
   // Certificados de calibración (PDF) - se envían aparte, no dentro de fields
   const certificates = [];
   const _calId = form.querySelector('#calibrableIdentSelect');
@@ -334,7 +349,7 @@ async function submitInventarioForm(e) {
     } else if (k === 'CALIBRABLE_IDENT') {
       // solo UI, ignorar
     } else {
-      rawFields[k] = val;
+      rawFields[k] = (k==='SERVICIO' || k==='CLASIFICACION BIOMEDICA' || k==='CLASIFICACION DE LA TECNOLOGIA' || k==='CLASIFICACION DEL RIESGO' || k==='TIPO DE ADQUISICION' || k==='TIPO DE MTTO' || k==='FRECUENCIA DE MTTO PREVENTIVO' || k==='FRECUENCIA DE MANTENIMIENTO') ? sanitizeSelectValue(val) : val;
     }
   }
 

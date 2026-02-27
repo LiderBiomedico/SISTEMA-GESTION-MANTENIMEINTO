@@ -185,9 +185,54 @@ const SINGLE_SELECT_MAP = {
   },
 };
 
+
+function cleanSelectValue(value) {
+  if (value === null || value === undefined) return '';
+  // Convert to string safely
+  var s = String(value);
+  // Replace non‑breaking spaces and trim
+  s = s.replace(/\u00A0/g, ' ').trim();
+
+  // Unescape common JSON-escaped quotes (e.g. \"text\" or \'text\')
+  // Do it a few times in case of double-stringify
+  for (var i = 0; i < 3; i++) {
+    s = s.replace(/\\\"/g, '"').replace(/\\\'/g, "'").trim();
+  }
+
+  // Remove wrapping quotes repeatedly: ""text"", "text", 'text'
+  for (var j = 0; j < 5; j++) {
+    var t = s.trim();
+    if ((t.startsWith('""') && t.endsWith('""') && t.length >= 4)) {
+      s = t.slice(2, -2).trim();
+      continue;
+    }
+    if ((t.startsWith("''") && t.endsWith("''") && t.length >= 4)) {
+      s = t.slice(2, -2).trim();
+      continue;
+    }
+    if ((t.startsWith('"') && t.endsWith('"') && t.length >= 2)) {
+      s = t.slice(1, -1).trim();
+      continue;
+    }
+    if ((t.startsWith("'") && t.endsWith("'") && t.length >= 2)) {
+      s = t.slice(1, -1).trim();
+      continue;
+    }
+    break;
+  }
+
+  // If still has doubled quotes inside like ""Consulta Externa"" -> remove them
+  s = s.replace(/(^"+|"+$)/g, '').trim();
+  return s;
+}
+
 function toSingleSelect(fieldName, value) {
   if (value === null || value === undefined) return null;
-  var s = String(value).trim();
+  var s = cleanSelectValue(value);
+  // Debug: detect quoted select values
+  if (fieldName === 'Servicio' && (String(value).includes('"') || String(value).includes('\"'))) {
+    console.log('[inventario] Servicio raw=', String(value), ' cleaned=', s);
+  }
   if (!s) return null;
   var map = SINGLE_SELECT_MAP[fieldName];
   if (!map) return s;
@@ -329,42 +374,6 @@ function removeUnknownFields(fields, errData) {
   return { cleaned: cleaned, removed: removed };
 }
 
-// Remove field(s) that trigger "Insufficient permissions to create new select option".
-// Airtable error message usually contains the option value in quotes, but not the field name.
-// Strategy: extract the option string and remove any known Single Select field whose value equals that option.
-function removeSingleSelectByOption(fields, errData) {
-  const errObj = errData && errData.error ? errData.error : errData || {};
-  const msg = typeof errObj === 'string'
-    ? errObj
-    : (errObj.message || (errData && errData.message) || JSON.stringify(errData || {}));
-
-  if (!/create new select option/i.test(String(msg))) return { cleaned: fields, removed: [] };
-
-  // Extract first quoted token: "Consulta Externa"
-  const q = String(msg).match(/"([^"]+)"/);
-  const optionRaw = q && q[1] ? String(q[1]).trim() : '';
-  if (!optionRaw) return { cleaned: fields, removed: [] };
-
-  const cleaned = Object.assign({}, fields);
-  const removed = [];
-
-  Object.keys(cleaned).forEach(function(fieldName) {
-    try {
-      if (!SINGLE_SELECT_MAP[fieldName]) return;
-      const v = cleaned[fieldName];
-      // Compare after cleaning (same function used by mapper)
-      const vv = cleanInputString(v);
-      const oo = cleanInputString(optionRaw);
-      if (String(vv).trim() === String(oo).trim()) {
-        delete cleaned[fieldName];
-        removed.push(fieldName);
-      }
-    } catch (e) {}
-  });
-
-  return { cleaned: cleaned, removed: removed };
-}
-
 async function airtableRequest(method, url, data) {
   if (!AIRTABLE_API_KEY || !AIRTABLE_BASE_ID) {
     throw { status: 500, data: { error: 'Missing AIRTABLE_API_KEY/TOKEN or AIRTABLE_BASE_ID' } };
@@ -457,11 +466,7 @@ exports.handler = async (event) => {
           lastError = { status, data };
           console.log('[inventario] POST attempt ' + (attempt+1) + ' failed:', JSON.stringify(data));
           if (status !== 422) break;
-          let r = removeUnknownFields(mapped, data);
-          // If not an unknown-field error, try select-option error handling
-          if (r.removed.length === 0) {
-            r = removeSingleSelectByOption(mapped, data);
-          }
+          const r = removeUnknownFields(mapped, data);
           if (r.removed.length === 0) break;
           allRemoved = allRemoved.concat(r.removed);
           mapped = r.cleaned;
@@ -515,10 +520,7 @@ exports.handler = async (event) => {
         const data   = (e.response && e.response.data)   || { error: 'Airtable error' };
 
         if (status === 422) {
-          let r = removeUnknownFields(mapped, data);
-          if (r.removed.length === 0) {
-            r = removeSingleSelectByOption(mapped, data);
-          }
+          const r = removeUnknownFields(mapped, data);
           if (r.removed.length > 0) {
             try {
               const resp2 = await airtableRequest('PATCH', url, { fields: r.cleaned });
