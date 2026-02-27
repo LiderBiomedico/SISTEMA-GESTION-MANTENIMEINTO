@@ -12,7 +12,6 @@ const TABLE_NAME = process.env.AIRTABLE_INVENTARIO_TABLE || 'Inventario';
 // Puede ser nombre o fieldId (recomendado). Si no se define, usa el nombre por defecto.
 const AIRTABLE_CAL_CERT_FIELD = process.env.AIRTABLE_CAL_CERT_FIELD || 'Certificados de Calibracion';
 const AIRTABLE_API = 'https://api.airtable.com/v0';
-const AIRTABLE_META_API = 'https://api.airtable.com/v0/meta';
 const AIRTABLE_CONTENT_API = 'https://content.airtable.com/v0';
 
 
@@ -26,56 +25,6 @@ function json(statusCode, body) {
       'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
     },
     body: JSON.stringify(body),
-  };
-}
-
-
-async function fetchSelectOptionsFromAirtable() {
-  if (!AIRTABLE_API_KEY || !AIRTABLE_BASE_ID) {
-    throw new Error('Missing AIRTABLE_API_KEY or AIRTABLE_BASE_ID');
-  }
-  const url = `${AIRTABLE_META_API}/bases/${AIRTABLE_BASE_ID}/tables`;
-  const headers = { Authorization: `Bearer ${AIRTABLE_API_KEY}` };
-  const resp = await axios.get(url, { headers });
-  const tables = (resp.data && resp.data.tables) ? resp.data.tables : [];
-  const table = tables.find(t => (t && t.name) === TABLE_NAME) || null;
-  if (!table) {
-    return { ok: false, error: { message: `Table not found in meta: ${TABLE_NAME}` } };
-  }
-
-  const wanted = new Set([
-    'Servicio','SERVICIO',
-    'Ubicación','UBICACIÓN','Ubicacion','UBICACION',
-    'Clasificación Biomédica','CLASIFICACION BIOMEDICA','Clasificacion Biomedica',
-    'Clasificación de la Tecnología','CLASIFICACION DE LA TECNOLOGIA','Clasificacion de la Tecnologia',
-    'Clasificación del Riesgo','CLASIFICACION DEL RIESGO','Clasificacion del Riesgo',
-    'Vida Útil','VIDA UTIL','Vida Util','VIDA ÚTIL'
-  ]);
-
-  const out = {};
-  (table.fields || []).forEach(f => {
-    if (!f || !f.name) return;
-    if (!wanted.has(f.name)) return;
-    if (f.type === 'singleSelect' || f.type === 'multipleSelects') {
-      const choices = (((f.options || {}).choices) || []).map(c => c.name).filter(Boolean);
-      out[f.name] = choices;
-    }
-  });
-
-  // For convenience, also provide a canonical key per logical field
-  const pick = (...names) => {
-    for (const n of names) if (out[n] && out[n].length) return out[n];
-    return [];
-  };
-  return {
-    ok: true,
-    table: TABLE_NAME,
-    selects: {
-      SERVICIO: pick('Servicio','SERVICIO'),
-      CLASIFICACION_BIOMEDICA: pick('Clasificación Biomédica','CLASIFICACION BIOMEDICA','Clasificacion Biomedica'),
-      CLASIFICACION_TECNOLOGIA: pick('Clasificación de la Tecnología','CLASIFICACION DE LA TECNOLOGIA','Clasificacion de la Tecnologia'),
-      CLASIFICACION_RIESGO: pick('Clasificación del Riesgo','CLASIFICACION DEL RIESGO','Clasificacion del Riesgo')
-    }
   };
 }
 
@@ -351,17 +300,14 @@ exports.handler = async (event) => {
       });
     }
 
-
-    // Meta: devolver opciones de campos Select (para poblar listas desplegables en el frontend)
-    if (event.httpMethod === 'GET' && (qs.meta === '1' || qs.meta === 'true')) {
-      try {
-        const meta = await fetchSelectOptionsFromAirtable();
-        return json(200, meta);
-      } catch (e) {
-        return json(500, { ok: false, error: { message: e.message || String(e) } });
-      }
+    
+    // Meta - Opciones de campos Select (Servicio / Clasificaciones / Riesgo)
+    if ((qs.meta === '1' || qs.meta === 'true' || qs.meta === 'yes') && event.httpMethod === 'GET') {
+      const meta = await fetchSelectOptionsFromAirtable();
+      return json(200, meta);
     }
-    const baseUrl = `${AIRTABLE_API}/${AIRTABLE_BASE_ID}/${encodeURIComponent(TABLE_NAME)}`;
+
+const baseUrl = `${AIRTABLE_API}/${AIRTABLE_BASE_ID}/${encodeURIComponent(TABLE_NAME)}`;
 
     // =========================================================================
     // GET - Listar registros

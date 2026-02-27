@@ -560,54 +560,12 @@ function removeCalCertRow(btn) {
   } catch (e) {}
 }
 
-
-// ============================================================================
-// Inventario: cargar opciones de Airtable (Select) y poblar datalist
-// ============================================================================
-async function loadInventarioSelectOptions() {
-  try {
-    const url = `${API_BASE_URL}/inventario?meta=1`;
-    const res = await fetch(url, { headers: { ...getAuthHeader() } });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok || !data || !data.ok) {
-      console.warn('⚠️ No se pudieron cargar opciones de Airtable', data);
-      return;
-    }
-
-    function fillDatalist(id, options) {
-      const dl = document.getElementById(id);
-      if (!dl) return;
-      dl.innerHTML = '';
-      (options || []).forEach(opt => {
-        const o = document.createElement('option');
-        o.value = opt;
-        dl.appendChild(o);
-      });
-    }
-
-    const selects = data.selects || {};
-    fillDatalist('servicioOptions', selects.SERVICIO);
-    fillDatalist('clasBioOptions', selects.CLASIFICACION_BIOMEDICA);
-    fillDatalist('clasTecOptions', selects.CLASIFICACION_TECNOLOGIA);
-    fillDatalist('riesgoOptions', selects.CLASIFICACION_RIESGO);
-
-    console.log('✅ Opciones de inventario cargadas desde Airtable (Select)');
-  } catch (e) {
-    console.warn('⚠️ Error cargando opciones de inventario:', e);
-  }
-}
-
-
 // ============================================================================
 // INICIALIZACIÓN
 // ============================================================================
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   console.log('✅ Sistema de Gestión de Mantenimiento Hospitalario iniciado');
-
-  // Cargar listas desplegables desde Airtable (SERVICIO, clasificaciones, riesgo)
-  loadInventarioSelectOptions();
-
 
   // Dashboard init
   if (document.getElementById('dashboard')) {
@@ -627,12 +585,69 @@ document.addEventListener('DOMContentLoaded', () => {
     inventarioForm.addEventListener('submit', submitInventarioForm);
   }
 
+
+  // Cargar listas desplegables (selects) desde Airtable para evitar errores 422 en campos Select
+  try {
+    await loadInventarioSelectOptions();
+  } catch (e) {
+    console.warn('⚠️ No se pudieron cargar opciones de selects para inventario:', e);
+  }
+
   // Refresh dashboard cada 5 min
   setInterval(() => {
     const active = document.querySelector('.module.active');
     if (active && active.id === 'dashboard') fetchDashboardData();
   }, 300000);
 });
+
+
+// ============================================================================
+// INVENTARIO - Carga de opciones (Select) desde Airtable
+// - Evita error 422: INVALID_MULTIPLE_CHOICE_OPTIONS (no crear opciones nuevas)
+// ============================================================================
+async function loadInventarioSelectOptions() {
+  // Solo si existe el formulario inventario y los selects
+  const selServicio = document.getElementById('invServicioSelect');
+  const selBio = document.getElementById('invClasificacionBiomedicaSelect');
+  const selTec = document.getElementById('invClasificacionTecnologiaSelect');
+  const selRiesgo = document.getElementById('invClasificacionRiesgoSelect');
+
+  if (!selServicio && !selBio && !selTec && !selRiesgo) return;
+
+  const url = `${API_BASE_URL}/inventario?meta=1`;
+  const resp = await axios.get(url, { headers: getAuthHeader() });
+  const data = resp.data || {};
+  if (!data.ok) throw new Error((data.error && data.error.message) ? data.error.message : 'Meta options not available');
+
+  const selects = data.selects || {};
+
+  // Helper: llenar <select> con opciones
+  function fillSelect(selectEl, options) {
+    if (!selectEl) return;
+    const current = selectEl.value;
+    // limpiar
+    while (selectEl.firstChild) selectEl.removeChild(selectEl.firstChild);
+    const opt0 = document.createElement('option');
+    opt0.value = '';
+    opt0.textContent = 'Seleccione...';
+    selectEl.appendChild(opt0);
+
+    (options || []).forEach((txt) => {
+      const o = document.createElement('option');
+      o.value = txt;
+      o.textContent = txt;
+      selectEl.appendChild(o);
+    });
+
+    // restaurar valor si existe en opciones
+    if (current) selectEl.value = current;
+  }
+
+  fillSelect(selServicio, selects.SERVICIO);
+  fillSelect(selBio, selects.CLASIFICACION_BIOMEDICA);
+  fillSelect(selTec, selects.CLASIFICACION_TECNOLOGIA);
+  fillSelect(selRiesgo, selects.CLASIFICACION_RIESGO);
+}
 
 // Exponer funciones al window para onclick=""
 window.switchModule = switchModule;
