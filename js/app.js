@@ -5,29 +5,6 @@
 
 var API_BASE_URL = '/.netlify/functions';
 
-
-async function loadNextItemIntoForm() {
-  try {
-    const res = await fetch(`${API_BASE_URL}/inventario?nextItem=1`, {
-      headers: { ...getAuthHeader() },
-    });
-    const data = await res.json().catch(() => ({}));
-    const el = document.getElementById('invItem') || document.querySelector('input[name="Item"]');
-    if (!el) return;
-    if (res.ok && data && (data.nextItem || data.nextItem === 0)) {
-      el.value = String(data.nextItem);
-      el.readOnly = true;
-    } else {
-      // Si no se puede consultar, deja el campo vacío pero readonly
-      el.value = '';
-      el.readOnly = true;
-    }
-  } catch (e) {
-    const el = document.getElementById('invItem') || document.querySelector('input[name="Item"]');
-    if (el) el.readOnly = true;
-  }
-}
-
 // Token para autenticación con Netlify Functions
 function getAuthHeader() {
   const token =
@@ -110,12 +87,42 @@ function loadModuleData(moduleName) {
 // MODALES
 // ============================================================================
 
+
+// ============================================================================
+// INVENTARIO - ITEM autogenerado (vista previa)
+// Airtable genera el autonúmero; aquí solo mostramos el próximo valor estimado.
+// ============================================================================
+async function setNextItemPreview() {
+  const input = document.getElementById('invItem');
+  if (!input) return;
+  try {
+    input.value = 'Cargando...';
+    const res = await fetch('/.netlify/functions/inventario?nextItem=1', { method: 'GET' });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data && (data.nextItem !== undefined)) {
+      // Formato 00001 (5 dígitos)
+      const n = Number(data.nextItem);
+      input.value = Number.isFinite(n) ? String(n).padStart(5, '0') : '';
+    } else {
+      input.value = '';
+      console.warn('No se pudo obtener nextItem:', data);
+    }
+  } catch (e) {
+    console.warn('Error obteniendo nextItem:', e);
+    input.value = '';
+  }
+}
+
 function openModal(modalId) {
   const el = document.getElementById(modalId);
   if (!el) return;
   // Soporta ambos estilos de modal (display y class)
   el.style.display = 'block';
   el.classList.add('active');
+  if (modalId === 'newInventario') {
+    // Mostrar Item autogenerado
+    setNextItemPreview();
+  }
 }
 
 function closeModal(modalId) {
@@ -401,9 +408,6 @@ async function submitInventarioForm(e) {
     fields[mapped] = v;
   }
 
-  // Item es autonumérico en Airtable: no se envía al crear
-  if ('Item' in fields) delete fields['Item'];
-
   // Guardar años de calibración (texto) si hay certificados
   if (certificates.length > 0) {
     const years = Array.from(new Set(certificates.map(c => c.year))).sort();
@@ -448,7 +452,6 @@ async function submitInventarioForm(e) {
       }
       closeModal('newInventario');
       form.reset();
-    loadNextItemIntoForm();
 
       // Reset visual de certificados: dejar 1 fila vacía
       try {
@@ -602,6 +605,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // Formulario inventario (modal newInventario con campos UPPERCASE)
   const inventarioForm = document.getElementById('inventarioForm');
   if (inventarioForm) {
+    // Previsualizar Item autogenerado
+    setNextItemPreview();
     // Quitar "required" de inputs dentro de <details> para evitar error "not focusable"
     // La validación se hace en JS (submitInventarioForm)
     inventarioForm.querySelectorAll('details input[required], details select[required], details textarea[required]').forEach(el => {
@@ -610,9 +615,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     inventarioForm.addEventListener('submit', submitInventarioForm);
-
-    // Cargar Item autonumérico (vista previa)
-    loadNextItemIntoForm();
   }
 
   // Refresh dashboard cada 5 min
