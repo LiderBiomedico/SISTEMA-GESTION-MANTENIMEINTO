@@ -185,38 +185,9 @@ const SINGLE_SELECT_MAP = {
   },
 };
 
-// Limpieza robusta de strings que pueden venir doble-stringify, con escapes, o
-// con comillas repetidas. Ejemplos que hemos visto en producción:
-//   "\"\"Consulta Externa\"\""  -> Consulta Externa
-//   "\"Consulta Externa\""      -> Consulta Externa
-//   "\\\"Consulta Externa\\\""  -> Consulta Externa
-function cleanInputString(v) {
-  if (v === null || v === undefined) return v;
-  let s = String(v).trim();
-  if (!s) return s;
-
-  // Des-escapar comillas comunes (por doble stringify o escapes del cliente)
-  s = s.replace(/\\"/g, '"').replace(/\\'/g, "'");
-
-  // Quitar comillas/escapes en bordes varias veces
-  for (let i = 0; i < 3; i++) {
-    s = s.trim();
-    s = s.replace(/^\\+(["'])+/, '');
-    s = s.replace(/(["'])+\\+$/, '');
-    s = s.replace(/^(["'])+/, '');
-    s = s.replace(/(["'])+$/, '');
-  }
-
-  return String(s).trim();
-}
-
 function toSingleSelect(fieldName, value) {
   if (value === null || value === undefined) return null;
-  // Limpieza fuerte (caso comillas dobles y escapes)
-  var s = cleanInputString(value);
-  // Por seguridad, elimina cualquier comilla remanente dentro del string
-  // (las opciones de Airtable no deberían contener comillas)
-  s = String(s).replace(/["']/g, '').trim();
+  var s = String(value).trim();
   if (!s) return null;
   var map = SINGLE_SELECT_MAP[fieldName];
   if (!map) return s;
@@ -300,8 +271,6 @@ function toBoolean(v) {
 
 function normalizeValue(fieldName, value) {
   if (value === null || typeof value === 'undefined') return value;
-  // Limpieza defensiva robusta (comillas repetidas / escapes / doble stringify)
-  if (typeof value === 'string') value = cleanInputString(value);
   if (NUMBER_FIELDS.has(fieldName)) return toNumber(value);
   if (BOOL_FIELDS.has(fieldName))   return toBoolean(value);
   // Single Select: normalizar o devolver null (se omitirá)
@@ -320,16 +289,12 @@ function mapAndNormalizeFields(inputFields) {
     const key    = String(k || '').trim();
     const mapped = FIELD_MAP[key] || key;
 
-    // Limpieza previa (especialmente para selects)
-    let vv = v;
-    if (typeof vv === 'string') vv = cleanInputString(vv);
-
-    if (mapped === 'Manual' && isUrl(vv)) {
-      out[mapped] = [{ url: String(vv).trim() }];
+    if (mapped === 'Manual' && isUrl(v)) {
+      out[mapped] = [{ url: String(v).trim() }];
       continue;
     }
 
-    const normalized = normalizeValue(mapped, vv);
+    const normalized = normalizeValue(mapped, v);
     // null = valor no reconocido para Single Select -> NO enviar (evita 422)
     if (normalized !== null && normalized !== undefined) {
       out[mapped] = normalized;
@@ -361,6 +326,42 @@ function removeUnknownFields(fields, errData) {
   unknown.forEach(function(u) {
     if (u in cleaned) { delete cleaned[u]; removed.push(u); }
   });
+  return { cleaned: cleaned, removed: removed };
+}
+
+// Remove field(s) that trigger "Insufficient permissions to create new select option".
+// Airtable error message usually contains the option value in quotes, but not the field name.
+// Strategy: extract the option string and remove any known Single Select field whose value equals that option.
+function removeSingleSelectByOption(fields, errData) {
+  const errObj = errData && errData.error ? errData.error : errData || {};
+  const msg = typeof errObj === 'string'
+    ? errObj
+    : (errObj.message || (errData && errData.message) || JSON.stringify(errData || {}));
+
+  if (!/create new select option/i.test(String(msg))) return { cleaned: fields, removed: [] };
+
+  // Extract first quoted token: "Consulta Externa"
+  const q = String(msg).match(/"([^"]+)"/);
+  const optionRaw = q && q[1] ? String(q[1]).trim() : '';
+  if (!optionRaw) return { cleaned: fields, removed: [] };
+
+  const cleaned = Object.assign({}, fields);
+  const removed = [];
+
+  Object.keys(cleaned).forEach(function(fieldName) {
+    try {
+      if (!SINGLE_SELECT_MAP[fieldName]) return;
+      const v = cleaned[fieldName];
+      // Compare after cleaning (same function used by mapper)
+      const vv = cleanInputString(v);
+      const oo = cleanInputString(optionRaw);
+      if (String(vv).trim() === String(oo).trim()) {
+        delete cleaned[fieldName];
+        removed.push(fieldName);
+      }
+    } catch (e) {}
+  });
+
   return { cleaned: cleaned, removed: removed };
 }
 
@@ -456,7 +457,11 @@ exports.handler = async (event) => {
           lastError = { status, data };
           console.log('[inventario] POST attempt ' + (attempt+1) + ' failed:', JSON.stringify(data));
           if (status !== 422) break;
-          const r = removeUnknownFields(mapped, data);
+          let r = removeUnknownFields(mapped, data);
+          // If not an unknown-field error, try select-option error handling
+          if (r.removed.length === 0) {
+            r = removeSingleSelectByOption(mapped, data);
+          }
           if (r.removed.length === 0) break;
           allRemoved = allRemoved.concat(r.removed);
           mapped = r.cleaned;
@@ -510,7 +515,10 @@ exports.handler = async (event) => {
         const data   = (e.response && e.response.data)   || { error: 'Airtable error' };
 
         if (status === 422) {
-          const r = removeUnknownFields(mapped, data);
+          let r = removeUnknownFields(mapped, data);
+          if (r.removed.length === 0) {
+            r = removeSingleSelectByOption(mapped, data);
+          }
           if (r.removed.length > 0) {
             try {
               const resp2 = await airtableRequest('PATCH', url, { fields: r.cleaned });
