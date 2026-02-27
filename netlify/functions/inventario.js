@@ -13,7 +13,6 @@ const TABLE_NAME = process.env.AIRTABLE_INVENTARIO_TABLE || 'Inventario';
 const AIRTABLE_CAL_CERT_FIELD = process.env.AIRTABLE_CAL_CERT_FIELD || 'Certificados de Calibracion';
 const AIRTABLE_API = 'https://api.airtable.com/v0';
 const AIRTABLE_CONTENT_API = 'https://content.airtable.com/v0';
-const AIRTABLE_META_API = 'https://api.airtable.com/v0/meta';
 
 
 function json(statusCode, body) {
@@ -27,108 +26,6 @@ function json(statusCode, body) {
     },
     body: JSON.stringify(body),
   };
-}
-
-// ============================================================================
-// OPCIONES PARA CAMPOS SELECT (Servicio / Clasificaciones / Riesgo)
-// - Primero intenta leer schema (Meta API)
-// - Si falla (permisos), infiere de los registros existentes
-// - Si aún queda vacío, usa fallback con opciones conocidas (según configuración mostrada)
-// ============================================================================
-
-const SELECT_FIELDS = [
-  'Servicio',
-  'Clasificacion Biomedica',
-  'Clasificacion de la Tecnologia',
-  'Clasificacion del Riesgo'
-];
-
-const FALLBACK_SELECT_OPTIONS = {
-  'Servicio': [
-    'Cirugia Adulto',
-    'Consulta Externa',
-    'Urgencias Adulto',
-    'Urgencias Pediatria',
-    'Laboratorio Clinico',
-    'Imagenes Diagnosticas',
-    'Uci Adultos'
-  ],
-  'Clasificacion Biomedica': [
-    'Diagnostico',
-    'Terapéuticos/Tratamiento',
-    'Soporte Vital',
-    'Laboratorio/Análisis',
-    'NO APLICA'
-  ],
-  'Clasificacion de la Tecnologia': [
-    'Equipo Biomedico',
-    'Equipo Industrial',
-    'Equipo de apoyo',
-    'Equipo Electrico'
-  ],
-  'Clasificacion del Riesgo': [
-    'Clase I (Riesgo Bajo)',
-    'Clase IIa (Riesgo Moderado)',
-    'Clase IIb (Riesgo Alto)',
-    'Clase III (Riesgo muy alto)'
-  ]
-};
-
-function uniqClean(arr) {
-  const out = [];
-  const seen = new Set();
-  (arr || []).forEach(v => {
-    const s = String(v || '').trim();
-    if (!s) return;
-    const key = s.toLowerCase();
-    if (seen.has(key)) return;
-    seen.add(key);
-    out.push(s);
-  });
-  return out;
-}
-
-async function readOptionsFromMeta() {
-  if (!AIRTABLE_API_KEY || !AIRTABLE_BASE_ID) return null;
-  const url = `${AIRTABLE_META_API}/bases/${AIRTABLE_BASE_ID}/tables`;
-  const headers = { Authorization: `Bearer ${AIRTABLE_API_KEY}` };
-  const resp = await axios.get(url, { headers });
-  const tables = resp.data && resp.data.tables ? resp.data.tables : [];
-  const table = tables.find(t => (t && t.name) === TABLE_NAME) || tables[0];
-  if (!table || !Array.isArray(table.fields)) return null;
-
-  const options = {};
-  for (const fname of SELECT_FIELDS) {
-    const f = table.fields.find(x => x && x.name === fname);
-    const choices = f && f.options && Array.isArray(f.options.choices) ? f.options.choices : null;
-    if (choices) {
-      options[fname] = uniqClean(choices.map(c => c && (c.name || c.label || c.value)).filter(Boolean));
-    }
-  }
-  return options;
-}
-
-async function inferOptionsFromRecords(baseUrl) {
-  const params = new URLSearchParams();
-  params.set('pageSize', '100');
-  // pedir solo los campos relevantes
-  SELECT_FIELDS.forEach(f => params.append('fields[]', f));
-  const url = `${baseUrl}?${params.toString()}`;
-  const resp = await airtableRequest('GET', url);
-  const records = resp.data && Array.isArray(resp.data.records) ? resp.data.records : [];
-
-  const options = {};
-  for (const f of SELECT_FIELDS) options[f] = [];
-  records.forEach(r => {
-    const fields = (r && r.fields) || {};
-    for (const f of SELECT_FIELDS) {
-      const v = fields[f];
-      if (Array.isArray(v)) v.forEach(x => options[f].push(x));
-      else options[f].push(v);
-    }
-  });
-  for (const f of SELECT_FIELDS) options[f] = uniqClean(options[f]);
-  return options;
 }
 
 // Mapeo de campos del formulario a columnas de Airtable
@@ -258,6 +155,145 @@ const DATE_FIELDS = new Set([
   'Fecha de Recepcion'
 ]);
 
+// -----------------------------------------------------------------------------
+// Single select / multiple select fields (Airtable will 422 if value is not an
+// existing option and the token can't create new options).
+// We canonicalize common values and we can retry with accent variants.
+// -----------------------------------------------------------------------------
+const SELECT_FIELDS = new Set([
+  'Servicio',
+  'Clasificacion Biomedica',
+  'Clasificacion de la Tecnologia',
+  'Clasificacion del Riesgo'
+]);
+
+// Options observed in your Airtable (based on screenshots). Keep exact spelling.
+const SELECT_OPTIONS = {
+  'Servicio': [
+    'Cirugia Adulto',
+    'Consulta Externa',
+    'Urgencias Adulto',
+    'Urgencias Pediatria',
+    'Laboratorio Clinico',
+    'Imagenes Diagnosticas',
+    'Uci Adultos'
+  ],
+  'Clasificacion Biomedica': [
+    'Diagnostico',
+    'Terapéuticos/Tratamiento',
+    'Soporte Vital',
+    'Laboratorio/Análisis',
+    'NO APLICA'
+  ],
+  'Clasificacion de la Tecnologia': [
+    'Equipo Biomedico',
+    'Equipo Industrial',
+    'Equipo de apoyo',
+    'Equipo Electrico'
+  ],
+  'Clasificacion del Riesgo': [
+    'Clase I (Riesgo Bajo)',
+    'Clase IIa (Riesgo Moderado)',
+    'Clase IIb (Riesgo Alto)',
+    'Clase III (Riesgo muy alto)'
+  ]
+};
+
+function stripWrappingQuotes(s) {
+  if (typeof s !== 'string') return s;
+  let t = s.trim();
+  if ((t.startsWith('"') && t.endsWith('"')) || (t.startsWith("'") && t.endsWith("'"))) {
+    t = t.slice(1, -1).trim();
+  }
+  // also remove accidental escaped quotes
+  t = t.replace(/^\\"|\\"$/g, '').trim();
+  return t;
+}
+
+function stripDiacritics(s) {
+  try {
+    return String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  } catch {
+    return String(s);
+  }
+}
+
+function canonicalizeSelectValue(fieldName, value) {
+  if (!SELECT_FIELDS.has(fieldName)) return value;
+  if (typeof value !== 'string') return value;
+  const v = stripWrappingQuotes(value);
+  if (!v) return value;
+
+  const options = SELECT_OPTIONS[fieldName] || [];
+  if (options.length === 0) return v;
+
+  const vKey = stripDiacritics(v).toLowerCase();
+  const hit = options.find(opt => stripDiacritics(opt).toLowerCase() === vKey);
+  return hit || v;
+}
+
+function extractInvalidChoice(errData) {
+  const errObj = errData?.error || errData || {};
+  const msg = errObj?.message || errData?.message || '';
+  // Example: Insufficient permissions to create new select option "\"Diagnostico\""
+  const m = String(msg).match(/select option\s+"(.*)"/i);
+  if (!m) return null;
+  const raw = m[1];
+  return stripWrappingQuotes(raw);
+}
+
+function applySelectFallbackRetry(mappedFields, invalidChoice) {
+  if (!invalidChoice) return { changed: false, fields: mappedFields };
+  const candidates = new Map([
+    // common accent/case variants
+    ['Diagnostico', ['Diagnóstico']],
+    ['Diagnóstico', ['Diagnostico']],
+    ['Cirugia Adulto', ['Cirugía Adulto']],
+    ['Cirugía Adulto', ['Cirugia Adulto']],
+    ['Imagenes Diagnosticas', ['Imágenes Diagnósticas']],
+    ['Imágenes Diagnósticas', ['Imagenes Diagnosticas']],
+    ['Uci Adultos', ['UCI Adultos']],
+    ['UCI Adultos', ['Uci Adultos']],
+    ['Equipo Biomedico', ['Equipo Biomédico']],
+    ['Equipo Biomédico', ['Equipo Biomedico']],
+    ['Equipo Electrico', ['Equipo Eléctrico']],
+    ['Equipo Eléctrico', ['Equipo Electrico']],
+    ['Laboratorio/Analisis', ['Laboratorio/Análisis']],
+    ['Laboratorio/Análisis', ['Laboratorio/Analisis']],
+    ['Terapeuticos/Tratamiento', ['Terapéuticos/Tratamiento']],
+    ['Terapéuticos/Tratamiento', ['Terapeuticos/Tratamiento']]
+  ]);
+
+  const invalidKey = stripDiacritics(invalidChoice).toLowerCase();
+  const out = { ...mappedFields };
+  let changed = false;
+
+  for (const f of Object.keys(out)) {
+    if (!SELECT_FIELDS.has(f)) continue;
+    const cur = typeof out[f] === 'string' ? stripWrappingQuotes(out[f]) : out[f];
+    if (typeof cur !== 'string') continue;
+    if (stripDiacritics(cur).toLowerCase() !== invalidKey) continue;
+
+    // Try: (1) canonicalize against observed options list; (2) accent swap candidates
+    const canon = canonicalizeSelectValue(f, cur);
+    if (canon && canon !== cur) {
+      out[f] = canon;
+      changed = true;
+      continue;
+    }
+
+    const swaps = candidates.get(cur) || candidates.get(invalidChoice) || [];
+    for (const s of swaps) {
+      const sCanon = canonicalizeSelectValue(f, s);
+      out[f] = sCanon;
+      changed = true;
+      break;
+    }
+  }
+
+  return { changed, fields: out };
+}
+
 function isUrl(s) {
   return typeof s === 'string' && /^https?:\/\/\S+/i.test(s.trim());
 }
@@ -329,10 +365,6 @@ function mapAndNormalizeFields(inputFields) {
   for (const [k, v] of Object.entries(inputFields || {})) {
     const key = String(k || '').trim();
     const mapped = FIELD_MAP[key] || key;
-
-    // Omitir vacíos (Airtable suele responder 422 si se envían "" a Number/Select/Date)
-    if (v === '' || v === null || typeof v === 'undefined') continue;
-    if (typeof v === 'string' && v.trim() === '') continue;
     
     // Campo Manual como attachment si es URL
     if (mapped === 'Manual' && isUrl(v)) {
@@ -340,42 +372,10 @@ function mapAndNormalizeFields(inputFields) {
       continue;
     }
     
-    out[mapped] = normalizeValue(mapped, v);
+    const norm = normalizeValue(mapped, v);
+    out[mapped] = canonicalizeSelectValue(mapped, norm);
   }
   console.log('[inventario] Mapped fields:', JSON.stringify(out));
-  return out;
-}
-
-// Para campos Select: intenta hacer match exacto con opciones conocidas (case-insensitive)
-async function normalizeSelectFields(mappedFields, baseUrl) {
-  const out = { ...mappedFields };
-  // Obtener opciones (meta -> records -> fallback)
-  let options = null;
-  try { options = await readOptionsFromMeta(); } catch (e) { options = null; }
-  if (!options || Object.keys(options).length === 0) {
-    try { options = await inferOptionsFromRecords(baseUrl); } catch (e) { options = null; }
-  }
-  const merged = {};
-  for (const f of SELECT_FIELDS) {
-    const fromApi = options && Array.isArray(options[f]) ? options[f] : [];
-    const fb = FALLBACK_SELECT_OPTIONS[f] || [];
-    merged[f] = uniqClean([ ...fromApi, ...fb ]);
-  }
-
-  for (const f of SELECT_FIELDS) {
-    if (!(f in out)) continue;
-    const val = out[f];
-    if (val === null || typeof val === 'undefined') continue;
-    const s = String(val).trim();
-    if (!s) { delete out[f]; continue; }
-    // Si ya existe exacto, ok
-    if (merged[f].includes(s)) { out[f] = s; continue; }
-    // Buscar match case-insensitive
-    const hit = merged[f].find(opt => String(opt).trim().toLowerCase() === s.toLowerCase());
-    if (hit) { out[f] = hit; continue; }
-    // Si no hay match, no lo enviamos para evitar INVALID_MULTIPLE_CHOICE_OPTIONS
-    delete out[f];
-  }
   return out;
 }
 
@@ -446,33 +446,6 @@ exports.handler = async (event) => {
     // GET - Listar registros
     // =========================================================================
     if (event.httpMethod === 'GET') {
-      // Opciones para selects (Servicio / Clasificaciones / Riesgo)
-      if (String(qs.options || '') === '1') {
-        let options = null;
-        // 1) Meta API (si hay permisos)
-        try {
-          options = await readOptionsFromMeta();
-        } catch (e) {
-          options = null;
-        }
-        // 2) Inferir desde registros
-        if (!options || Object.keys(options).length === 0) {
-          try {
-            options = await inferOptionsFromRecords(baseUrl);
-          } catch (e) {
-            options = null;
-          }
-        }
-        // 3) Fallback fijo
-        const merged = {};
-        for (const f of SELECT_FIELDS) {
-          const fromApi = options && Array.isArray(options[f]) ? options[f] : [];
-          const fb = FALLBACK_SELECT_OPTIONS[f] || [];
-          merged[f] = uniqClean([ ...fromApi, ...fb ]);
-        }
-        return json(200, { ok: true, options: merged });
-      }
-
       const pageSize = Math.min(parseInt(qs.pageSize || '50', 10) || 50, 100);
       let offset = qs.offset ? String(qs.offset) : null;
 
@@ -510,8 +483,6 @@ exports.handler = async (event) => {
     // =========================================================================
     if (event.httpMethod === 'POST') {
       let mapped = mapAndNormalizeFields(body.fields || {});
-      // Normalizar selects para que coincidan con las opciones existentes (evita 422 INVALID_MULTIPLE_CHOICE_OPTIONS)
-      mapped = await normalizeSelectFields(mapped, baseUrl);
       const certificates = Array.isArray(body.certificates) ? body.certificates : [];
       let allRemoved = [];
       
@@ -561,6 +532,17 @@ exports.handler = async (event) => {
 
           if (status !== 422) break;
 
+          // Retry once for invalid select option by swapping accent/case variants
+          const errType = data?.error?.type || data?.error || data?.type;
+          if (String(errType) === 'INVALID_MULTIPLE_CHOICE_OPTIONS') {
+            const invalidChoice = extractInvalidChoice(data);
+            const retry = applySelectFallbackRetry(mapped, invalidChoice);
+            if (retry.changed) {
+              mapped = retry.fields;
+              continue;
+            }
+          }
+
           const { cleaned, removed } = removeUnknownFields(mapped, data);
           if (removed.length === 0) break;
 
@@ -573,7 +555,7 @@ exports.handler = async (event) => {
       
       return json(lastError?.status || 422, { 
         ok: false, 
-        error: (typeof lastError?.data?.error === 'object' ? (lastError?.data?.error?.message || lastError?.data?.error?.type) : lastError?.data?.error) || 'Airtable error', 
+        error: lastError?.data?.error?.message || lastError?.data?.error || 'Airtable error', 
         details: lastError?.data,
         removedFields: allRemoved,
         mappedSent: mapped 
@@ -591,8 +573,7 @@ exports.handler = async (event) => {
 
       const certificates = Array.isArray(body.certificates) ? body.certificates : [];
       
-      let mapped = mapAndNormalizeFields(body.fields || {});
-      mapped = await normalizeSelectFields(mapped, baseUrl);
+      const mapped = mapAndNormalizeFields(body.fields || {});
       const url = `${baseUrl}/${encodeURIComponent(id)}`;
       
       try {
@@ -630,6 +611,23 @@ exports.handler = async (event) => {
         
         // Retry on unknown fields
         if (status === 422) {
+          // Retry for invalid select option by swapping accent/case variants
+          const errType = data?.error?.type || data?.error || data?.type;
+          if (String(errType) === 'INVALID_MULTIPLE_CHOICE_OPTIONS') {
+            const invalidChoice = extractInvalidChoice(data);
+            const retry = applySelectFallbackRetry(mapped, invalidChoice);
+            if (retry.changed) {
+              try {
+                const resp0 = await airtableRequest('PATCH', url, { fields: retry.fields });
+                return json(200, { ok: true, record: resp0.data, warning: { selectRetry: true } });
+              } catch (e0) {
+                const status0 = e0.response?.status || 500;
+                const data0 = e0.response?.data || { error: 'Airtable error after select retry' };
+                return json(status0, { ok: false, error: data0?.error?.message || data0.error || 'Airtable error', details: data0 });
+              }
+            }
+          }
+
           const { cleaned, removed } = removeUnknownFields(mapped, data);
           if (removed.length > 0) {
             try {

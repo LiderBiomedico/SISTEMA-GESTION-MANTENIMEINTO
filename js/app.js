@@ -439,14 +439,7 @@ async function submitInventarioForm(e) {
     }
   } catch (err) {
     console.error('Error guardando inventario:', err?.response?.data || err.message);
-    let msg = err?.response?.data?.error || err?.response?.data?.details?.error?.message || err.message;
-    if (msg && typeof msg === 'object') {
-      msg = msg.message || msg.type || JSON.stringify(msg);
-    }
-    const more = err?.response?.data?.details?.error?.type || err?.response?.data?.details?.error?.message;
-    if (more && typeof more === 'string' && !String(msg).includes(more)) {
-      msg = `${msg} (${more})`;
-    }
+    const msg = err?.response?.data?.error || err?.response?.data?.details?.error?.message || err.message;
     alert('Error guardando inventario: ' + msg);
   } finally {
     if (submitBtn) {
@@ -568,76 +561,11 @@ function removeCalCertRow(btn) {
 }
 
 // ============================================================================
-// OPCIONES DESPLEGABLES (Servicio / Clasificaciones / Riesgo)
-// - Evita HTTP 422 por intentar crear nuevas opciones de selección en Airtable
-// - Carga opciones desde backend (options=1) con fallback a valores predefinidos
-// ============================================================================
-
-function fillSelect(selectEl, options) {
-  if (!selectEl) return;
-  const keepFirst = selectEl.querySelector('option[value=""]');
-  selectEl.innerHTML = '';
-  // Placeholder
-  const ph = document.createElement('option');
-  ph.value = '';
-  ph.textContent = 'Seleccione...';
-  selectEl.appendChild(ph);
-  (options || []).forEach(v => {
-    const val = String(v || '').trim();
-    if (!val) return;
-    const opt = document.createElement('option');
-    opt.value = val;
-    opt.textContent = val;
-    selectEl.appendChild(opt);
-  });
-}
-
-async function loadInventarioSelectOptions() {
-  const servicioSel = document.getElementById('invServicio');
-  const clasBioSel = document.getElementById('invClasBio');
-  const clasTecSel = document.getElementById('invClasTec');
-  const riesgoSel = document.getElementById('invClasRiesgo');
-
-  // Si el HTML aún no fue actualizado, no hacemos nada.
-  if (!servicioSel && !clasBioSel && !clasTecSel && !riesgoSel) return;
-
-  try {
-    const url = `${API_BASE_URL}/inventario?options=1`;
-    const resp = await axios.get(url, { headers: getAuthHeader() });
-    const opt = (resp && resp.data && resp.data.options) ? resp.data.options : {};
-
-    fillSelect(servicioSel, opt.Servicio);
-    fillSelect(clasBioSel, opt['Clasificacion Biomedica']);
-    fillSelect(clasTecSel, opt['Clasificacion de la Tecnologia']);
-    fillSelect(riesgoSel, opt['Clasificacion del Riesgo']);
-  } catch (e) {
-    console.warn('⚠️ No se pudieron cargar opciones desplegables. Se usarán valores por defecto.', e);
-    // Fallback local (coincide con tus opciones de Airtable según capturas)
-    fillSelect(servicioSel, [
-      'Cirugia Adulto','Consulta Externa','Urgencias Adulto','Urgencias Pediatria',
-      'Laboratorio Clinico','Imagenes Diagnosticas','Uci Adultos'
-    ]);
-    fillSelect(clasBioSel, [
-      'Diagnostico','Terapéuticos/Tratamiento','Soporte Vital','Laboratorio/Análisis','NO APLICA'
-    ]);
-    fillSelect(clasTecSel, [
-      'Equipo Biomedico','Equipo Industrial','Equipo de apoyo','Equipo Electrico'
-    ]);
-    fillSelect(riesgoSel, [
-      'Clase I (Riesgo Bajo)','Clase IIa (Riesgo Moderado)','Clase IIb (Riesgo Alto)','Clase III (Riesgo muy alto)'
-    ]);
-  }
-}
-
-// ============================================================================
 // INICIALIZACIÓN
 // ============================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
   console.log('✅ Sistema de Gestión de Mantenimiento Hospitalario iniciado');
-
-  // Cargar listas desplegables del inventario (Servicio / Clasificaciones / Riesgo)
-  loadInventarioSelectOptions();
 
   // Dashboard init
   if (document.getElementById('dashboard')) {
