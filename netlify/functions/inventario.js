@@ -185,9 +185,38 @@ const SINGLE_SELECT_MAP = {
   },
 };
 
+// Limpieza robusta de strings que pueden venir doble-stringify, con escapes, o
+// con comillas repetidas. Ejemplos que hemos visto en producción:
+//   "\"\"Consulta Externa\"\""  -> Consulta Externa
+//   "\"Consulta Externa\""      -> Consulta Externa
+//   "\\\"Consulta Externa\\\""  -> Consulta Externa
+function cleanInputString(v) {
+  if (v === null || v === undefined) return v;
+  let s = String(v).trim();
+  if (!s) return s;
+
+  // Des-escapar comillas comunes (por doble stringify o escapes del cliente)
+  s = s.replace(/\\"/g, '"').replace(/\\'/g, "'");
+
+  // Quitar comillas/escapes en bordes varias veces
+  for (let i = 0; i < 3; i++) {
+    s = s.trim();
+    s = s.replace(/^\\+(["'])+/, '');
+    s = s.replace(/(["'])+\\+$/, '');
+    s = s.replace(/^(["'])+/, '');
+    s = s.replace(/(["'])+$/, '');
+  }
+
+  return String(s).trim();
+}
+
 function toSingleSelect(fieldName, value) {
   if (value === null || value === undefined) return null;
-  var s = String(value).trim();
+  // Limpieza fuerte (caso comillas dobles y escapes)
+  var s = cleanInputString(value);
+  // Por seguridad, elimina cualquier comilla remanente dentro del string
+  // (las opciones de Airtable no deberían contener comillas)
+  s = String(s).replace(/["']/g, '').trim();
   if (!s) return null;
   var map = SINGLE_SELECT_MAP[fieldName];
   if (!map) return s;
@@ -271,19 +300,8 @@ function toBoolean(v) {
 
 function normalizeValue(fieldName, value) {
   if (value === null || typeof value === 'undefined') return value;
-  // Limpieza defensiva: algunos serializadores terminan enviando
-  // valores con comillas dobles, por ejemplo ""Consulta Externa"".
-  // Esto hace que Airtable intente CREAR una nueva opción de Single Select
-  // y falle por permisos. Aquí normalizamos antes de mapear.
-  if (typeof value === 'string') {
-    var s0 = String(value).trim();
-    // quitar comillas en bordes repetidas (", ')
-    // ej: ""Consulta Externa"" -> Consulta Externa
-    s0 = s0.replace(/^["']+/, '').replace(/["']+$/, '');
-    // repetir por si venían dobles
-    s0 = s0.replace(/^["']+/, '').replace(/["']+$/, '');
-    value = s0;
-  }
+  // Limpieza defensiva robusta (comillas repetidas / escapes / doble stringify)
+  if (typeof value === 'string') value = cleanInputString(value);
   if (NUMBER_FIELDS.has(fieldName)) return toNumber(value);
   if (BOOL_FIELDS.has(fieldName))   return toBoolean(value);
   // Single Select: normalizar o devolver null (se omitirá)
@@ -302,15 +320,9 @@ function mapAndNormalizeFields(inputFields) {
     const key    = String(k || '').trim();
     const mapped = FIELD_MAP[key] || key;
 
-    // Limpieza defensiva previa (especialmente para selects)
+    // Limpieza previa (especialmente para selects)
     let vv = v;
-    if (typeof vv === 'string') {
-      let s = String(vv).trim();
-      // Quitar comillas sobrantes en bordes (""texto"" / "texto" / 'texto')
-      s = s.replace(/^["']+/, '').replace(/["']+$/, '');
-      s = s.replace(/^["']+/, '').replace(/["']+$/, '');
-      vv = s;
-    }
+    if (typeof vv === 'string') vv = cleanInputString(vv);
 
     if (mapped === 'Manual' && isUrl(vv)) {
       out[mapped] = [{ url: String(vv).trim() }];
