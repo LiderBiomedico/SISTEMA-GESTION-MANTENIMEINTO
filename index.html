@@ -1281,7 +1281,8 @@
                         <div class="form-grid">
                             <div class="form-group">
                                 <label>SERVICIO</label>
-                                <input name="SERVICIO" type="text" placeholder="Ej: UCI Adultos">
+                                <input id="invServicio" name="SERVICIO" type="text" placeholder="Ej: UCI Adultos" list="servicioOptions">
+                                <datalist id="servicioOptions"></datalist>
                             </div>
                             <div class="form-group">
                                 <label>UBICACIÓN</label>
@@ -1289,15 +1290,18 @@
                             </div>
                             <div class="form-group">
                                 <label>CLASIFICACION BIOMEDICA</label>
-                                <input name="CLASIFICACION BIOMEDICA" type="text" placeholder="Ej: Diagnóstico / Terapéutico / Soporte">
+                                <input id="invClasBio" name="CLASIFICACION BIOMEDICA" type="text" placeholder="Ej: Diagnóstico / Terapéutico / Soporte" list="clasBioOptions">
+                                <datalist id="clasBioOptions"></datalist>
                             </div>
                             <div class="form-group">
                                 <label>CLASIFICACION DE LA TECNOLOGIA</label>
-                                <input name="CLASIFICACION DE LA TECNOLOGIA" type="text" placeholder="Ej: Equipo biomédico / Dispositivo médico">
+                                <input id="invClasTec" name="CLASIFICACION DE LA TECNOLOGIA" type="text" placeholder="Ej: Equipo biomédico / Dispositivo médico" list="clasTecOptions">
+                                <datalist id="clasTecOptions"></datalist>
                             </div>
                             <div class="form-group">
                                 <label>CLASIFICACION DEL RIESGO</label>
-                                <input name="CLASIFICACION DEL RIESGO" type="text" placeholder="Ej: I / IIa / IIb / III">
+                                <input id="invRiesgo" name="CLASIFICACION DEL RIESGO" type="text" placeholder="Ej: I / IIa / IIb / III" list="riesgoOptions">
+                                <datalist id="riesgoOptions"></datalist>
                             </div>
                             <div class="form-group">
                                 <label>VIDA UTIL</label>

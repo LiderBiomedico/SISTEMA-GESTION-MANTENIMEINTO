@@ -438,22 +438,9 @@ async function submitInventarioForm(e) {
       throw new Error('Respuesta inesperada del servidor');
     }
   } catch (err) {
-    const status = err?.response?.status;
-    const data = err?.response?.data;
-    console.error('Error guardando inventario:', { status, data, message: err?.message });
-
-    // Construir un mensaje legible (Airtable suele enviar {error:{type,message}})
-    const msg =
-      data?.details?.error?.message ||
-      data?.details?.error?.type ||
-      data?.details?.message ||
-      data?.error?.message ||
-      data?.error ||
-      err?.message ||
-      'Error desconocido';
-
-    const extra = data ? `\n\nDetalles (debug):\n${JSON.stringify(data, null, 2)}` : '';
-    alert(`Error guardando inventario${status ? ` (HTTP ${status})` : ''}: ${msg}${extra}`);
+    console.error('Error guardando inventario:', err?.response?.data || err.message);
+    const msg = err?.response?.data?.error || err?.response?.data?.details?.error?.message || err.message;
+    alert('Error guardando inventario: ' + msg);
   } finally {
     if (submitBtn) {
       submitBtn.disabled = false;
@@ -573,12 +560,54 @@ function removeCalCertRow(btn) {
   } catch (e) {}
 }
 
+
+// ============================================================================
+// Inventario: cargar opciones de Airtable (Select) y poblar datalist
+// ============================================================================
+async function loadInventarioSelectOptions() {
+  try {
+    const url = `${API_BASE_URL}/inventario?meta=1`;
+    const res = await fetch(url, { headers: { ...getAuthHeader() } });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data || !data.ok) {
+      console.warn('⚠️ No se pudieron cargar opciones de Airtable', data);
+      return;
+    }
+
+    function fillDatalist(id, options) {
+      const dl = document.getElementById(id);
+      if (!dl) return;
+      dl.innerHTML = '';
+      (options || []).forEach(opt => {
+        const o = document.createElement('option');
+        o.value = opt;
+        dl.appendChild(o);
+      });
+    }
+
+    const selects = data.selects || {};
+    fillDatalist('servicioOptions', selects.SERVICIO);
+    fillDatalist('clasBioOptions', selects.CLASIFICACION_BIOMEDICA);
+    fillDatalist('clasTecOptions', selects.CLASIFICACION_TECNOLOGIA);
+    fillDatalist('riesgoOptions', selects.CLASIFICACION_RIESGO);
+
+    console.log('✅ Opciones de inventario cargadas desde Airtable (Select)');
+  } catch (e) {
+    console.warn('⚠️ Error cargando opciones de inventario:', e);
+  }
+}
+
+
 // ============================================================================
 // INICIALIZACIÓN
 // ============================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
   console.log('✅ Sistema de Gestión de Mantenimiento Hospitalario iniciado');
+
+  // Cargar listas desplegables desde Airtable (SERVICIO, clasificaciones, riesgo)
+  loadInventarioSelectOptions();
+
 
   // Dashboard init
   if (document.getElementById('dashboard')) {

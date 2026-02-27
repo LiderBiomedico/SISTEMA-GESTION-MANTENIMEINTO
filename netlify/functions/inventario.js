@@ -12,6 +12,7 @@ const TABLE_NAME = process.env.AIRTABLE_INVENTARIO_TABLE || 'Inventario';
 // Puede ser nombre o fieldId (recomendado). Si no se define, usa el nombre por defecto.
 const AIRTABLE_CAL_CERT_FIELD = process.env.AIRTABLE_CAL_CERT_FIELD || 'Certificados de Calibracion';
 const AIRTABLE_API = 'https://api.airtable.com/v0';
+const AIRTABLE_META_API = 'https://api.airtable.com/v0/meta';
 const AIRTABLE_CONTENT_API = 'https://content.airtable.com/v0';
 
 
@@ -25,6 +26,56 @@ function json(statusCode, body) {
       'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
     },
     body: JSON.stringify(body),
+  };
+}
+
+
+async function fetchSelectOptionsFromAirtable() {
+  if (!AIRTABLE_API_KEY || !AIRTABLE_BASE_ID) {
+    throw new Error('Missing AIRTABLE_API_KEY or AIRTABLE_BASE_ID');
+  }
+  const url = `${AIRTABLE_META_API}/bases/${AIRTABLE_BASE_ID}/tables`;
+  const headers = { Authorization: `Bearer ${AIRTABLE_API_KEY}` };
+  const resp = await axios.get(url, { headers });
+  const tables = (resp.data && resp.data.tables) ? resp.data.tables : [];
+  const table = tables.find(t => (t && t.name) === TABLE_NAME) || null;
+  if (!table) {
+    return { ok: false, error: { message: `Table not found in meta: ${TABLE_NAME}` } };
+  }
+
+  const wanted = new Set([
+    'Servicio','SERVICIO',
+    'Ubicación','UBICACIÓN','Ubicacion','UBICACION',
+    'Clasificación Biomédica','CLASIFICACION BIOMEDICA','Clasificacion Biomedica',
+    'Clasificación de la Tecnología','CLASIFICACION DE LA TECNOLOGIA','Clasificacion de la Tecnologia',
+    'Clasificación del Riesgo','CLASIFICACION DEL RIESGO','Clasificacion del Riesgo',
+    'Vida Útil','VIDA UTIL','Vida Util','VIDA ÚTIL'
+  ]);
+
+  const out = {};
+  (table.fields || []).forEach(f => {
+    if (!f || !f.name) return;
+    if (!wanted.has(f.name)) return;
+    if (f.type === 'singleSelect' || f.type === 'multipleSelects') {
+      const choices = (((f.options || {}).choices) || []).map(c => c.name).filter(Boolean);
+      out[f.name] = choices;
+    }
+  });
+
+  // For convenience, also provide a canonical key per logical field
+  const pick = (...names) => {
+    for (const n of names) if (out[n] && out[n].length) return out[n];
+    return [];
+  };
+  return {
+    ok: true,
+    table: TABLE_NAME,
+    selects: {
+      SERVICIO: pick('Servicio','SERVICIO'),
+      CLASIFICACION_BIOMEDICA: pick('Clasificación Biomédica','CLASIFICACION BIOMEDICA','Clasificacion Biomedica'),
+      CLASIFICACION_TECNOLOGIA: pick('Clasificación de la Tecnología','CLASIFICACION DE LA TECNOLOGIA','Clasificacion de la Tecnologia'),
+      CLASIFICACION_RIESGO: pick('Clasificación del Riesgo','CLASIFICACION DEL RIESGO','Clasificacion del Riesgo')
+    }
   };
 }
 
@@ -155,95 +206,6 @@ const DATE_FIELDS = new Set([
   'Fecha de Recepcion'
 ]);
 
-// Campos tipo select en Airtable (Single select / Multiple select) que NO pueden crear opciones nuevas vía API
-// Cuando el usuario escribe una opción no existente (o con diferente capitalización), Airtable devuelve 422:
-// INVALID_MULTIPLE_CHOICE_OPTIONS / "Insufficient permissions to create new select option ..."
-// Para evitarlo, normalizamos a valores canónicos comunes del hospital.
-const SELECT_FIELD_NORMALIZERS = {
-  'Servicio': (v) => normalizeByMap(v, {
-    'uci adultos': 'UCI Adultos',
-    'uci adulto': 'UCI Adultos',
-    'uci neonatal': 'UCI Neonatal',
-    'uci neo': 'UCI Neonatal',
-    'uci pediatrica': 'UCI Pediátrica',
-    'uci pediátrica': 'UCI Pediátrica',
-    'urgencias': 'Urgencias',
-    'quirófano': 'Quirófano',
-    'quirofano': 'Quirófano',
-    'hospitalizacion': 'Hospitalización',
-    'hospitalización': 'Hospitalización',
-    'imagenes diagnosticas': 'Imágenes Diagnósticas',
-    'imágenes diagnósticas': 'Imágenes Diagnósticas',
-    'laboratorio': 'Laboratorio',
-    'consulta externa': 'Consulta Externa',
-    'esterilizacion': 'Esterilización',
-    'esterilización': 'Esterilización',
-  }, { titleCaseFallback: true }),
-
-  'Clasificacion Biomedica': (v) => normalizeByMap(v, {
-    'diagnostico': 'Diagnóstico',
-    'diagnóstico': 'Diagnóstico',
-    'terapeutico': 'Terapéutico',
-    'terapéutico': 'Terapéutico',
-    'soporte': 'Soporte',
-  }, { titleCaseFallback: true }),
-
-  'Clasificacion de la Tecnologia': (v) => normalizeByMap(v, {
-    'equipo biomedico': 'Equipo biomédico',
-    'equipo biomédico': 'Equipo biomédico',
-    'dispositivo medico': 'Dispositivo médico',
-    'dispositivo médico': 'Dispositivo médico',
-  }, { titleCaseFallback: true }),
-
-  'Clasificacion del Riesgo': (v) => normalizeByMap(v, {
-    'i': 'I',
-    'iia': 'IIa',
-    'iib': 'IIb',
-    'iii': 'III',
-    '1': 'I',
-    '2a': 'IIa',
-    '2b': 'IIb',
-    '3': 'III',
-  }, { upperFirst: true })
-};
-
-function stripAccents(s) {
-  return String(s || '').normalize('NFD').replace(/\p{Diacritic}+/gu, '');
-}
-
-function cleanKey(s) {
-  return stripAccents(String(s || '').trim().toLowerCase()).replace(/\s+/g, ' ');
-}
-
-function toTitleCaseSmart(s) {
-  // Mantiene siglas como UCI, RX, etc.
-  return String(s || '')
-    .trim()
-    .split(/\s+/)
-    .map(w => {
-      const up = w.toUpperCase();
-      if (['UCI','RX','TAC','RM','UCI'].includes(up)) return up;
-      return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
-    })
-    .join(' ');
-}
-
-function normalizeByMap(value, map, opts = {}) {
-  if (value === null || typeof value === 'undefined') return value;
-  if (typeof value !== 'string') return value;
-  const raw = value.trim();
-  if (!raw) return undefined;
-
-  const k = cleanKey(raw);
-  if (map && map[k]) return map[k];
-
-  // Fallback: muchos selects existentes difieren solo por capitalización
-  if (opts.titleCaseFallback) return toTitleCaseSmart(raw);
-  if (opts.upperFirst) return raw.charAt(0).toUpperCase() + raw.slice(1);
-
-  return raw;
-}
-
 function isUrl(s) {
   return typeof s === 'string' && /^https?:\/\/\S+/i.test(s.trim());
 }
@@ -297,18 +259,9 @@ function toBoolean(v) {
 
 function normalizeValue(fieldName, value) {
   if (value === null || typeof value === 'undefined') return value;
-
-  // Evitar que Airtable rechace "" (cadena vacía) en campos numéricos/fecha/select.
-  // En creación, es mejor OMITIR el campo cuando viene vacío.
-  if (typeof value === 'string' && value.trim() === '') return undefined;
   
   if (NUMBER_FIELDS.has(fieldName)) return toNumber(value);
   if (BOOL_FIELDS.has(fieldName)) return toBoolean(value);
-
-  // Normalización de campos Select
-  if (SELECT_FIELD_NORMALIZERS[fieldName]) {
-    return SELECT_FIELD_NORMALIZERS[fieldName](value);
-  }
   
   if (DATE_FIELDS.has(fieldName)) {
     if (value instanceof Date) return value.toISOString().slice(0,10);
@@ -331,9 +284,7 @@ function mapAndNormalizeFields(inputFields) {
       continue;
     }
     
-    const nv = normalizeValue(mapped, v);
-    if (typeof nv === 'undefined') continue; // omite vacíos
-    out[mapped] = nv;
+    out[mapped] = normalizeValue(mapped, v);
   }
   console.log('[inventario] Mapped fields:', JSON.stringify(out));
   return out;
@@ -400,6 +351,16 @@ exports.handler = async (event) => {
       });
     }
 
+
+    // Meta: devolver opciones de campos Select (para poblar listas desplegables en el frontend)
+    if (event.httpMethod === 'GET' && (qs.meta === '1' || qs.meta === 'true')) {
+      try {
+        const meta = await fetchSelectOptionsFromAirtable();
+        return json(200, meta);
+      } catch (e) {
+        return json(500, { ok: false, error: { message: e.message || String(e) } });
+      }
+    }
     const baseUrl = `${AIRTABLE_API}/${AIRTABLE_BASE_ID}/${encodeURIComponent(TABLE_NAME)}`;
 
     // =========================================================================
