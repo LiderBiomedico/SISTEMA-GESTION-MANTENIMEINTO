@@ -13,6 +13,7 @@ const TABLE_NAME = process.env.AIRTABLE_INVENTARIO_TABLE || 'Inventario';
 const AIRTABLE_CAL_CERT_FIELD = process.env.AIRTABLE_CAL_CERT_FIELD || 'Certificados de Calibracion';
 const AIRTABLE_API = 'https://api.airtable.com/v0';
 const AIRTABLE_CONTENT_API = 'https://content.airtable.com/v0';
+const AIRTABLE_META_API = 'https://api.airtable.com/v0/meta';
 
 
 function json(statusCode, body) {
@@ -26,6 +27,108 @@ function json(statusCode, body) {
     },
     body: JSON.stringify(body),
   };
+}
+
+// ============================================================================
+// OPCIONES PARA CAMPOS SELECT (Servicio / Clasificaciones / Riesgo)
+// - Primero intenta leer schema (Meta API)
+// - Si falla (permisos), infiere de los registros existentes
+// - Si aún queda vacío, usa fallback con opciones conocidas (según configuración mostrada)
+// ============================================================================
+
+const SELECT_FIELDS = [
+  'Servicio',
+  'Clasificacion Biomedica',
+  'Clasificacion de la Tecnologia',
+  'Clasificacion del Riesgo'
+];
+
+const FALLBACK_SELECT_OPTIONS = {
+  'Servicio': [
+    'Cirugia Adulto',
+    'Consulta Externa',
+    'Urgencias Adulto',
+    'Urgencias Pediatria',
+    'Laboratorio Clinico',
+    'Imagenes Diagnosticas',
+    'Uci Adultos'
+  ],
+  'Clasificacion Biomedica': [
+    'Diagnostico',
+    'Terapéuticos/Tratamiento',
+    'Soporte Vital',
+    'Laboratorio/Análisis',
+    'NO APLICA'
+  ],
+  'Clasificacion de la Tecnologia': [
+    'Equipo Biomedico',
+    'Equipo Industrial',
+    'Equipo de apoyo',
+    'Equipo Electrico'
+  ],
+  'Clasificacion del Riesgo': [
+    'Clase I (Riesgo Bajo)',
+    'Clase IIa (Riesgo Moderado)',
+    'Clase IIb (Riesgo Alto)',
+    'Clase III (Riesgo muy alto)'
+  ]
+};
+
+function uniqClean(arr) {
+  const out = [];
+  const seen = new Set();
+  (arr || []).forEach(v => {
+    const s = String(v || '').trim();
+    if (!s) return;
+    const key = s.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push(s);
+  });
+  return out;
+}
+
+async function readOptionsFromMeta() {
+  if (!AIRTABLE_API_KEY || !AIRTABLE_BASE_ID) return null;
+  const url = `${AIRTABLE_META_API}/bases/${AIRTABLE_BASE_ID}/tables`;
+  const headers = { Authorization: `Bearer ${AIRTABLE_API_KEY}` };
+  const resp = await axios.get(url, { headers });
+  const tables = resp.data && resp.data.tables ? resp.data.tables : [];
+  const table = tables.find(t => (t && t.name) === TABLE_NAME) || tables[0];
+  if (!table || !Array.isArray(table.fields)) return null;
+
+  const options = {};
+  for (const fname of SELECT_FIELDS) {
+    const f = table.fields.find(x => x && x.name === fname);
+    const choices = f && f.options && Array.isArray(f.options.choices) ? f.options.choices : null;
+    if (choices) {
+      options[fname] = uniqClean(choices.map(c => c && (c.name || c.label || c.value)).filter(Boolean));
+    }
+  }
+  return options;
+}
+
+async function inferOptionsFromRecords(baseUrl) {
+  const params = new URLSearchParams();
+  params.set('pageSize', '100');
+  // pedir solo los campos relevantes
+  SELECT_FIELDS.forEach(f => params.append('fields[]', f));
+  const url = `${baseUrl}?${params.toString()}`;
+  const resp = await airtableRequest('GET', url);
+  const records = resp.data && Array.isArray(resp.data.records) ? resp.data.records : [];
+
+  const options = {};
+  for (const f of SELECT_FIELDS) options[f] = [];
+  records.forEach(r => {
+    const fields = (r && r.fields) || {};
+    for (const f of SELECT_FIELDS) {
+      const v = fields[f];
+      if (Array.isArray(v)) v.forEach(x => options[f].push(x));
+      else options[f].push(v);
+    }
+  });
+  for (const f of SELECT_FIELDS) options[f] = uniqClean(options[f]);
+  return options;
 }
 
 // Mapeo de campos del formulario a columnas de Airtable
@@ -300,19 +403,39 @@ exports.handler = async (event) => {
       });
     }
 
-    
-    // Meta - Opciones de campos Select (Servicio / Clasificaciones / Riesgo)
-    if ((qs.meta === '1' || qs.meta === 'true' || qs.meta === 'yes') && event.httpMethod === 'GET') {
-      const meta = await fetchSelectOptionsFromAirtable();
-      return json(200, meta);
-    }
-
-const baseUrl = `${AIRTABLE_API}/${AIRTABLE_BASE_ID}/${encodeURIComponent(TABLE_NAME)}`;
+    const baseUrl = `${AIRTABLE_API}/${AIRTABLE_BASE_ID}/${encodeURIComponent(TABLE_NAME)}`;
 
     // =========================================================================
     // GET - Listar registros
     // =========================================================================
     if (event.httpMethod === 'GET') {
+      // Opciones para selects (Servicio / Clasificaciones / Riesgo)
+      if (String(qs.options || '') === '1') {
+        let options = null;
+        // 1) Meta API (si hay permisos)
+        try {
+          options = await readOptionsFromMeta();
+        } catch (e) {
+          options = null;
+        }
+        // 2) Inferir desde registros
+        if (!options || Object.keys(options).length === 0) {
+          try {
+            options = await inferOptionsFromRecords(baseUrl);
+          } catch (e) {
+            options = null;
+          }
+        }
+        // 3) Fallback fijo
+        const merged = {};
+        for (const f of SELECT_FIELDS) {
+          const fromApi = options && Array.isArray(options[f]) ? options[f] : [];
+          const fb = FALLBACK_SELECT_OPTIONS[f] || [];
+          merged[f] = uniqClean([ ...fromApi, ...fb ]);
+        }
+        return json(200, { ok: true, options: merged });
+      }
+
       const pageSize = Math.min(parseInt(qs.pageSize || '50', 10) || 50, 100);
       let offset = qs.offset ? String(qs.offset) : null;
 
