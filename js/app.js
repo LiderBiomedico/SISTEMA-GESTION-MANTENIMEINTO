@@ -272,7 +272,42 @@ async function submitInventarioForm(e) {
   const fd = new FormData(form);
   const rawFields = {};
 
+  // Certificados de calibración (PDF) - se envían aparte, no dentro de fields
+  const certificates = [];
+  try {
+    const rows = form.querySelectorAll('#calCertList .cal-cert-row');
+    rows.forEach((row) => {
+      const yearEl = row.querySelector('input[name="CAL_CERT_YEAR"]');
+      const fileEl = row.querySelector('input[name="CAL_CERT_FILE"]');
+      const year = yearEl ? String(yearEl.value || '').trim() : '';
+      const file = fileEl && fileEl.files ? fileEl.files[0] : null;
+      if (!year && !file) return;
+      if (!year || !/^[0-9]{4}$/.test(year)) {
+        throw new Error('El año de calibración debe ser un número de 4 dígitos (ej: 2025).');
+      }
+      if (!file) {
+        throw new Error(`Falta adjuntar el PDF del certificado para el año ${year}.`);
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        throw new Error(`El PDF de ${year} supera 5MB. Airtable solo permite carga directa hasta 5MB por archivo.`);
+      }
+      if (file.type && file.type !== 'application/pdf') {
+        throw new Error(`El archivo de ${year} debe ser PDF.`);
+      }
+      certificates.push({ year, file });
+    });
+  } catch (e) {
+    alert(e.message || String(e));
+    return;
+  }
+
   for (const [k, v] of fd.entries()) {
+    // Ignorar inputs de certificados (se manejan arriba)
+    if (k === 'CAL_CERT_YEAR' || k === 'CAL_CERT_FILE') continue;
+
+    // Ignorar archivos/adjuntos genéricos en este flujo (solo soportamos PDFs por el componente de certificados)
+    if (v instanceof File) continue;
+
     const val = String(v).trim();
     if (val === '') continue;
     if (k === 'CALIBRABLE' || k === 'Calibrable') {
@@ -309,7 +344,7 @@ async function submitInventarioForm(e) {
     'UBICACION': 'Ubicacion',
     'VIDA UTIL': 'Vida Util',
     'FECHA FABRICA': 'Fecha Fabrica',
-    'CERTIFICADO 2025': 'Certificado 2025',
+    // Certificados de calibración se guardan por API (adjuntos) y años en campo texto
     'FECHA DE COMRPA': 'Fecha de Compra',
     'FECHA DE COMPRA': 'Fecha de Compra',
     'VALOR EN PESOS': 'Valor en Pesos',
@@ -343,6 +378,12 @@ async function submitInventarioForm(e) {
     fields[mapped] = v;
   }
 
+  // Guardar años de calibración (texto) si hay certificados
+  if (certificates.length > 0) {
+    const years = Array.from(new Set(certificates.map(c => c.year))).sort();
+    fields['Años de Calibracion'] = years.join(', ');
+  }
+
   console.log('📤 Enviando campos mapeados:', fields);
 
   const submitBtn = form.querySelector('button[type="submit"]');
@@ -354,7 +395,19 @@ async function submitInventarioForm(e) {
 
   try {
     const url = `${API_BASE_URL}/inventario`;
-    const resp = await axios.post(url, { fields }, {
+    // Convertir PDFs a base64 para el endpoint backend (uploadAttachment)
+    const certPayload = [];
+    for (const c of certificates) {
+      const b64 = await fileToBase64(c.file);
+      certPayload.push({
+        year: c.year,
+        filename: c.file.name,
+        contentType: c.file.type || 'application/pdf',
+        fileBase64: b64
+      });
+    }
+
+    const resp = await axios.post(url, { fields, certificates: certPayload }, {
       headers: { ...getAuthHeader(), 'Content-Type': 'application/json' }
     });
 
@@ -369,6 +422,16 @@ async function submitInventarioForm(e) {
       }
       closeModal('newInventario');
       form.reset();
+
+      // Reset visual de certificados: dejar 1 fila vacía
+      try {
+        const list = document.getElementById('calCertList');
+        if (list) {
+          list.innerHTML = '';
+          addCalCertRow();
+        }
+      } catch (e) {}
+
       if (typeof loadInventario === 'function') loadInventario();
       alert('✅ Registro guardado correctamente');
     } else {
@@ -448,6 +511,56 @@ function escapeHtml(str) {
 }
 
 // ============================================================================
+// CERTIFICADOS DE CALIBRACIÓN (UI + Base64)
+// ============================================================================
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('No se pudo leer el archivo.'));
+    reader.onload = () => {
+      const res = String(reader.result || '');
+      // reader.result = data:application/pdf;base64,AAAA...
+      const comma = res.indexOf(',');
+      resolve(comma >= 0 ? res.slice(comma + 1) : res);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function addCalCertRow() {
+  const list = document.getElementById('calCertList');
+  if (!list) return;
+  const year = String(new Date().getFullYear());
+  const row = document.createElement('div');
+  row.className = 'cal-cert-row';
+  row.innerHTML = `
+    <input name="CAL_CERT_YEAR" type="number" min="2000" max="2100" step="1" placeholder="Año" value="${year}" style="max-width:140px;">
+    <input name="CAL_CERT_FILE" type="file" accept="application/pdf" style="flex:1;">
+    <button type="button" class="btn btn-secondary btn-small" onclick="removeCalCertRow(this)" title="Quitar">✕</button>
+  `;
+  list.appendChild(row);
+}
+
+function removeCalCertRow(btn) {
+  try {
+    const row = btn && btn.closest ? btn.closest('.cal-cert-row') : null;
+    if (!row) return;
+    const list = document.getElementById('calCertList');
+    if (!list) return;
+    // Mantener al menos una fila
+    if (list.querySelectorAll('.cal-cert-row').length <= 1) {
+      const yearEl = row.querySelector('input[name="CAL_CERT_YEAR"]');
+      const fileEl = row.querySelector('input[name="CAL_CERT_FILE"]');
+      if (yearEl) yearEl.value = String(new Date().getFullYear());
+      if (fileEl) fileEl.value = '';
+      return;
+    }
+    row.remove();
+  } catch (e) {}
+}
+
+// ============================================================================
 // INICIALIZACIÓN
 // ============================================================================
 
@@ -487,3 +600,5 @@ window.debouncedInventarioSearch = debouncedInventarioSearch;
 window.inventarioNextPage = inventarioNextPage;
 window.inventarioPrevPage = inventarioPrevPage;
 window.exportInventarioCSV = exportInventarioCSV;
+window.addCalCertRow = addCalCertRow;
+window.removeCalCertRow = removeCalCertRow;

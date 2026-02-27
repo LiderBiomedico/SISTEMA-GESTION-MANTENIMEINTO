@@ -8,7 +8,11 @@ const axios = require('axios');
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY || process.env.AIRTABLE_TOKEN || '';
 const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID || '';
 const TABLE_NAME = process.env.AIRTABLE_INVENTARIO_TABLE || 'Inventario';
+// Campo (Attachment) donde se guardarán los PDFs de certificados
+// Puede ser nombre o fieldId (recomendado). Si no se define, usa el nombre por defecto.
+const AIRTABLE_CAL_CERT_FIELD = process.env.AIRTABLE_CAL_CERT_FIELD || 'Certificados de Calibracion';
 const AIRTABLE_API = 'https://api.airtable.com/v0';
+const AIRTABLE_CONTENT_API = 'https://content.airtable.com/v0';
 
 
 function json(statusCode, body) {
@@ -46,7 +50,7 @@ const FIELD_MAP = {
   'VIDA UTIL': 'Vida Util',
   'VIDA ÚTIL': 'Vida Util',
   'FECHA FABRICA': 'Fecha Fabrica',
-  'CERTIFICADO 2025': 'Certificado 2025',
+  // Certificados de calibración se manejan como adjuntos vía Upload Attachment API
   'FECHA DE COMRPA': 'Fecha de Compra',
   'FECHA DE COMPRA': 'Fecha de Compra',
   'VALOR EN PESOS': 'Valor en Pesos',
@@ -112,6 +116,26 @@ const FIELD_MAP = {
   'Telefono': 'Telefono',
   'Ciudad': 'Ciudad',
 };
+
+async function uploadAttachment({ recordId, field, filename, contentType, fileBase64 }) {
+  if (!AIRTABLE_API_KEY || !AIRTABLE_BASE_ID) {
+    throw { status: 500, data: { error: 'Missing AIRTABLE_API_KEY/TOKEN or AIRTABLE_BASE_ID' } };
+  }
+  if (!recordId) throw { status: 400, data: { error: 'Missing recordId for uploadAttachment' } };
+  if (!fileBase64) throw { status: 400, data: { error: 'Missing fileBase64 for uploadAttachment' } };
+
+  const url = `${AIRTABLE_CONTENT_API}/${AIRTABLE_BASE_ID}/${encodeURIComponent(recordId)}/${encodeURIComponent(field)}/uploadAttachment`;
+  const headers = {
+    Authorization: `Bearer ${AIRTABLE_API_KEY}`,
+    'Content-Type': 'application/json'
+  };
+  const data = {
+    filename,
+    contentType: contentType || 'application/pdf',
+    file: fileBase64
+  };
+  return axios.post(url, data, { headers });
+}
 
 const NUMBER_FIELDS = new Set([
   'Valor en Pesos',
@@ -319,6 +343,7 @@ exports.handler = async (event) => {
     // =========================================================================
     if (event.httpMethod === 'POST') {
       let mapped = mapAndNormalizeFields(body.fields || {});
+      const certificates = Array.isArray(body.certificates) ? body.certificates : [];
       let allRemoved = [];
       
       // Intentar hasta 3 veces, removiendo campos desconocidos en cada intento
@@ -326,9 +351,37 @@ exports.handler = async (event) => {
       for (let attempt = 0; attempt < 3; attempt++) {
         try {
           const resp = await airtableRequest('POST', baseUrl, { fields: mapped });
-          const result = { ok: true, success: true, record: resp.data };
+          const record = resp.data;
+          const result = { ok: true, success: true, record };
+
+          // Subir PDFs de certificados (si vienen en payload)
+          if (certificates.length > 0 && record && record.id) {
+            const warnings = [];
+            for (const c of certificates) {
+              try {
+                const year = String(c.year || '').trim();
+                const originalName = String(c.filename || 'certificado.pdf');
+                const safeName = originalName.replace(/[^a-zA-Z0-9._-]/g, '_');
+                const finalName = year ? `Calibracion_${year}_${safeName}` : `Calibracion_${safeName}`;
+                await uploadAttachment({
+                  recordId: record.id,
+                  field: AIRTABLE_CAL_CERT_FIELD,
+                  filename: finalName,
+                  contentType: c.contentType || 'application/pdf',
+                  fileBase64: c.fileBase64
+                });
+              } catch (upErr) {
+                const d = upErr.response?.data || upErr.data || { error: upErr.message || 'upload error' };
+                warnings.push({ type: 'CERT_UPLOAD_FAILED', details: d });
+              }
+            }
+            if (warnings.length > 0) {
+              result.warning = { ...(result.warning || {}), certificateUploads: warnings };
+            }
+          }
+
           if (allRemoved.length > 0) {
-            result.warning = { removedUnknownFields: allRemoved };
+            result.warning = { ...(result.warning || {}), removedUnknownFields: allRemoved };
           }
           return json(200, result);
         } catch (e) {
@@ -366,13 +419,41 @@ exports.handler = async (event) => {
       if (!id) {
         return json(400, { ok: false, error: 'Missing record id' });
       }
+
+      const certificates = Array.isArray(body.certificates) ? body.certificates : [];
       
       const mapped = mapAndNormalizeFields(body.fields || {});
       const url = `${baseUrl}/${encodeURIComponent(id)}`;
       
       try {
         const resp = await airtableRequest('PATCH', url, { fields: mapped });
-        return json(200, { ok: true, record: resp.data });
+        const out = { ok: true, record: resp.data };
+
+        // Subir certificados adicionales si vienen
+        if (certificates.length > 0) {
+          const warnings = [];
+          for (const c of certificates) {
+            try {
+              const year = String(c.year || '').trim();
+              const originalName = String(c.filename || 'certificado.pdf');
+              const safeName = originalName.replace(/[^a-zA-Z0-9._-]/g, '_');
+              const finalName = year ? `Calibracion_${year}_${safeName}` : `Calibracion_${safeName}`;
+              await uploadAttachment({
+                recordId: id,
+                field: AIRTABLE_CAL_CERT_FIELD,
+                filename: finalName,
+                contentType: c.contentType || 'application/pdf',
+                fileBase64: c.fileBase64
+              });
+            } catch (upErr) {
+              const d = upErr.response?.data || upErr.data || { error: upErr.message || 'upload error' };
+              warnings.push({ type: 'CERT_UPLOAD_FAILED', details: d });
+            }
+          }
+          if (warnings.length > 0) out.warning = { ...(out.warning || {}), certificateUploads: warnings };
+        }
+
+        return json(200, out);
       } catch (e) {
         const status = e.response?.status || 500;
         const data = e.response?.data || { error: 'Airtable error' };
