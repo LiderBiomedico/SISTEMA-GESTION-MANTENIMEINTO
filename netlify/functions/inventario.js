@@ -140,8 +140,7 @@ async function uploadAttachment({ recordId, field, filename, contentType, fileBa
 const NUMBER_FIELDS = new Set([
   'Valor en Pesos',
   'Costo de Mantenimiento',
-  'Vida Util',
-  'Vida Útil'
+  'Vida Util'
 ]);
 
 const BOOL_FIELDS = new Set(['Calibrable']);
@@ -209,6 +208,10 @@ function toBoolean(v) {
 
 function normalizeValue(fieldName, value) {
   if (value === null || typeof value === 'undefined') return value;
+
+  // Evitar que Airtable rechace "" (cadena vacía) en campos numéricos/fecha/select.
+  // En creación, es mejor OMITIR el campo cuando viene vacío.
+  if (typeof value === 'string' && value.trim() === '') return undefined;
   
   if (NUMBER_FIELDS.has(fieldName)) return toNumber(value);
   if (BOOL_FIELDS.has(fieldName)) return toBoolean(value);
@@ -224,15 +227,6 @@ function normalizeValue(fieldName, value) {
 
 function mapAndNormalizeFields(inputFields) {
   const out = {};
-  // Variantes para soportar nombres de columnas con/sin tildes en Airtable.
-  // Enviamos ambas. Si una no existe, el flujo de limpieza (UNKNOWN_FIELD_NAME) la removerá.
-  const ALT_FIELD_VARIANTS = {
-    'Ubicacion': ['Ubicación'],
-    'Vida Util': ['Vida Útil'],
-    'Clasificacion Biomedica': ['Clasificación Biomédica'],
-    'Clasificacion de la Tecnologia': ['Clasificación de la Tecnología'],
-    'Clasificacion del Riesgo': ['Clasificación del Riesgo']
-  };
   for (const [k, v] of Object.entries(inputFields || {})) {
     const key = String(k || '').trim();
     const mapped = FIELD_MAP[key] || key;
@@ -243,14 +237,9 @@ function mapAndNormalizeFields(inputFields) {
       continue;
     }
     
-    const norm = normalizeValue(mapped, v);
-    out[mapped] = norm;
-
-    const alts = ALT_FIELD_VARIANTS[mapped] || [];
-    for (const alt of alts) {
-      if (!alt || alt === mapped) continue;
-      out[alt] = normalizeValue(alt, v);
-    }
+    const nv = normalizeValue(mapped, v);
+    if (typeof nv === 'undefined') continue; // omite vacíos
+    out[mapped] = nv;
   }
   console.log('[inventario] Mapped fields:', JSON.stringify(out));
   return out;

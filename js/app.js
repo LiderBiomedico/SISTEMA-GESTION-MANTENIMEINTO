@@ -438,9 +438,22 @@ async function submitInventarioForm(e) {
       throw new Error('Respuesta inesperada del servidor');
     }
   } catch (err) {
-    console.error('Error guardando inventario:', err?.response?.data || err.message);
-    const msg = err?.response?.data?.error || err?.response?.data?.details?.error?.message || err.message;
-    alert('Error guardando inventario: ' + msg);
+    const status = err?.response?.status;
+    const data = err?.response?.data;
+    console.error('Error guardando inventario:', { status, data, message: err?.message });
+
+    // Construir un mensaje legible (Airtable suele enviar {error:{type,message}})
+    const msg =
+      data?.details?.error?.message ||
+      data?.details?.error?.type ||
+      data?.details?.message ||
+      data?.error?.message ||
+      data?.error ||
+      err?.message ||
+      'Error desconocido';
+
+    const extra = data ? `\n\nDetalles (debug):\n${JSON.stringify(data, null, 2)}` : '';
+    alert(`Error guardando inventario${status ? ` (HTTP ${status})` : ''}: ${msg}${extra}`);
   } finally {
     if (submitBtn) {
       submitBtn.disabled = false;
