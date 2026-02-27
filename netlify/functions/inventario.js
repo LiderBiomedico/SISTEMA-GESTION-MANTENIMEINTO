@@ -143,8 +143,9 @@ const NUMBER_FIELDS = new Set([
   'Vida Util'
 ]);
 
+// Calibrable es Selección única en Airtable (SI/NO), NO un checkbox booleano
 const BOOL_FIELDS = new Set([
-  // 'Calibrable' removido: en Airtable es Selección única (SI/NO), no checkbox booleano
+  // Removido 'Calibrable' — es Single Select, no checkbox
 ]);
 
 const DATE_FIELDS = new Set([
@@ -156,6 +157,71 @@ const DATE_FIELDS = new Set([
   'Fecha Fabrica',
   'Fecha de Recepcion'
 ]);
+
+// Campos de Selección única — valores deben coincidir EXACTAMENTE con opciones de Airtable
+// Mapa: valor del formulario → valor exacto en Airtable
+const SINGLE_SELECT_MAP = {
+  'Calibrable': {
+    'SI': 'SI', 'si': 'SI', 'Sí': 'SI', 'sí': 'SI', 'yes': 'SI', 'true': 'SI',
+    'NO': 'NO', 'no': 'NO', 'false': 'NO',
+  },
+  'Clasificacion Biomedica': {
+    'Diagnostico':              'Diagnostico',
+    'Diagnóstico':              'Diagnostico',
+    'DIAGNOSTICO':              'Diagnostico',
+    'Terapéuticos/Tratamiento': 'Terapéuticos/Tratamiento',
+    'Terapeuticos/Tratamiento': 'Terapéuticos/Tratamiento',
+    'TERAPÉUTICOS/TRATAMIENTO': 'Terapéuticos/Tratamiento',
+    'Soporte Vital':            'Soporte Vital',
+    'SOPORTE VITAL':            'Soporte Vital',
+    'Laboratorio/Análisis':     'Laboratorio/Análisis',
+    'Laboratorio/Analisis':     'Laboratorio/Análisis',
+    'LABORATORIO/ANÁLISIS':     'Laboratorio/Análisis',
+    'NO APLICA':                'NO APLICA',
+    'No Aplica':                'NO APLICA',
+  },
+  'Clasificacion de la Tecnologia': {
+    'Equipo Biomedico':  'Equipo Biomedico',
+    'Equipo Biomédico':  'Equipo Biomedico',
+    'EQUIPO BIOMEDICO':  'Equipo Biomedico',
+    'Equipo Industrial': 'Equipo Industrial',
+    'EQUIPO INDUSTRIAL': 'Equipo Industrial',
+    'Equipo de apoyo':   'Equipo de apoyo',
+    'EQUIPO DE APOYO':   'Equipo de apoyo',
+    'Equipo Electrico':  'Equipo Electrico',
+    'Equipo Eléctrico':  'Equipo Electrico',
+    'EQUIPO ELECTRICO':  'Equipo Electrico',
+  },
+  'Clasificacion del Riesgo': {
+    'Clase I (Riesgo Bajo)':          'Clase I (Riesgo Bajo)',
+    'CLASE I (RIESGO BAJO)':          'Clase I (Riesgo Bajo)',
+    'Clase IIa (Riesgo Moderado)':    'Clase IIa (Riesgo Moderado)',
+    'CLASE IIA (RIESGO MODERADO)':    'Clase IIa (Riesgo Moderado)',
+    'Clase IIb (Riesgo Alto)':        'Clase IIb (Riesgo Alto)',
+    'CLASE IIB (RIESGO ALTO)':        'Clase IIb (Riesgo Alto)',
+    'Clase III (Riesgo muy alto)':    'Clase III (Riesgo muy alto)',
+    'Clase III (Riesgo Muy Alto)':    'Clase III (Riesgo muy alto)',
+    'CLASE III (RIESGO MUY ALTO)':    'Clase III (Riesgo muy alto)',
+  },
+};
+
+function toSingleSelect(fieldName, value) {
+  if (value === null || value === undefined) return null;
+  const s = String(value).trim();
+  if (!s) return null;
+  const map = SINGLE_SELECT_MAP[fieldName];
+  if (!map) return s;
+  // Coincidencia exacta
+  if (map[s] !== undefined) return map[s];
+  // Coincidencia case-insensitive
+  const lower = s.toLowerCase();
+  for (const [k, v] of Object.entries(map)) {
+    if (k.toLowerCase() === lower) return v;
+  }
+  // Si no hay match, devolver null para NO enviar el campo y evitar el 422
+  console.warn(\`[inventario] toSingleSelect: valor "\${s}" no reconocido para campo "\${fieldName}" — se omitirá\`);
+  return null;
+}
 
 function isUrl(s) {
   return typeof s === 'string' && /^https?:\/\/\S+/i.test(s.trim());
@@ -208,39 +274,27 @@ function toBoolean(v) {
   return v;
 }
 
-// Campos de Selección única — deben enviarse como string exacto de la opción
-const SINGLE_SELECT_FIELDS = new Set(['Calibrable']);
-
-function toSingleSelect(fieldName, value) {
-  if (typeof value !== 'string') return value;
-  const s = value.trim();
-  if (fieldName === 'Calibrable') {
-    if (['si','sí','yes','true','1'].includes(s.toLowerCase())) return 'SI';
-    if (['no','false','0'].includes(s.toLowerCase())) return 'NO';
-    // Si ya viene como "SI" o "NO" exacto, respetar
-    if (s === 'SI' || s === 'NO') return s;
-  }
-  return s;
-}
-
 function normalizeValue(fieldName, value) {
   if (value === null || typeof value === 'undefined') return value;
-  
+
   if (NUMBER_FIELDS.has(fieldName)) return toNumber(value);
-  if (BOOL_FIELDS.has(fieldName)) return toBoolean(value);
-  if (SINGLE_SELECT_FIELDS.has(fieldName)) return toSingleSelect(fieldName, value);
-  
+  if (BOOL_FIELDS.has(fieldName))   return toBoolean(value);
+
+  // Selección única: normalizar al valor exacto de Airtable
+  if (SINGLE_SELECT_MAP[fieldName] !== undefined) return toSingleSelect(fieldName, value);
+
   if (DATE_FIELDS.has(fieldName)) {
     if (value instanceof Date) return value.toISOString().slice(0,10);
     if (looksLikeISODate(value)) return String(value).trim().slice(0,10);
     return value;
   }
-  
+
   return value;
 }
 
 function mapAndNormalizeFields(inputFields) {
   const out = {};
+  // Nota: toSingleSelect devuelve null si el valor no es reconocido → ese campo se omite
   for (const [k, v] of Object.entries(inputFields || {})) {
     const key = String(k || '').trim();
     const mapped = FIELD_MAP[key] || key;
@@ -251,7 +305,9 @@ function mapAndNormalizeFields(inputFields) {
       continue;
     }
     
-    out[mapped] = normalizeValue(mapped, v);
+    const normalized = normalizeValue(mapped, v);
+    if (normalized === null || normalized === undefined) continue; // omitir campos sin valor válido
+    out[mapped] = normalized;
   }
   console.log('[inventario] Mapped fields:', JSON.stringify(out));
   return out;
