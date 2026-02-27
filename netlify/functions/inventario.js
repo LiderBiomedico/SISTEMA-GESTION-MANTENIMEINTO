@@ -143,19 +143,7 @@ const NUMBER_FIELDS = new Set([
   'Vida Util'
 ]);
 
-// NOTA: En Airtable "Calibrable" es *single select* (SI/NO), NO boolean.
-const BOOL_FIELDS = new Set([]);
-
-function normalizeCalibrableToSelect(v) {
-  const s = String(v ?? '').trim();
-  if (!s) return null;
-  const up = s.toUpperCase();
-  if (up === 'SI' || up === 'SÍ' || up === 'YES' || up === 'TRUE' || up === '1') return 'SI';
-  if (up === 'NO' || up === 'FALSE' || up === '0') return 'NO';
-  if (up === 'S') return 'SI';
-  if (up === 'N') return 'NO';
-  return s;
-}
+const BOOL_FIELDS = new Set(['Calibrable']);
 
 const DATE_FIELDS = new Set([
   'Fecha de Compra',
@@ -220,9 +208,6 @@ function toBoolean(v) {
 
 function normalizeValue(fieldName, value) {
   if (value === null || typeof value === 'undefined') return value;
-
-  // Airtable single select: opciones exactas "SI" / "NO"
-  if (fieldName === 'Calibrable') return normalizeCalibrableToSelect(value);
   
   if (NUMBER_FIELDS.has(fieldName)) return toNumber(value);
   if (BOOL_FIELDS.has(fieldName)) return toBoolean(value);
@@ -321,6 +306,23 @@ exports.handler = async (event) => {
     // GET - Listar registros
     // =========================================================================
     if (event.httpMethod === 'GET') {
+      // nextItem=1 -> devuelve el próximo consecutivo del campo Autonumber "Item"
+      if (qs.nextItem && String(qs.nextItem) === '1') {
+        const params = new URLSearchParams();
+        params.set('pageSize', '1');
+        // Ordenar por el campo "Item" descendente para obtener el último
+        params.set('sort[0][field]', 'Item');
+        params.set('sort[0][direction]', 'desc');
+        const url = `${baseUrl}?${params.toString()}`;
+        const resp = await airtableRequest('GET', url);
+        const rec = (resp.data.records || [])[0];
+        const last = rec && rec.fields ? (rec.fields['Item'] ?? rec.fields['ITEM'] ?? null) : null;
+        const lastNum = Number(last || 0);
+        const nextNum = Number.isFinite(lastNum) ? (lastNum + 1) : 1;
+        const nextDisplay = String(nextNum).padStart(5, '0');
+        return json(200, { ok: true, nextItem: nextNum, nextItemDisplay: nextDisplay });
+      }
+
       const pageSize = Math.min(parseInt(qs.pageSize || '50', 10) || 50, 100);
       let offset = qs.offset ? String(qs.offset) : null;
 
@@ -358,6 +360,11 @@ exports.handler = async (event) => {
     // =========================================================================
     if (event.httpMethod === 'POST') {
       let mapped = mapAndNormalizeFields(body.fields || {});
+
+      // "Item" en Airtable es Autonumber (solo lectura). Aunque el frontend lo muestre,
+      // NO se debe enviar en creación porque genera error 422.
+      if ('Item' in mapped) delete mapped['Item'];
+
       const certificates = Array.isArray(body.certificates) ? body.certificates : [];
       let allRemoved = [];
       
@@ -438,6 +445,9 @@ exports.handler = async (event) => {
       const certificates = Array.isArray(body.certificates) ? body.certificates : [];
       
       const mapped = mapAndNormalizeFields(body.fields || {});
+
+      // "Item" es Autonumber (solo lectura). Nunca se debe actualizar.
+      if ('Item' in mapped) delete mapped['Item'];
       const url = `${baseUrl}/${encodeURIComponent(id)}`;
       
       try {
