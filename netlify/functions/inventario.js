@@ -155,6 +155,95 @@ const DATE_FIELDS = new Set([
   'Fecha de Recepcion'
 ]);
 
+// Campos tipo select en Airtable (Single select / Multiple select) que NO pueden crear opciones nuevas vía API
+// Cuando el usuario escribe una opción no existente (o con diferente capitalización), Airtable devuelve 422:
+// INVALID_MULTIPLE_CHOICE_OPTIONS / "Insufficient permissions to create new select option ..."
+// Para evitarlo, normalizamos a valores canónicos comunes del hospital.
+const SELECT_FIELD_NORMALIZERS = {
+  'Servicio': (v) => normalizeByMap(v, {
+    'uci adultos': 'UCI Adultos',
+    'uci adulto': 'UCI Adultos',
+    'uci neonatal': 'UCI Neonatal',
+    'uci neo': 'UCI Neonatal',
+    'uci pediatrica': 'UCI Pediátrica',
+    'uci pediátrica': 'UCI Pediátrica',
+    'urgencias': 'Urgencias',
+    'quirófano': 'Quirófano',
+    'quirofano': 'Quirófano',
+    'hospitalizacion': 'Hospitalización',
+    'hospitalización': 'Hospitalización',
+    'imagenes diagnosticas': 'Imágenes Diagnósticas',
+    'imágenes diagnósticas': 'Imágenes Diagnósticas',
+    'laboratorio': 'Laboratorio',
+    'consulta externa': 'Consulta Externa',
+    'esterilizacion': 'Esterilización',
+    'esterilización': 'Esterilización',
+  }, { titleCaseFallback: true }),
+
+  'Clasificacion Biomedica': (v) => normalizeByMap(v, {
+    'diagnostico': 'Diagnóstico',
+    'diagnóstico': 'Diagnóstico',
+    'terapeutico': 'Terapéutico',
+    'terapéutico': 'Terapéutico',
+    'soporte': 'Soporte',
+  }, { titleCaseFallback: true }),
+
+  'Clasificacion de la Tecnologia': (v) => normalizeByMap(v, {
+    'equipo biomedico': 'Equipo biomédico',
+    'equipo biomédico': 'Equipo biomédico',
+    'dispositivo medico': 'Dispositivo médico',
+    'dispositivo médico': 'Dispositivo médico',
+  }, { titleCaseFallback: true }),
+
+  'Clasificacion del Riesgo': (v) => normalizeByMap(v, {
+    'i': 'I',
+    'iia': 'IIa',
+    'iib': 'IIb',
+    'iii': 'III',
+    '1': 'I',
+    '2a': 'IIa',
+    '2b': 'IIb',
+    '3': 'III',
+  }, { upperFirst: true })
+};
+
+function stripAccents(s) {
+  return String(s || '').normalize('NFD').replace(/\p{Diacritic}+/gu, '');
+}
+
+function cleanKey(s) {
+  return stripAccents(String(s || '').trim().toLowerCase()).replace(/\s+/g, ' ');
+}
+
+function toTitleCaseSmart(s) {
+  // Mantiene siglas como UCI, RX, etc.
+  return String(s || '')
+    .trim()
+    .split(/\s+/)
+    .map(w => {
+      const up = w.toUpperCase();
+      if (['UCI','RX','TAC','RM','UCI'].includes(up)) return up;
+      return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+    })
+    .join(' ');
+}
+
+function normalizeByMap(value, map, opts = {}) {
+  if (value === null || typeof value === 'undefined') return value;
+  if (typeof value !== 'string') return value;
+  const raw = value.trim();
+  if (!raw) return undefined;
+
+  const k = cleanKey(raw);
+  if (map && map[k]) return map[k];
+
+  // Fallback: muchos selects existentes difieren solo por capitalización
+  if (opts.titleCaseFallback) return toTitleCaseSmart(raw);
+  if (opts.upperFirst) return raw.charAt(0).toUpperCase() + raw.slice(1);
+
+  return raw;
+}
+
 function isUrl(s) {
   return typeof s === 'string' && /^https?:\/\/\S+/i.test(s.trim());
 }
@@ -215,6 +304,11 @@ function normalizeValue(fieldName, value) {
   
   if (NUMBER_FIELDS.has(fieldName)) return toNumber(value);
   if (BOOL_FIELDS.has(fieldName)) return toBoolean(value);
+
+  // Normalización de campos Select
+  if (SELECT_FIELD_NORMALIZERS[fieldName]) {
+    return SELECT_FIELD_NORMALIZERS[fieldName](value);
+  }
   
   if (DATE_FIELDS.has(fieldName)) {
     if (value instanceof Date) return value.toISOString().slice(0,10);
