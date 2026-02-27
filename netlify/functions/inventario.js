@@ -288,6 +288,47 @@ exports.handler = async (event) => {
     }
 
     const qs = event.queryStringParameters || {};
+
+    // ------------------------------------------------------------
+    // Opciones para campos tipo "Selección única" (Single select)
+    // GET /.netlify/functions/inventario?selectOptions=1
+    // ------------------------------------------------------------
+    if (event.httpMethod === 'GET' && (qs.selectOptions === '1' || qs.selectOptions === 'true')) {
+      return json(200, {
+        ok: true,
+        options: {
+          SERVICIO: [
+            "Cirugia Adulto",
+            "Consulta Externa",
+            "Urgencias Adulto",
+            "Urgencias Pediatria",
+            "Laboratorio Clinico",
+            "Imagenes Diagnosticas",
+            "Uci Adultos"
+          ],
+          "CLASIFICACION BIOMEDICA": [
+            "Diagnostico",
+            "Terapéuticos/Tratamiento",
+            "Soporte Vital",
+            "Laboratorio/Análisis",
+            "NO APLICA"
+          ],
+          "CLASIFICACION DE LA TECNOLOGIA": [
+            "Equipo Biomedico",
+            "Equipo Industrial",
+            "Equipo de apoyo",
+            "Equipo Electrico"
+          ],
+          "CLASIFICACION DEL RIESGO": [
+            "Clase I (Riesgo Bajo)",
+            "Clase IIa (Riesgo Moderado)",
+            "Clase IIb (Riesgo Alto)",
+            "Clase III (Riesgo muy alto)"
+          ]
+        }
+      });
+    }
+
     const debug = !!qs.debug;
 
     // Debug mode
@@ -306,23 +347,6 @@ exports.handler = async (event) => {
     // GET - Listar registros
     // =========================================================================
     if (event.httpMethod === 'GET') {
-      // nextItem=1 -> devuelve el próximo consecutivo del campo Autonumber "Item"
-      if (qs.nextItem && String(qs.nextItem) === '1') {
-        const params = new URLSearchParams();
-        params.set('pageSize', '1');
-        // Ordenar por el campo "Item" descendente para obtener el último
-        params.set('sort[0][field]', 'Item');
-        params.set('sort[0][direction]', 'desc');
-        const url = `${baseUrl}?${params.toString()}`;
-        const resp = await airtableRequest('GET', url);
-        const rec = (resp.data.records || [])[0];
-        const last = rec && rec.fields ? (rec.fields['Item'] ?? rec.fields['ITEM'] ?? null) : null;
-        const lastNum = Number(last || 0);
-        const nextNum = Number.isFinite(lastNum) ? (lastNum + 1) : 1;
-        const nextDisplay = String(nextNum).padStart(5, '0');
-        return json(200, { ok: true, nextItem: nextNum, nextItemDisplay: nextDisplay });
-      }
-
       const pageSize = Math.min(parseInt(qs.pageSize || '50', 10) || 50, 100);
       let offset = qs.offset ? String(qs.offset) : null;
 

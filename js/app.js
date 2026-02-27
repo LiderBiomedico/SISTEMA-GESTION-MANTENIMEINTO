@@ -93,28 +93,6 @@ function openModal(modalId) {
   // Soporta ambos estilos de modal (display y class)
   el.style.display = 'block';
   el.classList.add('active');
-
-  // Inventario: cargar el próximo ITEM (Airtable Autonumber) solo para visualizar
-  if (modalId === 'newInventario') {
-    loadNextInventarioItem().catch(() => {});
-  }
-}
-
-// Carga el próximo ITEM (max + 1) desde Airtable para mostrarlo en el formulario.
-async function loadNextInventarioItem() {
-  const itemEl = document.getElementById('invItem');
-  if (!itemEl) return;
-  itemEl.value = '';
-  itemEl.placeholder = 'Cargando...';
-
-  const res = await fetch('/.netlify/functions/inventario?nextItem=1', { method: 'GET' });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok || !data || !data.ok) {
-    itemEl.placeholder = '—';
-    return;
-  }
-  itemEl.value = String(data.nextItemDisplay || data.nextItem || '').trim() || '';
-  if (!itemEl.value) itemEl.placeholder = '—';
 }
 
 function closeModal(modalId) {
@@ -339,6 +317,10 @@ async function submitInventarioForm(e) {
     }
   }
 
+  if (!rawFields['ITEM'] && !rawFields['Item']) {
+    alert('El campo ITEM es obligatorio');
+    return;
+  }
   if (!rawFields['EQUIPO'] && !rawFields['Equipo']) {
     alert('El campo EQUIPO es obligatorio');
     return;
@@ -582,6 +564,48 @@ function removeCalCertRow(btn) {
 // INICIALIZACIÓN
 // ============================================================================
 
+
+// =======================
+// Cargar opciones de selects (Servicio / Clasificaciones / Riesgo)
+// =======================
+async function loadInventarioSelectOptions() {
+  const map = {
+    'SERVICIO': 'invServicio',
+    'CLASIFICACION BIOMEDICA': 'invClasBio',
+    'CLASIFICACION DE LA TECNOLOGIA': 'invClasTec',
+    'CLASIFICACION DEL RIESGO': 'invClasRiesgo'
+  };
+
+  try {
+    const res = await fetch('/.netlify/functions/inventario?selectOptions=1');
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data || !data.options) {
+      console.warn('No se pudieron cargar opciones de Airtable, usando fallback local.', data);
+      return;
+    }
+
+    Object.entries(map).forEach(([field, selectId]) => {
+      const el = document.getElementById(selectId);
+      const opts = (data.options[field] || []).filter(Boolean);
+      if (!el || !opts.length) return;
+
+      // preserve first placeholder option
+      const first = el.querySelector('option[value=""]');
+      el.innerHTML = '';
+      if (first) el.appendChild(first);
+
+      opts.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v;
+        opt.textContent = v;
+        el.appendChild(opt);
+      });
+    });
+  } catch (e) {
+    console.warn('Error cargando opciones de selects:', e);
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   console.log('✅ Sistema de Gestión de Mantenimiento Hospitalario iniciado');
 
@@ -599,6 +623,8 @@ document.addEventListener('DOMContentLoaded', () => {
       el.removeAttribute('required');
       el.dataset.jsRequired = 'true'; // marcamos para validar por JS
     });
+
+    loadInventarioSelectOptions();
 
     inventarioForm.addEventListener('submit', submitInventarioForm);
   }
