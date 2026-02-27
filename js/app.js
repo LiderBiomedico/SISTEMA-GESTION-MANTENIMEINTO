@@ -346,7 +346,10 @@ async function submitInventarioForm(e) {
     const val = String(v).trim();
     if (val === '') continue;
     if (k === 'CALIBRABLE' || k === 'Calibrable') {
-      rawFields[k] = (val === 'true' || val === 'Sí' || val === 'si');
+      // En Airtable este campo suele ser "Selección única" (Si/No). Enviar TEXTO, no boolean.
+      const s = val.trim().toLowerCase();
+      const yes = (s === 'true' || s === '1' || s === 'si' || s === 'sí' || s === 'yes' || s === 'y');
+      rawFields[k] = yes ? 'Si' : 'No';
     } else {
       rawFields[k] = val;
     }

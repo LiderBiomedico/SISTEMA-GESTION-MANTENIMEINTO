@@ -143,7 +143,9 @@ const NUMBER_FIELDS = new Set([
   'Vida Util'
 ]);
 
-const BOOL_FIELDS = new Set(['Calibrable']);
+// "Calibrable" en esta base se maneja como Selección única (Si/No),
+// por eso NO debe enviarse como boolean.
+const BOOL_FIELDS = new Set([]);
 
 const DATE_FIELDS = new Set([
   'Fecha de Compra',
@@ -208,6 +210,21 @@ function toBoolean(v) {
 
 function normalizeValue(fieldName, value) {
   if (value === null || typeof value === 'undefined') return value;
+
+  // "Calibrable" se maneja como Selección única (Si/No) en Airtable.
+  // Nunca enviar boolean aquí, para evitar: "Cannot parse value for field Calibrable".
+  if (fieldName === 'Calibrable') {
+    if (typeof value === 'boolean') return value ? 'Si' : 'No';
+    const s = String(value).trim();
+    const sl = s.toLowerCase();
+    const yes = ['true','1','si','sí','yes','y','on','x'].includes(sl);
+    const no = ['false','0','no','off','n'].includes(sl);
+    if (yes) return 'Si';
+    if (no) return 'No';
+    // Normalizar acento para coincidir con opción típica "Si"
+    if (sl === 'sí') return 'Si';
+    return s;
+  }
   
   if (NUMBER_FIELDS.has(fieldName)) return toNumber(value);
   if (BOOL_FIELDS.has(fieldName)) return toBoolean(value);
