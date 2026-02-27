@@ -12,6 +12,86 @@ const AIRTABLE_CAL_CERT_FIELD = process.env.AIRTABLE_CAL_CERT_FIELD || 'Certific
 const AIRTABLE_API = 'https://api.airtable.com/v0';
 const AIRTABLE_CONTENT_API = 'https://content.airtable.com/v0';
 
+// =============================================================================
+// CACHE de valores existentes para campos Single Select
+// Objetivo: evitar el error "Insufficient permissions to create new select option"
+// cuando el valor enviado no coincide EXACTAMENTE con el nombre interno del option.
+//
+// Estrategia:
+// 1) Leer registros existentes y construir un diccionario normalizado -> valor real.
+// 2) Al recibir un valor, intentar mapearlo al valor real conocido.
+// 3) Si no se puede mapear, omitir el campo para evitar 422.
+//
+// Nota: esto NO requiere acceso al API de "meta/schema".
+// =============================================================================
+
+const SELECT_FIELDS = [
+  'Servicio',
+  'Clasificacion Biomedica',
+  'Clasificacion de la Tecnologia',
+  'Clasificacion del Riesgo',
+  'Calibrable',
+];
+
+let __selectCache = null; // { [fieldName]: { [normalized]: actualValue } }
+let __selectCacheBuiltAt = 0;
+const SELECT_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutos
+
+function normalizeForMatch(input) {
+  const s = String(input || '')
+    .replace(/\u00A0/g, ' ') // NBSP
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toLowerCase();
+  // Quitar diacríticos
+  try {
+    return s.normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
+  } catch (e) {
+    return s;
+  }
+}
+
+async function buildSelectCacheIfNeeded() {
+  if (!AIRTABLE_API_KEY || !AIRTABLE_BASE_ID) return;
+
+  const now = Date.now();
+  if (__selectCache && (now - __selectCacheBuiltAt) < SELECT_CACHE_TTL_MS) return;
+
+  const headers = { Authorization: `Bearer ${AIRTABLE_API_KEY}` };
+  const fieldParams = SELECT_FIELDS.map(f => `fields[]=${encodeURIComponent(f)}`).join('&');
+
+  const cache = {};
+  SELECT_FIELDS.forEach(f => { cache[f] = {}; });
+
+  let offset = null;
+  let pages = 0;
+  const MAX_PAGES = 5; // 5 * 100 = 500 registros
+  const PAGE_SIZE = 100;
+
+  while (pages < MAX_PAGES) {
+    const url = `${AIRTABLE_API}/${AIRTABLE_BASE_ID}/${encodeURIComponent(TABLE_NAME)}?pageSize=${PAGE_SIZE}${offset ? `&offset=${encodeURIComponent(offset)}` : ''}&${fieldParams}`;
+    const resp = await axios.get(url, { headers });
+    const records = (resp.data && resp.data.records) ? resp.data.records : [];
+    records.forEach(r => {
+      const f = r.fields || {};
+      SELECT_FIELDS.forEach(fieldName => {
+        const v = f[fieldName];
+        if (typeof v === 'string' && v.trim()) {
+          const actual = v;
+          const key = normalizeForMatch(actual);
+          if (key && !cache[fieldName][key]) cache[fieldName][key] = actual;
+        }
+      });
+    });
+    offset = resp.data && resp.data.offset ? resp.data.offset : null;
+    pages += 1;
+    if (!offset) break;
+  }
+
+  __selectCache = cache;
+  __selectCacheBuiltAt = now;
+}
+
 function json(statusCode, body) {
   return {
     statusCode,
@@ -138,9 +218,11 @@ const SINGLE_SELECT_MAP = {
   'Clasificacion Biomedica': {
     'Diagnostico':               'Diagnostico',
     'Diagnóstico':               'Diagnostico',
+    // Airtable tiene el option con tilde: "Terapéuticos/Tratamiento"
     'Terapeuticos/Tratamiento':  'Terapéuticos/Tratamiento',
     'Terapéuticos/Tratamiento':  'Terapéuticos/Tratamiento',
     'Soporte Vital':             'Soporte Vital',
+    // Airtable tiene el option con tilde: "Laboratorio/Análisis"
     'Laboratorio/Analisis':      'Laboratorio/Análisis',
     'Laboratorio/Análisis':      'Laboratorio/Análisis',
     'NO APLICA':                 'NO APLICA',
@@ -185,49 +267,33 @@ const SINGLE_SELECT_MAP = {
   },
 };
 
-// Limpieza robusta de strings que pueden venir doble-stringify, con escapes, o
-// con comillas repetidas. Ejemplos que hemos visto en producción:
-//   "\"\"Consulta Externa\"\""  -> Consulta Externa
-//   "\"Consulta Externa\""      -> Consulta Externa
-//   "\\\"Consulta Externa\\\""  -> Consulta Externa
-function cleanInputString(v) {
-  if (v === null || v === undefined) return v;
-  let s = String(v).trim();
-  if (!s) return s;
-
-  // Des-escapar comillas comunes (por doble stringify o escapes del cliente)
-  s = s.replace(/\\"/g, '"').replace(/\\'/g, "'");
-
-  // Quitar comillas/escapes en bordes varias veces
-  for (let i = 0; i < 3; i++) {
-    s = s.trim();
-    s = s.replace(/^\\+(["'])+/, '');
-    s = s.replace(/(["'])+\\+$/, '');
-    s = s.replace(/^(["'])+/, '');
-    s = s.replace(/(["'])+$/, '');
-  }
-
-  return String(s).trim();
-}
-
 function toSingleSelect(fieldName, value) {
   if (value === null || value === undefined) return null;
-  // Limpieza fuerte (caso comillas dobles y escapes)
-  var s = cleanInputString(value);
-  // Por seguridad, elimina cualquier comilla remanente dentro del string
-  // (las opciones de Airtable no deberían contener comillas)
-  s = String(s).replace(/["']/g, '').trim();
+  var s = String(value).replace(/\u00A0/g, ' ').trim();
   if (!s) return null;
   var map = SINGLE_SELECT_MAP[fieldName];
-  if (!map) return s;
+  if (!map) {
+    // Intentar resolver contra cache si existe
+    if (__selectCache && __selectCache[fieldName]) {
+      var k0 = normalizeForMatch(s);
+      if (k0 && __selectCache[fieldName][k0]) return __selectCache[fieldName][k0];
+      return null; // evitamos 422
+    }
+    return s;
+  }
   if (map[s] !== undefined) return map[s];
   var lower = s.toLowerCase();
   var keys = Object.keys(map);
   for (var i = 0; i < keys.length; i++) {
     if (keys[i].toLowerCase() === lower) return map[keys[i]];
   }
+  // Si no está en el mapa, intentar resolver con cache leyendo el valor real del base
+  if (__selectCache && __selectCache[fieldName]) {
+    var k = normalizeForMatch(s);
+    if (k && __selectCache[fieldName][k]) return __selectCache[fieldName][k];
+  }
   console.warn('[inventario] valor no reconocido para "' + fieldName + '": "' + s + '" - campo omitido');
-  return null;
+  return null; // evitar 422 por creación de option
 }
 
 async function uploadAttachment({ recordId, field, filename, contentType, fileBase64 }) {
@@ -300,8 +366,6 @@ function toBoolean(v) {
 
 function normalizeValue(fieldName, value) {
   if (value === null || typeof value === 'undefined') return value;
-  // Limpieza defensiva robusta (comillas repetidas / escapes / doble stringify)
-  if (typeof value === 'string') value = cleanInputString(value);
   if (NUMBER_FIELDS.has(fieldName)) return toNumber(value);
   if (BOOL_FIELDS.has(fieldName))   return toBoolean(value);
   // Single Select: normalizar o devolver null (se omitirá)
@@ -320,16 +384,12 @@ function mapAndNormalizeFields(inputFields) {
     const key    = String(k || '').trim();
     const mapped = FIELD_MAP[key] || key;
 
-    // Limpieza previa (especialmente para selects)
-    let vv = v;
-    if (typeof vv === 'string') vv = cleanInputString(vv);
-
-    if (mapped === 'Manual' && isUrl(vv)) {
-      out[mapped] = [{ url: String(vv).trim() }];
+    if (mapped === 'Manual' && isUrl(v)) {
+      out[mapped] = [{ url: String(v).trim() }];
       continue;
     }
 
-    const normalized = normalizeValue(mapped, vv);
+    const normalized = normalizeValue(mapped, v);
     // null = valor no reconocido para Single Select -> NO enviar (evita 422)
     if (normalized !== null && normalized !== undefined) {
       out[mapped] = normalized;
@@ -419,6 +479,13 @@ exports.handler = async (event) => {
 
     // POST
     if (event.httpMethod === 'POST') {
+      // Construir cache de valores reales (Single Select) para evitar mismatches
+      try {
+        await buildSelectCacheIfNeeded();
+      } catch (e) {
+        console.warn('[inventario] no fue posible construir cache de select values:', e && (e.message || e));
+      }
+
       let mapped = mapAndNormalizeFields(body.fields || {});
       if ('Item' in mapped) delete mapped['Item'];
 
@@ -477,6 +544,13 @@ exports.handler = async (event) => {
     if (event.httpMethod === 'PUT') {
       const id = body.id;
       if (!id) return json(400, { ok: false, error: 'Missing record id' });
+
+      // Cache para Single Select
+      try {
+        await buildSelectCacheIfNeeded();
+      } catch (e) {
+        console.warn('[inventario] no fue posible construir cache de select values:', e && (e.message || e));
+      }
 
       const certificates = Array.isArray(body.certificates) ? body.certificates : [];
       const mapped       = mapAndNormalizeFields(body.fields || {});
