@@ -271,6 +271,19 @@ function toBoolean(v) {
 
 function normalizeValue(fieldName, value) {
   if (value === null || typeof value === 'undefined') return value;
+  // Limpieza defensiva: algunos serializadores terminan enviando
+  // valores con comillas dobles, por ejemplo ""Consulta Externa"".
+  // Esto hace que Airtable intente CREAR una nueva opción de Single Select
+  // y falle por permisos. Aquí normalizamos antes de mapear.
+  if (typeof value === 'string') {
+    var s0 = String(value).trim();
+    // quitar comillas en bordes repetidas (", ')
+    // ej: ""Consulta Externa"" -> Consulta Externa
+    s0 = s0.replace(/^["']+/, '').replace(/["']+$/, '');
+    // repetir por si venían dobles
+    s0 = s0.replace(/^["']+/, '').replace(/["']+$/, '');
+    value = s0;
+  }
   if (NUMBER_FIELDS.has(fieldName)) return toNumber(value);
   if (BOOL_FIELDS.has(fieldName))   return toBoolean(value);
   // Single Select: normalizar o devolver null (se omitirá)
@@ -289,12 +302,22 @@ function mapAndNormalizeFields(inputFields) {
     const key    = String(k || '').trim();
     const mapped = FIELD_MAP[key] || key;
 
-    if (mapped === 'Manual' && isUrl(v)) {
-      out[mapped] = [{ url: String(v).trim() }];
+    // Limpieza defensiva previa (especialmente para selects)
+    let vv = v;
+    if (typeof vv === 'string') {
+      let s = String(vv).trim();
+      // Quitar comillas sobrantes en bordes (""texto"" / "texto" / 'texto')
+      s = s.replace(/^["']+/, '').replace(/["']+$/, '');
+      s = s.replace(/^["']+/, '').replace(/["']+$/, '');
+      vv = s;
+    }
+
+    if (mapped === 'Manual' && isUrl(vv)) {
+      out[mapped] = [{ url: String(vv).trim() }];
       continue;
     }
 
-    const normalized = normalizeValue(mapped, v);
+    const normalized = normalizeValue(mapped, vv);
     // null = valor no reconocido para Single Select -> NO enviar (evita 422)
     if (normalized !== null && normalized !== undefined) {
       out[mapped] = normalized;
