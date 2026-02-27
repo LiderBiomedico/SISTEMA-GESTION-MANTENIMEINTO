@@ -296,9 +296,9 @@ async function submitInventarioForm(e) {
 
   // Certificados de calibración (PDF) - se envían aparte, no dentro de fields
   const certificates = [];
-  const _calIdent = form.querySelector('#calibrableIdentSelect');
-  const _calMain  = form.querySelector('#calibrableMainSelect');
-  const esCalibrableSI = (_calIdent && _calIdent.value === 'SI') || (_calMain && _calMain.value === 'SI');
+  const _calId = form.querySelector('#calibrableIdentSelect');
+  const _calMn = form.querySelector('#calibrableMainSelect');
+  const esCalibrableSI = (_calId && _calId.value === 'SI') || (_calMn && _calMn.value === 'SI');
   try {
     const rows = form.querySelectorAll('#calCertList .cal-cert-row');
     rows.forEach((row) => {
@@ -307,19 +307,11 @@ async function submitInventarioForm(e) {
       const year = yearEl ? String(yearEl.value || '').trim() : '';
       const file = fileEl && fileEl.files ? fileEl.files[0] : null;
       if (!year && !file) return;
-      if (!esCalibrableSI) return; // No calibrable: ignorar PDFs
-      if (!year || !/^[0-9]{4}$/.test(year)) {
-        throw new Error('El año de calibración debe ser un número de 4 dígitos (ej: 2025).');
-      }
-      if (!file) {
-        throw new Error('Falta adjuntar el PDF del certificado para el año ' + year + '.');
-      }
-      if (file.size > 5 * 1024 * 1024) {
-        throw new Error('El PDF de ' + year + ' supera 5MB.');
-      }
-      if (file.type && file.type !== 'application/pdf') {
-        throw new Error('El archivo de ' + year + ' debe ser PDF.');
-      }
+      if (!esCalibrableSI) return;
+      if (!year || !/^[0-9]{4}$/.test(year)) throw new Error('El año de calibración debe ser 4 dígitos.');
+      if (!file) throw new Error('Falta adjuntar el PDF del certificado para el año ' + year + '.');
+      if (file.size > 5 * 1024 * 1024) throw new Error('El PDF de ' + year + ' supera 5MB.');
+      if (file.type && file.type !== 'application/pdf') throw new Error('El archivo de ' + year + ' debe ser PDF.');
       certificates.push({ year, file });
     });
   } catch (e) {
@@ -337,10 +329,10 @@ async function submitInventarioForm(e) {
     const val = String(v).trim();
     if (val === '') continue;
     if (k === 'CALIBRABLE' || k === 'Calibrable') {
-      if (val === 'SI' || val === 'si' || val === 'Sí' || val === 'true') rawFields[k] = 'SI';
+      if (val === 'SI' || val === 'si' || val === 'true') rawFields[k] = 'SI';
       else if (val === 'NO' || val === 'no' || val === 'false') rawFields[k] = 'NO';
     } else if (k === 'CALIBRABLE_IDENT') {
-      // Solo UI, ignorar
+      // solo UI, ignorar
     } else {
       rawFields[k] = val;
     }
@@ -454,14 +446,14 @@ async function submitInventarioForm(e) {
 
       // Reset certificados y estado calibrable
       try {
-        var list = document.getElementById('calCertList');
-        if (list) { list.innerHTML = ''; addCalCertRow(); }
-        var idSel = document.getElementById('calibrableIdentSelect');
-        var mnSel = document.getElementById('calibrableMainSelect');
-        var cSect = document.getElementById('calCertSection');
-        if (idSel) idSel.value = '';
-        if (mnSel) mnSel.value = '';
-        if (cSect) cSect.style.display = 'none';
+        var _list = document.getElementById('calCertList');
+        if (_list) { _list.innerHTML = ''; addCalCertRow(); }
+        var _ids = document.getElementById('calibrableIdentSelect');
+        var _mns = document.getElementById('calibrableMainSelect');
+        var _css = document.getElementById('calCertSection');
+        if (_ids) _ids.value = '';
+        if (_mns) _mns.value = '';
+        if (_css) _css.style.display = 'none';
       } catch (e) {}
 
       if (typeof loadInventario === 'function') loadInventario();
@@ -564,9 +556,9 @@ function fileToBase64(file) {
 }
 
 
-// ============================================================
+// ==============================================================
 // CALIBRABLE: mostrar/ocultar seccion de certificados PDF
-// ============================================================
+// ==============================================================
 function toggleCalCertSection() {
   var identSelect = document.getElementById('calibrableIdentSelect');
   var section = document.getElementById('calCertSection');
@@ -578,20 +570,17 @@ function toggleCalCertSection() {
   if (!esSI) {
     var list = document.getElementById('calCertList');
     if (list) {
-      var inputs = list.querySelectorAll('input[name="CAL_CERT_FILE"]');
-      for (var i = 0; i < inputs.length; i++) inputs[i].value = '';
+      var inp = list.querySelectorAll('input[name="CAL_CERT_FILE"]');
+      for (var i = 0; i < inp.length; i++) inp[i].value = '';
     }
   }
 }
 
 function syncCalibrableSelects(origin) {
   if (origin === 'main') {
-    var mainSelect = document.getElementById('calibrableMainSelect');
-    var identSelect = document.getElementById('calibrableIdentSelect');
-    if (mainSelect && identSelect) {
-      identSelect.value = mainSelect.value;
-      toggleCalCertSection();
-    }
+    var m = document.getElementById('calibrableMainSelect');
+    var id = document.getElementById('calibrableIdentSelect');
+    if (m && id) { id.value = m.value; toggleCalCertSection(); }
   }
 }
 
