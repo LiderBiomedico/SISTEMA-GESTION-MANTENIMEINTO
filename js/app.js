@@ -291,24 +291,32 @@ async function loadKPIs() {
 async function submitInventarioForm(e) {
   e.preventDefault();
   const form = e.target;
+
+  // ¿Es calibrable? (si NO, no validamos ni enviamos certificados)
+  const calibrableEl = form.querySelector('[name="CALIBRABLE"]');
+  const calibrableVal = calibrableEl ? String(calibrableEl.value || '').trim().toLowerCase() : '';
+  const isCalibrable = (calibrableVal === 'true' || calibrableVal === 'sí' || calibrableVal === 'si' || calibrableVal === '1');
+
   const fd = new FormData(form);
   const rawFields = {};
 
   // Certificados de calibración (PDF) - se envían aparte, no dentro de fields
   const certificates = [];
   try {
+    // Si no es calibrable, ignorar completamente certificados
+    if (!isCalibrable) throw new Error('__SKIP_CERTS__');
+
     const rows = form.querySelectorAll('#calCertList .cal-cert-row');
     rows.forEach((row) => {
       const yearEl = row.querySelector('input[name="CAL_CERT_YEAR"]');
       const fileEl = row.querySelector('input[name="CAL_CERT_FILE"]');
       const year = yearEl ? String(yearEl.value || '').trim() : '';
       const file = fileEl && fileEl.files ? fileEl.files[0] : null;
-      if (!year && !file) return;
+
+      // Certificado es OPCIONAL: solo validamos cuando hay archivo.
+      if (!file) return;
       if (!year || !/^[0-9]{4}$/.test(year)) {
-        throw new Error('El año de calibración debe ser un número de 4 dígitos (ej: 2025).');
-      }
-      if (!file) {
-        throw new Error(`Falta adjuntar el PDF del certificado para el año ${year}.`);
+        throw new Error('Si adjuntas un PDF, el año de calibración debe ser un número de 4 dígitos (ej: 2025).');
       }
       if (file.size > 5 * 1024 * 1024) {
         throw new Error(`El PDF de ${year} supera 5MB. Airtable solo permite carga directa hasta 5MB por archivo.`);
@@ -319,8 +327,13 @@ async function submitInventarioForm(e) {
       certificates.push({ year, file });
     });
   } catch (e) {
-    alert(e.message || String(e));
-    return;
+    // Señal interna para omitir certificados cuando NO es calibrable
+    if ((e && e.message) === '__SKIP_CERTS__') {
+      // no-op
+    } else {
+      alert(e.message || String(e));
+      return;
+    }
   }
 
   for (const [k, v] of fd.entries()) {
@@ -400,8 +413,8 @@ async function submitInventarioForm(e) {
   // pero NO se debe enviar al backend en POST/PUT porque provoca error 422.
   if ('Item' in fields) delete fields['Item'];
 
-  // Guardar años de calibración (texto) si hay certificados
-  if (certificates.length > 0) {
+  // Guardar años de calibración (texto) si hay certificados (solo si es calibrable)
+  if (isCalibrable && certificates.length > 0) {
     const years = Array.from(new Set(certificates.map(c => c.year))).sort();
     fields['Años de Calibracion'] = years.join(', ');
   }
@@ -585,6 +598,40 @@ function removeCalCertRow(btn) {
   } catch (e) {}
 }
 
+// --------------------------------------------------------------------------
+// UI: mostrar/ocultar certificados según CALIBRABLE
+// --------------------------------------------------------------------------
+
+function syncCalibrableUI() {
+  const form = document.getElementById('inventarioForm');
+  if (!form) return;
+
+  const calibrableEl = form.querySelector('[name="CALIBRABLE"]');
+  const block = document.getElementById('calCertBlock');
+  if (!calibrableEl || !block) return;
+
+  const val = String(calibrableEl.value || '').trim().toLowerCase();
+  const isCalibrable = (val === 'true' || val === 'sí' || val === 'si' || val === '1');
+
+  block.style.display = isCalibrable ? '' : 'none';
+
+  // Deshabilitar inputs dentro del bloque cuando NO es calibrable
+  block.querySelectorAll('input, button, select, textarea').forEach(el => {
+    el.disabled = !isCalibrable;
+  });
+
+  // Si NO es calibrable, limpiar archivos/años
+  if (!isCalibrable) {
+    try {
+      const list = document.getElementById('calCertList');
+      if (list) {
+        list.querySelectorAll('input[name="CAL_CERT_FILE"]').forEach(f => { f.value = ''; });
+        list.querySelectorAll('input[name="CAL_CERT_YEAR"]').forEach(y => { y.value = ''; });
+      }
+    } catch (e) {}
+  }
+}
+
 // ============================================================================
 // INICIALIZACIÓN
 // ============================================================================
@@ -608,6 +655,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     inventarioForm.addEventListener('submit', submitInventarioForm);
+
+    // Calibrable: mostrar/ocultar certificados
+    const calibrableEl = inventarioForm.querySelector('[name="CALIBRABLE"]');
+    if (calibrableEl) {
+      calibrableEl.addEventListener('change', syncCalibrableUI);
+      // Estado inicial
+      syncCalibrableUI();
+    }
   }
 
   // Refresh dashboard cada 5 min

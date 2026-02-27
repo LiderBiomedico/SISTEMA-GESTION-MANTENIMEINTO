@@ -1248,6 +1248,16 @@
                                 <input name="SERIE" type="text" placeholder="Ej: SN123456">
                             </div>
                             <div class="form-group">
+                                <label>¿ES CALIBRABLE?</label>
+                                <select name="CALIBRABLE" id="invCalibrable">
+                                    <option value="">(Seleccionar)</option>
+                                    <option value="Sí">Sí</option>
+                                    <option value="No">No</option>
+                                </select>
+                                <div class="text-muted" style="margin-top:6px;">Si el equipo <b>NO</b> es calibrable, no se solicitarán certificados.</div>
+                            </div>
+
+                            <div class="form-group" id="calCertBlock">
                                 <label>CERTIFICADOS DE CALIBRACIÓN (PDF)</label>
                                 <div id="calCertList" class="cal-cert-list">
                                     <div class="cal-cert-row">
@@ -1388,14 +1398,6 @@
                             <div class="form-group">
                                 <label>COSTO DE MANTENIMIENTO</label>
                                 <input name="COSTO DE MANTENIMIENTO" type="number" step="1" placeholder="Ej: 450000">
-                            </div>
-                            <div class="form-group">
-                                <label>CALIBRABLE</label>
-                                <select name="CALIBRABLE">
-                                    <option value="">(Seleccionar)</option>
-                                    <option>SI</option>
-                                    <option>NO</option>
-                                </select>
                             </div>
                             <div class="form-group">
                                 <label>N. CERTIFICADO</label>
