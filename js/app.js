@@ -326,7 +326,9 @@ async function submitInventarioForm(e) {
     // Ignorar archivos/adjuntos genéricos en este flujo (solo soportamos PDFs por el componente de certificados)
     if (v instanceof File) continue;
 
-    const val = String(v).trim();
+    let val = String(v);
+      val = val.replace(/[\u00A0\s]+/g, ' ').trim();
+      val = val.replace(/^[\s'\"“”‘’]+/, '').replace(/[\s'\"“”‘’]+$/, '');
     if (val === '') continue;
     if (k === 'CALIBRABLE' || k === 'Calibrable') {
       if (val === 'SI' || val === 'si' || val === 'true') rawFields[k] = 'SI';

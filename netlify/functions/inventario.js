@@ -113,211 +113,98 @@ const FIELD_MAP = {
 // SINGLE SELECT: valores exactos configurados en Airtable
 // Si el valor no coincide -> se omite el campo (no se envía) para evitar 422
 // =============================================================================
-const SINGLE_SELECT_MAP = {
-  'Calibrable': {
-    'SI': 'SI', 'si': 'SI', 'yes': 'SI', 'true': 'SI',
-    'NO': 'NO', 'no': 'NO', 'false': 'NO',
-  },
-  'Servicio': {
-    'Cirugia Adulto':           'Cirugia Adulto',
-    'Cirugía Adulto':           'Cirugia Adulto',
-    'Consulta Externa':         'Consulta Externa',
-    'Urgencias Adulto':         'Urgencias Adulto',
-    'Urgencias Pediatria':      'Urgencias Pediatria',
-    'Urgencias Pediatría':      'Urgencias Pediatria',
-    'Laboratorio Clinico':      'Laboratorio Clinico',
-    'Laboratorio Clínico':      'Laboratorio Clinico',
-    'Imagenes Diagnosticas':    'Imagenes Diagnosticas',
-    'Imágenes Diagnósticas':    'Imagenes Diagnosticas',
-    'Uci Adultos':              'Uci Adultos',
-    'UCI Adultos':              'Uci Adultos',
-    'Hospitalizacion Pediatria': 'Hospitalizacion Pediatria',
-    'Hospitalización Pediatria': 'Hospitalizacion Pediatria',
-    'Hospitalización Pediatría': 'Hospitalizacion Pediatria',
-  },
-  'Clasificacion Biomedica': {
-    'Diagnostico':               'Diagnostico',
-    'Diagnóstico':               'Diagnostico',
-    'Terapeuticos/Tratamiento':  'Terapéuticos/Tratamiento',
-    'Terapéuticos/Tratamiento':  'Terapéuticos/Tratamiento',
-    'Soporte Vital':             'Soporte Vital',
-    'Laboratorio/Analisis':      'Laboratorio/Análisis',
-    'Laboratorio/Análisis':      'Laboratorio/Análisis',
-    'NO APLICA':                 'NO APLICA',
-    'No Aplica':                 'NO APLICA',
-  },
-  'Clasificacion de la Tecnologia': {
-    'Equipo Biomedico':   'Equipo Biomedico',
-    'Equipo Biomédico':   'Equipo Biomedico',
-    'Equipo Industrial':  'Equipo Industrial',
-    'Equipo de apoyo':    'Equipo de apoyo',
-    'Equipo Electrico':   'Equipo Electrico',
-    'Equipo Eléctrico':   'Equipo Electrico',
-  },
-  'Clasificacion del Riesgo': {
-    'Clase I (Riesgo Bajo)':         'Clase I (Riesgo Bajo)',
-    'Clase IIa (Riesgo Moderado)':   'Clase IIa (Riesgo Moderado)',
-    'Clase IIb (Riesgo Alto)':       'Clase IIb (Riesgo Alto)',
-    'Clase III (Riesgo muy alto)':   'Clase III (Riesgo muy alto)',
-    'Clase III (Riesgo Muy Alto)':   'Clase III (Riesgo muy alto)',
-  },
-  'Tipo de Adquisicion': {
-    'Compra':         'Compra',
-    'Donacion':       'Donacion',
-    'Donación':       'Donacion',
-    'Comodato':       'Comodato',
-    'Arrendamiento':  'Arrendamiento',
-    'Leasing':        'Leasing',
-  },
-  'Tipo de MTTO': {
-    'Preventivo':  'Preventivo',
-    'Correctivo':  'Correctivo',
-    'Predictivo':  'Predictivo',
-    'Mixto':       'Mixto',
-  },
-  'Frecuencia de MTTO Preventivo': {
-    'Mensual': 'Mensual', 'Bimestral': 'Bimestral', 'Trimestral': 'Trimestral',
-    'Cuatrimestral': 'Cuatrimestral', 'Semestral': 'Semestral', 'Anual': 'Anual',
-  },
-  'Frecuencia de Mantenimiento': {
-    'Mensual': 'Mensual', 'Bimestral': 'Bimestral', 'Trimestral': 'Trimestral',
-    'Cuatrimestral': 'Cuatrimestral', 'Semestral': 'Semestral', 'Anual': 'Anual',
-  },
+// =============================================================================
+// SINGLE SELECT: opciones permitidas (exactas) configuradas en Airtable
+// Objetivo: NUNCA intentar crear nuevas opciones (evita 422 por permisos).
+// - Si el valor NO coincide con una opción existente, el campo se omite.
+// - Comparación tolerante: ignora mayúsculas, acentos, espacios múltiples y NBSP.
+// =============================================================================
+function _stripAccents(str) {
+  return String(str || '')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '');
+}
+function _normKey(str) {
+  return _stripAccents(str)
+    .replace(/[ \s]+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+function _cleanValue(v) {
+  if (v === null || v === undefined) return '';
+  let s = String(v);
+  // quita comillas envolventes (por si el <option value="\"x\"">)
+  s = s.replace(/^[\s'"“”‘’]+/, '').replace(/[\s'"“”‘’]+$/, '');
+  s = s.replace(/[ \s]+/g, ' ').trim();
+  return s;
+}
+
+const RAW_SINGLE_SELECT_OPTIONS = {
+  'Calibrable': ['SI','NO'],
+  'Servicio': [
+    'Cirugia Adulto',
+    'Consulta Externa',
+    'Urgencias Adulto',
+    'Urgencias Pediatria',
+    'Laboratorio Clinico',
+    'Imagenes Diagnosticas',
+    'Uci Adultos',
+    'Hospitalizacion Pediatria',
+  ],
+  'Clasificacion Biomedica': [
+    'Diagnostico',
+    'Terapeuticos/Tratamiento',
+    'Soporte Vital',
+    'Laboratorio/Analisis',
+    'NO APLICA',
+  ],
+  'Clasificacion de la Tecnologia': [
+    'Equipo Biomedico',
+    'Equipo Industrial',
+    'Equipo de apoyo',
+    'Equipo Electrico',
+  ],
+  'Clasificacion del Riesgo': [
+    'Clase I (Riesgo Bajo)',
+    'Clase IIa (Riesgo Moderado)',
+    'Clase IIb (Riesgo Alto)',
+    'Clase III (Riesgo muy alto)',
+  ],
+  'Tipo de Adquisicion': [
+    'Compra','Donacion','Comodato','Arrendamiento','Leasing'
+  ],
+  'Tipo de MTTO': [
+    'Preventivo','Correctivo','Predictivo','Mixto'
+  ],
+  'Frecuencia de MTTO Preventivo': [
+    'Mensual','Bimestral','Trimestral','Semestral','Anual','No aplica'
+  ],
 };
 
-function cleanSelectString(val) {
-  // Defensive cleaning for values coming from UI / JSON that may be double-quoted or escaped
-  if (val === null || val === undefined) return '';
-  let s = String(val);
-
-  // Convert common escaped quotes
-  s = s.replace(/\\\"/g, '"').replace(/\\\'/g, "'");
-
-  // Replace NBSP and zero-width chars
-  s = s.replace(/\u00A0/g, ' ').replace(/[\u200B-\u200D\uFEFF]/g, '');
-
-  // Trim and collapse whitespace
-  s = s.trim().replace(/\s+/g, ' ');
-
-  // Remove wrapping quotes repeatedly: ""foo"" -> foo, "foo" -> foo, 'foo' -> foo
-  for (let i = 0; i < 5; i++) {
-    const t = s.trim();
-    if ((t.startsWith('"') && t.endsWith('"')) || (t.startsWith("'") && t.endsWith("'"))) {
-      s = t.slice(1, -1).trim();
-      continue;
-    }
-    // Handle double-double quotes like ""foo""
-    if (t.startsWith('""') && t.endsWith('""')) {
-      s = t.slice(2, -2).trim();
-      continue;
-    }
-    break;
-  }
-
-  return s;
-}
-
-function normalizeForMatch(s) {
-  s = cleanSelectString(s).toLowerCase();
-  // Remove diacritics (tildes) for matching only
-  try {
-    s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  } catch (e) {}
-  // Normalize spaces and punctuation variants
-  s = s.replace(/\s+/g, ' ').trim();
-  return s;
-}
+// índice normalizado: fieldNameNorm -> { valueNorm: valueExact }
+const SINGLE_SELECT_INDEX = Object.create(null);
+Object.keys(RAW_SINGLE_SELECT_OPTIONS).forEach((fname) => {
+  const fNorm = _normKey(fname);
+  SINGLE_SELECT_INDEX[fNorm] = Object.create(null);
+  RAW_SINGLE_SELECT_OPTIONS[fname].forEach((opt) => {
+    SINGLE_SELECT_INDEX[fNorm][_normKey(opt)] = opt;
+  });
+});
 
 function toSingleSelect(fieldName, value) {
-  if (value === null || value === undefined) return null;
+  const s = _cleanValue(value);
+  if (!s) return null;
 
-  const raw = cleanSelectString(value);
-  if (!raw) return null;
+  const fNorm = _normKey(fieldName);
+  const idx = SINGLE_SELECT_INDEX[fNorm];
+  if (!idx) return s; // no controlado: se envía tal cual
 
-  const map = SINGLE_SELECT_MAP[fieldName];
-  if (!map) return raw;
+  const vNorm = _normKey(s);
+  const match = idx[vNorm];
+  if (match) return match;
 
-  // Direct hit first (after cleaning)
-  if (map[raw] !== undefined) return map[raw];
-
-  // Normalized match (case + accents + whitespace)
-  const needle = normalizeForMatch(raw);
-  const keys = Object.keys(map);
-
-  for (let i = 0; i < keys.length; i++) {
-    if (normalizeForMatch(keys[i]) === needle) return map[keys[i]];
-  }
-
-  console.warn('[inventario] valor no reconocido para "' + fieldName + '": raw="' + String(value) + '" cleaned="' + raw + '" - campo omitido');
+  // No coincide con ninguna opción permitida -> omitir para evitar 422
   return null;
-}
-
-async function uploadAttachment({ recordId, field, filename, contentType, fileBase64 }) {
-  if (!AIRTABLE_API_KEY || !AIRTABLE_BASE_ID) {
-    throw { status: 500, data: { error: 'Missing AIRTABLE_API_KEY/TOKEN or AIRTABLE_BASE_ID' } };
-  }
-  if (!recordId) throw { status: 400, data: { error: 'Missing recordId for uploadAttachment' } };
-  if (!fileBase64) throw { status: 400, data: { error: 'Missing fileBase64 for uploadAttachment' } };
-
-  const url = `${AIRTABLE_CONTENT_API}/${AIRTABLE_BASE_ID}/${encodeURIComponent(recordId)}/${encodeURIComponent(field)}/uploadAttachment`;
-  const headers = {
-    Authorization: `Bearer ${AIRTABLE_API_KEY}`,
-    'Content-Type': 'application/json'
-  };
-  const data = { filename, contentType: contentType || 'application/pdf', file: fileBase64 };
-  return axios.post(url, data, { headers });
-}
-
-const NUMBER_FIELDS = new Set(['Valor en Pesos', 'Costo de Mantenimiento', 'Vida Util']);
-const BOOL_FIELDS   = new Set([]); // Calibrable es Single Select, NO checkbox
-const DATE_FIELDS   = new Set([
-  'Fecha de Compra', 'Fecha de Instalacion', 'Inicio de Garantia',
-  'Termino de Garantia', 'Fecha Programada de Mantenimiento',
-  'Fecha Fabrica', 'Fecha de Recepcion'
-]);
-
-function isUrl(s) {
-  return typeof s === 'string' && /^https?:\/\/\S+/i.test(s.trim());
-}
-
-function looksLikeISODate(s) {
-  return typeof s === 'string' && /^\d{4}-\d{2}-\d{2}/.test(s.trim());
-}
-
-function toNumber(v) {
-  if (typeof v === 'number') return v;
-  if (typeof v !== 'string') return v;
-  const s = v.trim();
-  if (!s) return v;
-  const cleaned = s.replace(/[^\d.,-]/g, '');
-  if (!cleaned) return v;
-  let norm = cleaned;
-  const hasDot = cleaned.includes('.');
-  const hasComma = cleaned.includes(',');
-  if (hasDot && hasComma) {
-    const lastDot = cleaned.lastIndexOf('.');
-    const lastComma = cleaned.lastIndexOf(',');
-    norm = lastComma > lastDot
-      ? cleaned.replace(/\./g,'').replace(',', '.')
-      : cleaned.replace(/,/g,'');
-  } else if (hasComma && !hasDot) {
-    const parts = cleaned.split(',');
-    norm = parts.length > 2 ? parts.join('') : parts[0] + '.' + parts[1];
-  } else {
-    norm = cleaned.replace(/,/g,'');
-  }
-  const n = Number(norm);
-  return Number.isFinite(n) ? n : v;
-}
-
-function toBoolean(v) {
-  if (typeof v === 'boolean') return v;
-  if (typeof v === 'number') return v !== 0;
-  if (typeof v !== 'string') return v;
-  const s = v.trim().toLowerCase();
-  if (['true','1','si','sí','yes','y','on','x'].includes(s)) return true;
-  if (['false','0','no','off','n'].includes(s)) return false;
-  return v;
 }
 
 function normalizeValue(fieldName, value) {
