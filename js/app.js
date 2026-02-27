@@ -93,6 +93,28 @@ function openModal(modalId) {
   // Soporta ambos estilos de modal (display y class)
   el.style.display = 'block';
   el.classList.add('active');
+
+  // Inventario: cargar el próximo ITEM (Airtable Autonumber) solo para visualizar
+  if (modalId === 'newInventario') {
+    loadNextInventarioItem().catch(() => {});
+  }
+}
+
+// Carga el próximo ITEM (max + 1) desde Airtable para mostrarlo en el formulario.
+async function loadNextInventarioItem() {
+  const itemEl = document.getElementById('invItem');
+  if (!itemEl) return;
+  itemEl.value = '';
+  itemEl.placeholder = 'Cargando...';
+
+  const res = await fetch('/.netlify/functions/inventario?nextItem=1', { method: 'GET' });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data || !data.ok) {
+    itemEl.placeholder = '—';
+    return;
+  }
+  itemEl.value = String(data.nextItemDisplay || data.nextItem || '').trim() || '';
+  if (!itemEl.value) itemEl.placeholder = '—';
 }
 
 function closeModal(modalId) {
@@ -317,10 +339,6 @@ async function submitInventarioForm(e) {
     }
   }
 
-  if (!rawFields['ITEM'] && !rawFields['Item']) {
-    alert('El campo ITEM es obligatorio');
-    return;
-  }
   if (!rawFields['EQUIPO'] && !rawFields['Equipo']) {
     alert('El campo EQUIPO es obligatorio');
     return;
@@ -561,62 +579,6 @@ function removeCalCertRow(btn) {
 }
 
 // ============================================================================
-// LISTAS DESPLEGABLES (Inventario) - evita errores 422 en Airtable
-// ============================================================================
-
-function fillSelectOptions(selectEl, options) {
-  if (!selectEl) return;
-  // Si ya tiene opciones (más de 1 contando "Seleccione..."), no duplicar
-  if (selectEl.options && selectEl.options.length > 1) return;
-  options.forEach(opt => {
-    const o = document.createElement('option');
-    o.value = opt;
-    o.textContent = opt;
-    selectEl.appendChild(o);
-  });
-}
-
-function initInventarioDropdowns() {
-  const servicio = document.getElementById('invServicio');
-  const clasBio = document.getElementById('invClasBio');
-  const clasTec = document.getElementById('invClasTec');
-  const clasRiesgo = document.getElementById('invClasRiesgo');
-
-  // Opciones EXACTAS como están en Airtable (según capturas)
-  fillSelectOptions(servicio, [
-    'Cirugia Adulto',
-    'Consulta Externa',
-    'Urgencias Adulto',
-    'Urgencias Pediatria',
-    'Laboratorio Clinico',
-    'Imagenes Diagnosticas',
-    'Uci Adultos'
-  ]);
-
-  fillSelectOptions(clasBio, [
-    'Diagnostico',
-    'Terapéuticos/Tratamiento',
-    'Soporte Vital',
-    'Laboratorio/Análisis',
-    'NO APLICA'
-  ]);
-
-  fillSelectOptions(clasTec, [
-    'Equipo Biomedico',
-    'Equipo Industrial',
-    'Equipo de apoyo',
-    'Equipo Electrico'
-  ]);
-
-  fillSelectOptions(clasRiesgo, [
-    'Clase I (Riesgo Bajo)',
-    'Clase IIa (Riesgo Moderado)',
-    'Clase IIb (Riesgo Alto)',
-    'Clase III (Riesgo muy alto)'
-  ]);
-}
-
-// ============================================================================
 // INICIALIZACIÓN
 // ============================================================================
 
@@ -631,9 +593,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // Formulario inventario (modal newInventario con campos UPPERCASE)
   const inventarioForm = document.getElementById('inventarioForm');
   if (inventarioForm) {
-    // Inicializar listas desplegables (servicio / clasificaciones)
-    initInventarioDropdowns();
-
     // Quitar "required" de inputs dentro de <details> para evitar error "not focusable"
     // La validación se hace en JS (submitInventarioForm)
     inventarioForm.querySelectorAll('details input[required], details select[required], details textarea[required]').forEach(el => {
