@@ -87,42 +87,34 @@ function loadModuleData(moduleName) {
 // MODALES
 // ============================================================================
 
-
-// ============================================================================
-// INVENTARIO - ITEM autogenerado (vista previa)
-// Airtable genera el autonúmero; aquí solo mostramos el próximo valor estimado.
-// ============================================================================
-async function setNextItemPreview() {
-  const input = document.getElementById('invItem');
-  if (!input) return;
-  try {
-    input.value = 'Cargando...';
-    const res = await fetch('/.netlify/functions/inventario?nextItem=1', { method: 'GET' });
-    const data = await res.json().catch(() => ({}));
-    if (res.ok && data && (data.nextItem !== undefined)) {
-      // Formato 00001 (5 dígitos)
-      const n = Number(data.nextItem);
-      input.value = Number.isFinite(n) ? String(n).padStart(5, '0') : '';
-    } else {
-      input.value = '';
-      console.warn('No se pudo obtener nextItem:', data);
-    }
-  } catch (e) {
-    console.warn('Error obteniendo nextItem:', e);
-    input.value = '';
-  }
-}
-
 function openModal(modalId) {
   const el = document.getElementById(modalId);
   if (!el) return;
   // Soporta ambos estilos de modal (display y class)
   el.style.display = 'block';
   el.classList.add('active');
+
+  // Inventario: cargar el próximo ITEM (Airtable Autonumber) solo para visualizar
   if (modalId === 'newInventario') {
-    // Mostrar Item autogenerado
-    setNextItemPreview();
+    loadNextInventarioItem().catch(() => {});
   }
+}
+
+// Carga el próximo ITEM (max + 1) desde Airtable para mostrarlo en el formulario.
+async function loadNextInventarioItem() {
+  const itemEl = document.getElementById('invItem');
+  if (!itemEl) return;
+  itemEl.value = '';
+  itemEl.placeholder = 'Cargando...';
+
+  const res = await fetch('/.netlify/functions/inventario?nextItem=1', { method: 'GET' });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data || !data.ok) {
+    itemEl.placeholder = '—';
+    return;
+  }
+  itemEl.value = String(data.nextItemDisplay || data.nextItem || '').trim() || '';
+  if (!itemEl.value) itemEl.placeholder = '—';
 }
 
 function closeModal(modalId) {
@@ -347,10 +339,6 @@ async function submitInventarioForm(e) {
     }
   }
 
-  if (!rawFields['ITEM'] && !rawFields['Item']) {
-    alert('El campo ITEM es obligatorio');
-    return;
-  }
   if (!rawFields['EQUIPO'] && !rawFields['Equipo']) {
     alert('El campo EQUIPO es obligatorio');
     return;
@@ -605,8 +593,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // Formulario inventario (modal newInventario con campos UPPERCASE)
   const inventarioForm = document.getElementById('inventarioForm');
   if (inventarioForm) {
-    // Previsualizar Item autogenerado
-    setNextItemPreview();
     // Quitar "required" de inputs dentro de <details> para evitar error "not focusable"
     // La validación se hace en JS (submitInventarioForm)
     inventarioForm.querySelectorAll('details input[required], details select[required], details textarea[required]').forEach(el => {

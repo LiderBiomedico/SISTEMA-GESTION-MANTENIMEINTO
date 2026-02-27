@@ -1222,8 +1222,10 @@
                     <div class="section-body">
                         <div class="form-grid">
                             <div class="form-group">
-                                <label>ITEM (Autogenerado)</label>
-                                <input id="invItem" name="ITEM" type="text" placeholder="Se genera automáticamente" disabled readonly autocomplete="off" inputmode="none">
+                                <label>ITEM</label>
+                                <!-- Airtable lo genera (Autonumber). Se muestra aquí solo como referencia. -->
+                                <input id="invItem" name="ITEM" type="text" placeholder="Cargando..." autocomplete="off" disabled>
+                                <small class="muted" style="display:block;margin-top:6px;">Autogenerado por Airtable (se muestra el próximo consecutivo).</small>
                             </div>
                             <div class="form-group">
                                 <label>EQUIPO</label>

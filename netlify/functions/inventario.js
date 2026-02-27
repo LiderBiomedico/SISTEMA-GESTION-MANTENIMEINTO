@@ -290,43 +290,6 @@ exports.handler = async (event) => {
     const qs = event.queryStringParameters || {};
     const debug = !!qs.debug;
 
-    
-    // Obtener el próximo ITEM (vista previa). Airtable genera el autonúmero real.
-    // Aquí calculamos: (máximo Item existente) + 1. Intentamos con varios nombres de campo.
-    if (event.httpMethod === 'GET' && qs.nextItem) {
-      const candidates = ['Item', 'Ítem', 'ITEM', 'ITEM '];
-      let lastItem = null;
-      let lastTriedError = null;
-
-      for (const fieldName of candidates) {
-        const url = `${AIRTABLE_API_URL}?maxRecords=1&sort%5B0%5D%5Bfield%5D=${encodeURIComponent(fieldName)}&sort%5B0%5D%5Bdirection%5D=desc`;
-        const r = await fetch(url, { headers: airtableHeaders() });
-        const j = await r.json().catch(() => ({}));
-
-        if (r.ok) {
-          const rec = (j.records && j.records[0]) ? j.records[0] : null;
-          const fields = rec && rec.fields ? rec.fields : {};
-          lastItem = fields[fieldName] ?? fields.Item ?? fields['Ítem'] ?? fields.ITEM ?? null;
-          // Si el campo existe pero aún no hay registros con Item, lastItem será null
-          break;
-        } else {
-          lastTriedError = j.error || j;
-          // Si el error es por campo desconocido, probamos el siguiente
-          const msg = (lastTriedError && (lastTriedError.message || lastTriedError.error || '')) + '';
-          if (msg.toLowerCase().includes('unknown field') || msg.toLowerCase().includes('field') || msg.toLowerCase().includes('no such')) {
-            continue;
-          }
-          // Otros errores (auth, permisos, etc.) -> abortar
-          return json(r.status || 500, { ok: false, error: lastTriedError });
-        }
-      }
-
-      const n = Number(lastItem);
-      const nextItem = Number.isFinite(n) ? (n + 1) : 1;
-      return json(200, { ok: true, lastItem: Number.isFinite(n) ? n : null, nextItem, note: 'preview' });
-    }
-
-
     // Debug mode
     if (debug && event.httpMethod === 'GET') {
       return json(200, { 
@@ -343,6 +306,23 @@ exports.handler = async (event) => {
     // GET - Listar registros
     // =========================================================================
     if (event.httpMethod === 'GET') {
+      // nextItem=1 -> devuelve el próximo consecutivo del campo Autonumber "Item"
+      if (qs.nextItem && String(qs.nextItem) === '1') {
+        const params = new URLSearchParams();
+        params.set('pageSize', '1');
+        // Ordenar por el campo "Item" descendente para obtener el último
+        params.set('sort[0][field]', 'Item');
+        params.set('sort[0][direction]', 'desc');
+        const url = `${baseUrl}?${params.toString()}`;
+        const resp = await airtableRequest('GET', url);
+        const rec = (resp.data.records || [])[0];
+        const last = rec && rec.fields ? (rec.fields['Item'] ?? rec.fields['ITEM'] ?? null) : null;
+        const lastNum = Number(last || 0);
+        const nextNum = Number.isFinite(lastNum) ? (lastNum + 1) : 1;
+        const nextDisplay = String(nextNum).padStart(5, '0');
+        return json(200, { ok: true, nextItem: nextNum, nextItemDisplay: nextDisplay });
+      }
+
       const pageSize = Math.min(parseInt(qs.pageSize || '50', 10) || 50, 100);
       let offset = qs.offset ? String(qs.offset) : null;
 
