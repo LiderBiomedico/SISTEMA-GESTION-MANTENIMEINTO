@@ -429,7 +429,14 @@
             max-width: 500px;
             width: 90%;
             box-shadow: var(--shadow-lg);
+            max-height: 90vh;
+            overflow-y: scroll;
+            scrollbar-width: thin;
+            scrollbar-color: #2563eb #e8edf5;
         }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #e8edf5; border-radius: 8px; }
+        .modal-content::-webkit-scrollbar-thumb { background: #2563eb; border-radius: 8px; }
 
         .modal-header {
             font-size: 20px;
@@ -1369,28 +1376,8 @@
                     <div class="section-body">
                         <div class="form-grid">
                             <div class="form-group">
-                                <label>TIPO DE MTTO</label>
-                                <input name="TIPO DE MTTO" type="text" placeholder="Ej: Preventivo / Correctivo / Calibración">
-                            </div>
-                            <div class="form-group">
-                                <label>COSTO DE MANTENIMIENTO</label>
-                                <input name="COSTO DE MANTENIMIENTO" type="number" step="1" placeholder="Ej: 450000">
-                            </div>
-                            <div class="form-group">
-                                <label>CALIBRABLE</label>
-                                <select name="CALIBRABLE" id="calibrableMainSelect" onchange="syncCalibrableSelects('main')">
-                                    <option value="">(Seleccionar)</option>
-                                    <option value="SI">SI</option>
-                                    <option value="NO">NO</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>N. CERTIFICADO</label>
-                                <input name="N. CERTIFICADO" type="text" placeholder="Ej: CAL-2025-009">
-                            </div>
-                            <div class="form-group">
                                 <label>¿ES CALIBRABLE?</label>
-                                <select name="CALIBRABLE_IDENT" id="calibrableIdentSelect" onchange="toggleCalCertSection()">
+                                <select name="CALIBRABLE_IDENT" id="calibrableIdentSelect" onchange="toggleCalCertSection()" style="max-width:320px;">
                                     <option value="">(Seleccionar)</option>
                                     <option value="SI">SI</option>
                                     <option value="NO">NO</option>
@@ -1410,9 +1397,9 @@
                                 </div>
                                 <div class="text-muted" style="margin-top:6px;">Máximo 5&nbsp;MB por PDF. El año se guardará en el nombre del archivo.</div>
                             </div>
-                            <div class="form-group">
+                            <div class="form-group" style="grid-column:1/-1;">
                                 <label>FRECUENCIA DE MTTO PREVENTIVO</label>
-                                <select name="FRECUENCIA DE MTTO PREVENTIVO" id="invFreqSelect">
+                                <select name="FRECUENCIA DE MTTO PREVENTIVO" id="invFreqSelect" onchange="onFreqChange()" style="max-width:320px;">
                                     <option value="">(Seleccionar)</option>
                                     <option value="Mensual">Mensual</option>
                                     <option value="Bimestral">Bimestral</option>
@@ -1422,27 +1409,24 @@
                                     <option value="Anual">Anual</option>
                                 </select>
                             </div>
-                            <div class="form-group">
-                                <label>FECHA PROGRAMADA DE MANTENIMINETO</label>
-                                <input name="FECHA PROGRAMADA DE MANTENIMINETO" id="invStartDate" type="date">
-                                <div class="text-muted mt-3" style="margin-top:8px;">Usada como fecha inicial para generar programación anual (opcional).</div>
-                            </div>
-                            <div class="form-group">
-                                <label>FRECUENCIA DE MANTENIMIENTO</label>
-                                <input name="FRECUENCIA DE MANTENIMIENTO" type="text" placeholder="Ej: Cada 3 meses">
-                            </div>
-                            <div class="form-group">
+                            <div class="form-group" id="scheduleBuilderGroup" style="grid-column:1/-1; display:none;">
                                 <label>PROGRAMACION DE MANTENIMIENTO ANUAL</label>
-                                <textarea name="PROGRAMACION DE MANTENIMIENTO ANUAL" id="invScheduleAnnual" rows="4" placeholder="Ej: 2026-03-01, 2026-06-01, 2026-09-01, 2026-12-01"></textarea>
-                                <div class="btn-row" style="margin-top:10px;">
-                                    <button type="button" class="btn btn-small btn-secondary" onclick="generateAnnualSchedule()">⚙️ Generar programación</button>
-                                    <button type="button" class="btn btn-small btn-secondary" onclick="clearAnnualSchedule()">🧹 Limpiar</button>
+                                <div id="scheduleMonthGrid" style="display:flex; flex-direction:column; gap:8px; margin-bottom:10px;"></div>
+                                <textarea name="PROGRAMACION DE MANTENIMIENTO ANUAL" id="invScheduleAnnual" rows="2"
+                                    style="background:#f8f8f8; font-size:0.82em; resize:vertical;" readonly
+                                    placeholder="Selecciona mes y semana para cada mantenimiento..."></textarea>
+                                <div style="display:flex; gap:8px; margin-top:6px;">
+                                    <button type="button" class="btn btn-small btn-secondary" onclick="clearMttoSchedule()">🧹 Limpiar</button>
                                 </div>
+                                <div class="text-muted" style="margin-top:4px; font-size:0.82em;">Escoge el mes y la semana (S1–S4) para cada periodo.</div>
                             </div>
                             <div class="form-group">
-                                <label>MANUAL</label>
-                                <input name="MANUAL" type="url" placeholder="Pega un link público (Drive/OneDrive) o URL del manual">
-                                <div class="text-muted mt-3" style="margin-top:8px;">Si deseas adjuntar en Airtable, pega un enlace público (Airtable lo guarda como adjunto por URL).</div>
+                                <label>MANUAL DEL EQUIPO (PDF)</label>
+                                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                                    <input id="manualFileInput" name="MANUAL_FILE" type="file" accept="application/pdf" style="flex:1; min-width:200px;">
+                                    <button type="button" class="btn btn-secondary btn-small" onclick="clearManualFile()">✕ Quitar</button>
+                                </div>
+                                <div class="text-muted" style="margin-top:6px;">Máximo 5&nbsp;MB. Se adjuntará como PDF en Airtable.</div>
                             </div>
                         </div>
                     </div>
