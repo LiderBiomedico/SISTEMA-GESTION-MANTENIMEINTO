@@ -370,6 +370,37 @@ async function airtableRequest(method, url, data) {
   return axios({ method, url, headers, data });
 }
 
+// =============================================================================
+// Airtable Attachment Upload (Content API)
+// Endpoint: POST https://content.airtable.com/v0/{baseId}/{recordId}/{attachmentFieldIdOrName}/uploadAttachment
+// Body: { contentType, file: <base64>, filename }
+// Nota: límite típico 5 MB por archivo.
+// =============================================================================
+async function uploadAttachment({ recordId, field, filename, contentType, fileBase64 }) {
+  if (!fileBase64) return null;
+  const cleanBase64 = String(fileBase64).replace(/^data:.*;base64,/, '').trim();
+  const url = `${AIRTABLE_CONTENT_API}/${AIRTABLE_BASE_ID}/${recordId}/${encodeURIComponent(field)}/uploadAttachment`;
+
+  const payload = {
+    contentType: contentType || 'application/octet-stream',
+    file: cleanBase64,
+    filename: filename || 'archivo',
+  };
+
+  // Content API también usa el mismo token Bearer
+  const res = await axios.post(url, payload, {
+    headers: {
+      'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    // Airtable puede tardar un poco en adjuntos
+    timeout: 60000,
+    maxBodyLength: 10 * 1024 * 1024,
+  });
+
+  return res.data;
+}
+
 exports.handler = async (event) => {
   try {
     if (event.httpMethod === 'OPTIONS') return json(204, { ok: true });
