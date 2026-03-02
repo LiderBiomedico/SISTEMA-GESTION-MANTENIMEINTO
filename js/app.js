@@ -296,6 +296,25 @@ async function submitInventarioForm(e) {
 
   // Certificados de calibración (PDF) - se envían aparte, no dentro de fields
   const certificates = [];
+
+  // PDF Registro INVIMA
+  let invimaFile = null;
+  const _invimaInput = form.querySelector('#invimaFileInput');
+  if (_invimaInput && _invimaInput.files && _invimaInput.files[0]) {
+    const _if = _invimaInput.files[0];
+    if (_if.size > 5 * 1024 * 1024) { alert('El PDF del Registro INVIMA supera 5MB.'); return; }
+    invimaFile = _if;
+  }
+
+  // PDF Registro de Importación
+  let importacionFile = null;
+  const _importInput = form.querySelector('#importacionFileInput');
+  if (_importInput && _importInput.files && _importInput.files[0]) {
+    const _impf = _importInput.files[0];
+    if (_impf.size > 5 * 1024 * 1024) { alert('El PDF del Registro de Importación supera 5MB.'); return; }
+    importacionFile = _impf;
+  }
+
   const _calId = form.querySelector('#calibrableIdentSelect');
   const _calMn = form.querySelector('#calibrableMainSelect');
   const esCalibrableSI = (_calId && _calId.value === 'SI') || (_calMn && _calMn.value === 'SI');
@@ -424,24 +443,19 @@ async function submitInventarioForm(e) {
       const b64 = await fileToBase64(c.file);
       certPayload.push({ year: c.year, filename: c.file.name, contentType: c.file.type || 'application/pdf', base64: b64 });
     }
-    let manualPayload = null;
-    if (typeof manualFile !== 'undefined' && manualFile) {
-      const mb64 = await fileToBase64(manualFile);
-      manualPayload = { filename: manualFile.name, contentType: manualFile.type || 'application/pdf', base64: mb64 };
-    }
     let invimaPayload = null;
-    if (typeof invimaFile !== 'undefined' && invimaFile) {
+    if (invimaFile) {
       const ib64 = await fileToBase64(invimaFile);
       console.log('📄 invima:', invimaFile.name);
       invimaPayload = { filename: invimaFile.name, contentType: invimaFile.type || 'application/pdf', base64: ib64 };
     }
     let importacionPayload = null;
-    if (typeof importacionFile !== 'undefined' && importacionFile) {
+    if (importacionFile) {
       const imp64 = await fileToBase64(importacionFile);
       console.log('📦 importacion:', importacionFile.name);
       importacionPayload = { filename: importacionFile.name, contentType: importacionFile.type || 'application/pdf', base64: imp64 };
     }
-    const resp = await axios.post(url, { fields, certificates: certPayload, manual: manualPayload, invima: invimaPayload, importacion: importacionPayload }, {
+    const resp = await axios.post(url, { fields, certificates: certPayload, invima: invimaPayload, importacion: importacionPayload }, {
       headers: { ...getAuthHeader(), 'Content-Type': 'application/json' }
     });
 

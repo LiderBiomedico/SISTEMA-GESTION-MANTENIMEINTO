@@ -14,6 +14,8 @@ const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID || '';
 const TABLE_NAME = process.env.AIRTABLE_INVENTARIO_TABLE || 'Inventario';
 const AIRTABLE_CAL_CERT_FIELD = process.env.AIRTABLE_CAL_CERT_FIELD || 'Certificados de Calibracion';
 const AIRTABLE_MANUAL_FIELD = process.env.AIRTABLE_MANUAL_FIELD || 'Manual';
+const AIRTABLE_INVIMA_FIELD = process.env.AIRTABLE_INVIMA_FIELD || 'Registro Invima pdf';
+const AIRTABLE_IMPORTACION_FIELD = process.env.AIRTABLE_IMPORTACION_FIELD || 'Registro de importacion';
 
 const AIRTABLE_API = 'https://api.airtable.com/v0';
 const AIRTABLE_META_API = 'https://api.airtable.com/v0/meta/bases';
@@ -498,6 +500,18 @@ exports.handler = async (event) => {
       if(manualData&&manualData.base64){
         manualResult=await uploadFileToField(recordId,AIRTABLE_MANUAL_FIELD,manualData);
         if(!manualResult.ok) console.error('[POST] error manual:',manualResult.error);
+      }
+      const invimaData=body.invima;
+      let invimaResult=null;
+      if(invimaData&&invimaData.base64){
+        invimaResult=await uploadFileToField(recordId,AIRTABLE_INVIMA_FIELD,invimaData);
+        if(!invimaResult.ok) console.error('[POST] error invima:',invimaResult.error);
+      }
+      const importacionData=body.importacion;
+      let importacionResult=null;
+      if(importacionData&&importacionData.base64){
+        importacionResult=await uploadFileToField(recordId,AIRTABLE_IMPORTACION_FIELD,importacionData);
+        if(!importacionResult.ok) console.error('[POST] error importacion:',importacionResult.error);
       }
       const uploaded=certRes.uploaded;
       const uploadErrors=certRes.errors;
