@@ -435,14 +435,26 @@ async function submitInventarioForm(e) {
       headers: { ...getAuthHeader(), 'Content-Type': 'application/json' }
     });
 
-    if (resp.data && (resp.data.ok || resp.data.record)) {
-      // Validación extra: si Airtable creó el registro pero sin campos visibles, avisar (suele pasar por filtros de campos)
+    if (resp.data && (resp.data.ok || resp.data.record || resp.data.data)) {
+      // Compatibilidad: el backend puede devolver {record} o {data}
+      const record = resp.data.record || resp.data.data || null;
+
+      // Si el backend tuvo que remover selects por valores no válidos, avisar exactamente cuáles
+      const removedSelects = (resp.data?.record && resp.data.record.__removedSelects) ||
+                            (resp.data?.data && resp.data.data.__removedSelects) ||
+                            resp.data?.__removedSelects;
+      if (Array.isArray(removedSelects) && removedSelects.length) {
+        alert('⚠️ El registro se guardó, pero Airtable rechazó estas listas desplegables: ' + removedSelects.join(', ') +
+              '.\nRevisa que el texto enviado coincida EXACTO con las opciones del campo (incluyendo tildes y espacios).');
+      }
+
+      // Validación real: si Airtable devolvió un record pero sin fields, entonces sí es un problema.
       const sentCount = Object.keys(fields || {}).length;
-      const recFields = resp.data.record && resp.data.record.fields ? resp.data.record.fields : {};
+      const recFields = (record && record.fields) ? record.fields : {};
       const recCount = Object.keys(recFields || {}).length;
       if (sentCount > 0 && recCount === 0) {
-        console.warn('⚠️ Registro creado pero sin campos. Revisa nombres de columnas en Airtable.', { sent: fields, record: resp.data.record });
-        alert('⚠️ Se creó el registro pero quedó vacío en Airtable. Esto suele ocurrir por nombres de columnas diferentes. Te recomiendo revisar el nombre exacto de las columnas en Airtable.');
+        console.warn('⚠️ Registro creado pero sin fields devueltos por Airtable.', { sent: fields, record });
+        alert('⚠️ Se creó el registro pero Airtable no devolvió campos. Revisa nombres exactos de columnas y permisos del token.');
       }
       closeModal('newInventario');
       form.reset();

@@ -348,7 +348,8 @@ exports.handler = async (event) => {
         uploaded.push({ ok: up.ok, status: up.status, filename: file.filename || file.name, response: up.data });
       }
 
-      return json(200, { ok: true, data: created.data, uploaded, removedFields, mappedSent: fields });
+      // Compatibilidad: algunos frontends esperan "record".
+      return json(200, { ok: true, record: created.data, data: created.data, uploaded, removedFields, mappedSent: fields });
     }
 
     // ===========================
@@ -364,7 +365,7 @@ exports.handler = async (event) => {
       const r = await updateRecord(id, fields);
       if (!r.ok) return json(r.status, { ok: false, error: r.data?.error || r.data, details: r.data, removedFields, mappedSent: fields });
 
-      return json(200, { ok: true, data: r.data, removedFields, mappedSent: fields });
+      return json(200, { ok: true, record: r.data, data: r.data, removedFields, mappedSent: fields });
     }
 
     // ===========================
