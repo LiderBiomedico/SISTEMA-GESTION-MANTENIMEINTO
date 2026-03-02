@@ -296,7 +296,6 @@ async function submitInventarioForm(e) {
 
   // Certificados de calibración (PDF) - se envían aparte, no dentro de fields
   const certificates = [];
-  // Manual del equipo (PDF)
   let manualFile = null;
   const _manualInput = form.querySelector('#manualFileInput');
   if (_manualInput && _manualInput.files && _manualInput.files[0]) {
@@ -467,7 +466,7 @@ async function submitInventarioForm(e) {
       closeModal('newInventario');
       form.reset();
 
-      // Reset certificados, manual y estado calibrable
+      // Reset certificados, manual y programación
       try {
         var _list = document.getElementById('calCertList');
         if (_list) { _list.innerHTML = ''; addCalCertRow(); }
@@ -479,11 +478,11 @@ async function submitInventarioForm(e) {
         if (_css) _css.style.display = 'none';
         var _mi = document.getElementById('manualFileInput');
         if (_mi) _mi.value = '';
-        clearWeekSchedule();
+        if (typeof clearMttoSchedule === 'function') clearMttoSchedule();
       } catch (e) {}
 
-      if (resp.data.uploaded && resp.data.uploaded.length > 0) console.log('✅ PDFs subidos:', resp.data.uploaded);
-      if (resp.data.uploadErrors && resp.data.uploadErrors.length > 0) {
+      if (resp.data.uploaded && resp.data.uploaded.length) console.log('✅ PDFs subidos:', resp.data.uploaded);
+      if (resp.data.uploadErrors && resp.data.uploadErrors.length) {
         console.error('❌ Error PDFs:', resp.data.uploadErrors);
         alert('⚠️ Registro guardado pero ERROR al subir PDF(s):\n' + JSON.stringify(resp.data.uploadErrors[0]));
       }
@@ -767,153 +766,99 @@ window.toggleCalCertSection = toggleCalCertSection;
 window.syncCalibrableSelects = syncCalibrableSelects;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SELECTOR DE SEMANAS PARA PROGRAMACIÓN DE MANTENIMIENTO
+// PROGRAMACIÓN DE MANTENIMIENTO: mes × semana
 // ─────────────────────────────────────────────────────────────────────────────
-var _selectedWeeks = new Set();
-
-// Devuelve el lunes de la semana ISO que contiene la fecha dada
-function isoWeekStart(date) {
-  var d = new Date(date);
-  var day = d.getDay() || 7;
-  d.setDate(d.getDate() - day + 1);
-  return d;
-}
-
-// Retorna número de semana ISO y año ISO para una fecha
-function isoWeekNumber(date) {
-  var d = isoWeekStart(date);
-  var jan4 = new Date(d.getFullYear(), 0, 4);
-  var startOfYear = isoWeekStart(jan4);
-  var week = Math.round((d - startOfYear) / (7 * 86400000)) + 1;
-  var year = d.getFullYear();
-  // Ajuste de año para semanas que caen en año siguiente/anterior
-  if (week < 1) { year--; week = isoWeekNumber(new Date(year, 11, 31)).week; }
-  else if (week > 52) {
-    var nextYearStart = isoWeekStart(new Date(year + 1, 0, 4));
-    if (d >= nextYearStart) { year++; week = 1; }
-  }
-  return { year: year, week: week };
-}
-
-// Genera las 52 semanas del año actual con sus fechas de lunes
-function buildWeekList() {
-  var weeks = [];
-  var year = new Date().getFullYear();
-  var jan4 = new Date(year, 0, 4);
-  var start = isoWeekStart(jan4);
-  for (var i = 0; i < 52; i++) {
-    var mon = new Date(start.getTime() + i * 7 * 86400000);
-    var sun = new Date(mon.getTime() + 6 * 86400000);
-    var w = isoWeekNumber(mon);
-    weeks.push({
-      key: w.year + '-W' + String(w.week).padStart(2, '0'),
-      label: 'S' + String(w.week).padStart(2, '0'),
-      tooltip: mon.toLocaleDateString('es-CO', {day:'2-digit',month:'short'}) + ' – ' + sun.toLocaleDateString('es-CO', {day:'2-digit',month:'short'}),
-      date: mon.toISOString().slice(0, 10),
-      weekNum: w.week
-    });
-  }
-  return weeks;
-}
-
-function renderWeekPicker() {
-  var container = document.getElementById('scheduleWeekPicker');
-  if (!container) return;
-  var weeks = buildWeekList();
-  container.innerHTML = '';
-  // Etiqueta de meses
-  var months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-  var lastMonth = -1;
-  weeks.forEach(function(w) {
-    var mon = new Date(w.date);
-    var m = mon.getMonth();
-    if (m !== lastMonth) {
-      var sep = document.createElement('div');
-      sep.style.cssText = 'width:100%; font-size:0.7em; font-weight:600; color:#888; margin-top:4px; text-transform:uppercase; letter-spacing:0.05em;';
-      sep.textContent = months[m];
-      container.appendChild(sep);
-      lastMonth = m;
-    }
-    var btn = document.createElement('button');
-    btn.type = 'button';
-    btn.textContent = w.label;
-    btn.title = w.tooltip;
-    btn.dataset.key = w.key;
-    btn.dataset.date = w.date;
-    btn.style.cssText = 'padding:4px 8px; border-radius:4px; border:1px solid #ccc; font-size:0.78em; cursor:pointer; background:#fff; transition:all 0.15s; min-width:36px;';
-    if (_selectedWeeks.has(w.key)) {
-      btn.style.background = '#2563eb';
-      btn.style.color = '#fff';
-      btn.style.borderColor = '#2563eb';
-    }
-    btn.onclick = function() { toggleWeek(this); };
-    container.appendChild(btn);
-  });
-}
-
-function toggleWeek(btn) {
-  var key = btn.dataset.key;
-  if (_selectedWeeks.has(key)) {
-    _selectedWeeks.delete(key);
-    btn.style.background = '#fff';
-    btn.style.color = '';
-    btn.style.borderColor = '#ccc';
-  } else {
-    _selectedWeeks.add(key);
-    btn.style.background = '#2563eb';
-    btn.style.color = '#fff';
-    btn.style.borderColor = '#2563eb';
-  }
-  updateScheduleTextarea();
-}
-
-function updateScheduleTextarea() {
-  var ta = document.getElementById('invScheduleAnnual');
-  if (!ta) return;
-  // Ordenar semanas y mostrar como "YYYY-Wxx (lunes YYYY-MM-DD)"
-  var sorted = Array.from(_selectedWeeks).sort();
-  var weeks = buildWeekList();
-  var weekMap = {};
-  weeks.forEach(function(w){ weekMap[w.key] = w.date; });
-  var lines = sorted.map(function(k){ return k + ' (' + (weekMap[k] || '') + ')'; });
-  ta.value = lines.join(', ');
-}
+var MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+var FREQ_MESES = { Mensual:[0,1,2,3,4,5,6,7,8,9,10,11], Bimestral:[0,2,4,6,8,10], Trimestral:[0,3,6,9], Cuatrimestral:[0,4,8], Semestral:[0,6], Anual:[0] };
+var _mttoSelections = {}; // { "0":"S2", "3":"S1", ... }
 
 function onFreqChange() {
   var sel = document.getElementById('invFreqSelect');
   var grp = document.getElementById('scheduleBuilderGroup');
   if (!sel || !grp) return;
-  if (sel.value) {
-    grp.style.display = '';
-    _selectedWeeks = new Set();
-    renderWeekPicker();
-    updateScheduleTextarea();
-  } else {
-    grp.style.display = 'none';
-  }
+  if (!sel.value) { grp.style.display = 'none'; return; }
+  _mttoSelections = {};
+  grp.style.display = '';
+  buildMonthGrid(sel.value);
+  updateMttoTextarea();
 }
 
-function generateWeekSchedule() {
-  var sel = document.getElementById('invFreqSelect');
-  if (!sel || !sel.value) { alert('Selecciona primero la Frecuencia de MTTO Preventivo.'); return; }
-  var freq = sel.value;
-  var stepMap = { 'Semanal':1,'Quincenal':2,'Mensual':4,'Bimestral':8,'Trimestral':13,'Cuatrimestral':17,'Semestral':26,'Anual':52 };
-  var step = stepMap[freq] || 4;
-  var weeks = buildWeekList();
-  _selectedWeeks = new Set();
-  for (var i = 0; i < weeks.length; i += step) {
-    _selectedWeeks.add(weeks[i].key);
-  }
-  renderWeekPicker();
-  updateScheduleTextarea();
+function buildMonthGrid(freq) {
+  var container = document.getElementById('scheduleMonthGrid');
+  if (!container) return;
+  var months = FREQ_MESES[freq] || [0];
+  container.innerHTML = '';
+  months.forEach(function(mi) {
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex; align-items:center; gap:10px; padding:6px 10px; background:#f4f7ff; border-radius:8px; border:1px solid #dbe4ff;';
+
+    var lbl = document.createElement('span');
+    lbl.textContent = MESES[mi];
+    lbl.style.cssText = 'min-width:110px; font-weight:600; font-size:0.88em; color:#334;';
+    row.appendChild(lbl);
+
+    ['S1','S2','S3','S4'].forEach(function(s, si) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = s;
+      btn.dataset.mes = mi;
+      btn.dataset.sem = s;
+      var weekDates = getWeekDatesOfMonth(mi, si);
+      btn.title = weekDates;
+      btn.style.cssText = 'padding:5px 12px; border-radius:6px; border:1.5px solid #b0bec5; font-size:0.82em; cursor:pointer; background:#fff; font-weight:600; transition:all 0.15s;';
+      if (_mttoSelections[mi] === s) {
+        btn.style.background = '#2563eb'; btn.style.color = '#fff'; btn.style.borderColor = '#2563eb';
+      }
+      btn.onclick = function() { selectWeekForMonth(mi, s, row); };
+      row.appendChild(btn);
+    });
+
+    container.appendChild(row);
+  });
 }
 
-function clearWeekSchedule() {
-  _selectedWeeks = new Set();
-  var grp = document.getElementById('scheduleBuilderGroup');
-  if (grp) grp.style.display = 'none';
+function getWeekDatesOfMonth(monthIndex, weekIndex) {
+  var year = new Date().getFullYear();
+  var firstDay = new Date(year, monthIndex, 1);
+  var startDay = firstDay.getDay() || 7;
+  var offset = startDay === 1 ? 0 : (8 - startDay);
+  var weekStart = new Date(year, monthIndex, 1 + offset + weekIndex * 7);
+  var weekEnd = new Date(weekStart.getTime() + 6 * 86400000);
+  var fmt = function(d){ return d.getDate() + '/' + (d.getMonth()+1); };
+  return fmt(weekStart) + ' – ' + fmt(weekEnd);
+}
+
+function selectWeekForMonth(mesIdx, sem, row) {
+  _mttoSelections[mesIdx] = sem;
+  // Actualizar estilos de botones en esa fila
+  row.querySelectorAll('button').forEach(function(b) {
+    if (b.dataset.sem === sem) {
+      b.style.background = '#2563eb'; b.style.color = '#fff'; b.style.borderColor = '#2563eb';
+    } else {
+      b.style.background = '#fff'; b.style.color = ''; b.style.borderColor = '#b0bec5';
+    }
+  });
+  updateMttoTextarea();
+}
+
+function updateMttoTextarea() {
+  var ta = document.getElementById('invScheduleAnnual');
+  if (!ta) return;
+  var year = new Date().getFullYear();
+  var parts = Object.keys(_mttoSelections).sort(function(a,b){return+a-+b;}).map(function(mi){
+    var s = _mttoSelections[mi];
+    var wn = +s.replace('S','');
+    return MESES[mi] + ' ' + s + ' (' + getWeekDatesOfMonth(+mi, wn-1) + '/' + year + ')';
+  });
+  ta.value = parts.join(' | ');
+}
+
+function clearMttoSchedule() {
+  _mttoSelections = {};
   var sel = document.getElementById('invFreqSelect');
   if (sel) sel.value = '';
+  var grp = document.getElementById('scheduleBuilderGroup');
+  if (grp) grp.style.display = 'none';
   var ta = document.getElementById('invScheduleAnnual');
   if (ta) ta.value = '';
 }
@@ -923,12 +868,15 @@ function clearManualFile() {
   if (mi) mi.value = '';
 }
 
+// aliases para compatibilidad con llamadas antiguas
+function generateAnnualSchedule() {}
+function clearAnnualSchedule() { clearMttoSchedule(); }
+
 window.onFreqChange = onFreqChange;
-window.generateWeekSchedule = generateWeekSchedule;
-window.clearWeekSchedule = clearWeekSchedule;
+window.clearMttoSchedule = clearMttoSchedule;
 window.clearManualFile = clearManualFile;
-window.generateAnnualSchedule = generateWeekSchedule; // alias por compatibilidad
-window.clearAnnualSchedule = clearWeekSchedule;
+window.generateAnnualSchedule = generateAnnualSchedule;
+window.clearAnnualSchedule = clearAnnualSchedule;
 
 function addCalCertRow() {
   const list = document.getElementById('calCertList');
