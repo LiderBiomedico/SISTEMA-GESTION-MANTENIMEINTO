@@ -728,6 +728,8 @@ function toggleCalCertSection() {
   if (!identSelect || !section) return;
   var esSI = identSelect.value === 'SI';
   section.style.display = esSI ? '' : 'none';
+  var mainSelect = document.getElementById('calibrableMainSelect');
+  if (mainSelect && identSelect.value !== '') mainSelect.value = identSelect.value;
   if (!esSI) {
     var list = document.getElementById('calCertList');
     if (list) {
@@ -738,11 +740,173 @@ function toggleCalCertSection() {
 }
 
 function syncCalibrableSelects(origin) {
-  // mantenido por compatibilidad
+  if (origin === 'main') {
+    var m = document.getElementById('calibrableMainSelect');
+    var id = document.getElementById('calibrableIdentSelect');
+    if (m && id) { id.value = m.value; toggleCalCertSection(); }
+  }
 }
 
 window.toggleCalCertSection = toggleCalCertSection;
 window.syncCalibrableSelects = syncCalibrableSelects;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PROGRAMACIÓN DE MANTENIMIENTO: elige mes + semana para cada periodo
+// ─────────────────────────────────────────────────────────────────────────────
+var MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+var FREQ_COUNT = { Mensual:12, Bimestral:6, Trimestral:4, Cuatrimestral:3, Semestral:2, Anual:1 };
+var FREQ_WINDOWS = {
+  Mensual:      [[0],[1],[2],[3],[4],[5],[6],[7],[8],[9],[10],[11]],
+  Bimestral:    [[0,1],[2,3],[4,5],[6,7],[8,9],[10,11]],
+  Trimestral:   [[0,1,2],[3,4,5],[6,7,8],[9,10,11]],
+  Cuatrimestral:[[0,1,2,3],[4,5,6,7],[8,9,10,11]],
+  Semestral:    [[0,1,2,3,4,5],[6,7,8,9,10,11]],
+  Anual:        [[0,1,2,3,4,5,6,7,8,9,10,11]]
+};
+var _mttoSlots = [];
+
+function onFreqChange() {
+  var sel = document.getElementById('invFreqSelect');
+  var grp = document.getElementById('scheduleBuilderGroup');
+  if (!sel || !grp) return;
+  if (!sel.value) { grp.style.display = 'none'; return; }
+  var freq = sel.value;
+  var count = FREQ_COUNT[freq] || 1;
+  _mttoSlots = [];
+  for (var i = 0; i < count; i++) _mttoSlots.push({ mes: null, sem: null });
+  grp.style.display = '';
+  buildSlotGrid(freq);
+  updateMttoTextarea();
+}
+
+function buildSlotGrid(freq) {
+  var container = document.getElementById('scheduleMonthGrid');
+  if (!container) return;
+  container.innerHTML = '';
+  var windows = FREQ_WINDOWS[freq] || [[0,1,2,3,4,5,6,7,8,9,10,11]];
+  _mttoSlots.forEach(function(slot, idx) {
+    var win = windows[idx] || windows[0];
+    var card = document.createElement('div');
+    card.style.cssText = 'padding:10px 14px; background:#f4f7ff; border-radius:10px; border:1px solid #dbe4ff; display:flex; flex-direction:column; gap:8px;';
+
+    var header = document.createElement('div');
+    header.style.cssText = 'font-weight:700; font-size:0.83em; color:#2563eb; text-transform:uppercase; letter-spacing:0.04em;';
+    header.textContent = 'Periodo ' + (idx+1) + ' · ' + (win.length > 1 ? MESES[win[0]].slice(0,3) + '–' + MESES[win[win.length-1]].slice(0,3) : MESES[win[0]]);
+    card.appendChild(header);
+
+    var mesRow = document.createElement('div');
+    mesRow.style.cssText = 'display:flex; align-items:center; gap:8px; flex-wrap:wrap;';
+    var mesLbl = document.createElement('span');
+    mesLbl.textContent = 'Mes:';
+    mesLbl.style.cssText = 'font-size:0.83em; font-weight:600; color:#555; white-space:nowrap; min-width:42px;';
+    mesRow.appendChild(mesLbl);
+    win.forEach(function(mi) {
+      var mb = document.createElement('button');
+      mb.type = 'button';
+      mb.textContent = MESES[mi].slice(0,3);
+      mb.dataset.slot = idx; mb.dataset.mes = mi;
+      mb.style.cssText = 'padding:4px 9px; border-radius:5px; border:1.5px solid #b0bec5; font-size:0.8em; cursor:pointer; background:#fff; font-weight:600; transition:all 0.15s;';
+      if (_mttoSlots[idx].mes === mi) applyMttoActive(mb, true);
+      mb.onclick = function() { selectMesForSlot(idx, mi, card); };
+      mesRow.appendChild(mb);
+    });
+    card.appendChild(mesRow);
+
+    var semRow = document.createElement('div');
+    semRow.id = 'semRow_' + idx;
+    semRow.style.cssText = 'display:' + (_mttoSlots[idx].mes !== null ? 'flex' : 'none') + '; align-items:center; gap:8px; flex-wrap:wrap;';
+    var semLbl = document.createElement('span');
+    semLbl.textContent = 'Semana:';
+    semLbl.style.cssText = 'font-size:0.83em; font-weight:600; color:#555; white-space:nowrap; min-width:62px;';
+    semRow.appendChild(semLbl);
+    ['S1','S2','S3','S4'].forEach(function(s, si) {
+      var sb = document.createElement('button');
+      sb.type = 'button';
+      sb.dataset.slot = idx; sb.dataset.sem = s;
+      var mesActual = _mttoSlots[idx].mes;
+      sb.textContent = s + (mesActual !== null ? ' (' + getWeekDatesOfMonth(mesActual, si) + ')' : '');
+      sb.style.cssText = 'padding:4px 10px; border-radius:5px; border:1.5px solid #b0bec5; font-size:0.8em; cursor:pointer; background:#fff; font-weight:600; transition:all 0.15s; white-space:nowrap;';
+      if (_mttoSlots[idx].sem === s) applyMttoActive(sb, true);
+      sb.onclick = function() { selectSemForSlot(idx, s, semRow); };
+      semRow.appendChild(sb);
+    });
+    card.appendChild(semRow);
+    container.appendChild(card);
+  });
+}
+
+function applyMttoActive(btn, active) {
+  if (active) { btn.style.background='#2563eb'; btn.style.color='#fff'; btn.style.borderColor='#2563eb'; }
+  else { btn.style.background='#fff'; btn.style.color=''; btn.style.borderColor='#b0bec5'; }
+}
+
+function selectMesForSlot(slotIdx, mesIdx, card) {
+  _mttoSlots[slotIdx].mes = mesIdx;
+  _mttoSlots[slotIdx].sem = null;
+  card.querySelectorAll('button[data-mes]').forEach(function(b) { applyMttoActive(b, +b.dataset.mes === mesIdx); });
+  var semRow = document.getElementById('semRow_' + slotIdx);
+  if (semRow) {
+    semRow.style.display = 'flex';
+    semRow.querySelectorAll('button[data-sem]').forEach(function(sb, si) {
+      sb.textContent = sb.dataset.sem + ' (' + getWeekDatesOfMonth(mesIdx, si) + ')';
+      applyMttoActive(sb, false);
+    });
+  }
+  updateMttoTextarea();
+}
+
+function selectSemForSlot(slotIdx, sem, semRow) {
+  _mttoSlots[slotIdx].sem = sem;
+  semRow.querySelectorAll('button[data-sem]').forEach(function(b) { applyMttoActive(b, b.dataset.sem === sem); });
+  updateMttoTextarea();
+}
+
+function getWeekDatesOfMonth(monthIndex, weekIndex) {
+  var year = new Date().getFullYear();
+  var firstDay = new Date(year, monthIndex, 1);
+  var dayOfWeek = firstDay.getDay() || 7;
+  var offset = dayOfWeek === 1 ? 0 : (8 - dayOfWeek);
+  var weekStart = new Date(year, monthIndex, 1 + offset + weekIndex * 7);
+  var weekEnd = new Date(weekStart.getTime() + 6 * 86400000);
+  return weekStart.getDate() + '/' + (weekStart.getMonth()+1) + '–' + weekEnd.getDate() + '/' + (weekEnd.getMonth()+1);
+}
+
+function updateMttoTextarea() {
+  var ta = document.getElementById('invScheduleAnnual');
+  if (!ta) return;
+  var year = new Date().getFullYear();
+  var parts = _mttoSlots.map(function(slot, i) {
+    if (slot.mes === null) return 'P' + (i+1) + ': pendiente';
+    if (!slot.sem) return MESES[slot.mes] + ': semana pendiente';
+    var wn = +slot.sem.replace('S','');
+    return MESES[slot.mes] + ' ' + slot.sem + ' (' + getWeekDatesOfMonth(slot.mes, wn-1) + '/' + year + ')';
+  });
+  ta.value = parts.join(' | ');
+}
+
+function clearMttoSchedule() {
+  _mttoSlots = [];
+  var sel = document.getElementById('invFreqSelect');
+  if (sel) sel.value = '';
+  var grp = document.getElementById('scheduleBuilderGroup');
+  if (grp) grp.style.display = 'none';
+  var ta = document.getElementById('invScheduleAnnual');
+  if (ta) ta.value = '';
+}
+
+function clearManualFile() {
+  var mi = document.getElementById('manualFileInput');
+  if (mi) mi.value = '';
+}
+
+function generateAnnualSchedule() {}
+function clearAnnualSchedule() { clearMttoSchedule(); }
+
+window.onFreqChange = onFreqChange;
+window.clearMttoSchedule = clearMttoSchedule;
+window.clearManualFile = clearManualFile;
+window.generateAnnualSchedule = generateAnnualSchedule;
+window.clearAnnualSchedule = clearAnnualSchedule;
 
 function addCalCertRow() {
   const list = document.getElementById('calCertList');
