@@ -36,6 +36,7 @@ const NUMBER_FIELDS = new Set([
   'Item',
   'Vida Util',
   'Valor en Pesos',
+  'Costo de Mantenimiento',
 ]);
 
 // Campos fecha (Airtable Date)
