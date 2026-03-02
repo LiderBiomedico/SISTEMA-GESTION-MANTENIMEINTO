@@ -426,7 +426,8 @@ async function submitInventarioForm(e) {
         year: c.year,
         filename: c.file.name,
         contentType: c.file.type || 'application/pdf',
-        fileBase64: b64
+        // Backend netlify/functions/inventario.js espera la propiedad "base64"
+        base64: b64
       });
     }
 
