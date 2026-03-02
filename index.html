@@ -1263,9 +1263,22 @@
                                 <label>CODIGO ECRI</label>
                                 <input name="CODIGO ECRI" type="text" placeholder="Ej: ECRI-XXXX">
                             </div>
-                            <div class="form-group">
+                            <div class="form-group" style="grid-column:1/-1;">
                                 <label>REGISTRO INVIMA</label>
-                                <input name="REGISTRO INVIMA" type="text" placeholder="Ej: 2019DM-0012345">
+                                <input name="REGISTRO INVIMA" type="text" placeholder="Ej: 2019DM-0012345" style="max-width:320px;">
+                                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:8px;">
+                                    <input id="invimaFileInput" name="INVIMA_FILE" type="file" accept="application/pdf" style="flex:1; min-width:200px;">
+                                    <button type="button" class="btn btn-secondary btn-small" onclick="document.getElementById('invimaFileInput').value=''">✕ Quitar</button>
+                                </div>
+                                <div class="text-muted" style="margin-top:4px; font-size:0.82em;">Opcional: adjunta el PDF del Registro INVIMA (máx. 5 MB).</div>
+                            </div>
+                            <div class="form-group" style="grid-column:1/-1;">
+                                <label>REGISTRO DE IMPORTACIÓN (PDF)</label>
+                                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                                    <input id="importacionFileInput" name="IMPORTACION_FILE" type="file" accept="application/pdf" style="flex:1; min-width:200px;">
+                                    <button type="button" class="btn btn-secondary btn-small" onclick="document.getElementById('importacionFileInput').value=''">✕ Quitar</button>
+                                </div>
+                                <div class="text-muted" style="margin-top:4px; font-size:0.82em;">Opcional: adjunta el PDF del Registro de Importación (máx. 5 MB).</div>
                             </div>
                         </div>
                     </div>

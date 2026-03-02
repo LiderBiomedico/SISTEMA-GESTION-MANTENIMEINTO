@@ -502,7 +502,9 @@ exports.handler = async (event) => {
       const uploaded=certRes.uploaded;
       const uploadErrors=certRes.errors;
       if(manualResult&&!manualResult.ok) uploadErrors.push({field:'Manual',error:manualResult.error});
-      return json(200, {ok:true, record:created.data, data:created.data, uploaded, uploadErrors, manualUploaded:manualResult?manualResult.ok:false, removedFields, resolvedFields, mappedSent:fields});
+      if(invimaResult&&!invimaResult.ok) uploadErrors.push({field:'INVIMA',error:invimaResult.error});
+      if(importacionResult&&!importacionResult.ok) uploadErrors.push({field:'Importacion',error:importacionResult.error});
+      return json(200, {ok:true, record:created.data, data:created.data, uploaded, uploadErrors, manualUploaded:manualResult?manualResult.ok:false, invimaUploaded:invimaResult?invimaResult.ok:false, importacionUploaded:importacionResult?importacionResult.ok:false, removedFields, resolvedFields, mappedSent:fields});
     }
 
     // =========================================================================

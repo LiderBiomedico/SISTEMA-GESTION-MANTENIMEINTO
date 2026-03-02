@@ -422,16 +422,26 @@ async function submitInventarioForm(e) {
     const certPayload = [];
     for (const c of certificates) {
       const b64 = await fileToBase64(c.file);
-      certPayload.push({
-        year: c.year,
-        filename: c.file.name,
-        contentType: c.file.type || 'application/pdf',
-        // Backend netlify/functions/inventario.js espera la propiedad "base64"
-        base64: b64
-      });
+      certPayload.push({ year: c.year, filename: c.file.name, contentType: c.file.type || 'application/pdf', base64: b64 });
     }
-
-    const resp = await axios.post(url, { fields, certificates: certPayload }, {
+    let manualPayload = null;
+    if (typeof manualFile !== 'undefined' && manualFile) {
+      const mb64 = await fileToBase64(manualFile);
+      manualPayload = { filename: manualFile.name, contentType: manualFile.type || 'application/pdf', base64: mb64 };
+    }
+    let invimaPayload = null;
+    if (typeof invimaFile !== 'undefined' && invimaFile) {
+      const ib64 = await fileToBase64(invimaFile);
+      console.log('📄 invima:', invimaFile.name);
+      invimaPayload = { filename: invimaFile.name, contentType: invimaFile.type || 'application/pdf', base64: ib64 };
+    }
+    let importacionPayload = null;
+    if (typeof importacionFile !== 'undefined' && importacionFile) {
+      const imp64 = await fileToBase64(importacionFile);
+      console.log('📦 importacion:', importacionFile.name);
+      importacionPayload = { filename: importacionFile.name, contentType: importacionFile.type || 'application/pdf', base64: imp64 };
+    }
+    const resp = await axios.post(url, { fields, certificates: certPayload, manual: manualPayload, invima: invimaPayload, importacion: importacionPayload }, {
       headers: { ...getAuthHeader(), 'Content-Type': 'application/json' }
     });
 
@@ -469,6 +479,10 @@ async function submitInventarioForm(e) {
         if (_ids) _ids.value = '';
         if (_mns) _mns.value = '';
         if (_css) _css.style.display = 'none';
+        var _ii = document.getElementById('invimaFileInput');
+        if (_ii) _ii.value = '';
+        var _imp = document.getElementById('importacionFileInput');
+        if (_imp) _imp.value = '';
       } catch (e) {}
 
       if (typeof loadInventario === 'function') loadInventario();
