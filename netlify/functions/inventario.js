@@ -72,6 +72,12 @@ const FIELD_MAP = {
   'SERVICIO': 'Servicio',
   'UBICACIÓN': 'Ubicacion',
   'UBICACION': 'Ubicacion',
+  'CLASIFICACION BIOMEDICA': 'Clasificacion Biomedica',
+  'CLASIFICACIÓN BIOMÉDICA': 'Clasificacion Biomedica',
+  'CLASIFICACION DE LA TECNOLOGIA': 'Clasificacion de la Tecnologia',
+  'CLASIFICACIÓN DE LA TECNOLOGÍA': 'Clasificacion de la Tecnologia',
+  'CLASIFICACION DEL RIESGO': 'Clasificacion del Riesgo',
+  'CLASIFICACIÓN DEL RIESGO': 'Clasificacion del Riesgo',
   'VIDA UTIL': 'Vida Util',
   'VIDA ÚTIL': 'Vida Util',
   'FECHA FABRICA': 'Fecha Fabrica',
@@ -80,6 +86,8 @@ const FIELD_MAP = {
   'VALOR EN PESOS': 'Valor en Pesos',
   'TIPO DE ADQUISICION': 'Tipo de Adquisicion',
   'NO. DE CONTRATO': 'No. de Contrato',
+  'CALIBRABLE': 'Calibrable',
+  'CALIBRABLE_IDENT': 'Calibrable',
 };
 
 function normalizeKey(k) {
