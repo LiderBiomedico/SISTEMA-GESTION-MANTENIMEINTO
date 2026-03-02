@@ -36,6 +36,7 @@ const NUMBER_FIELDS = new Set([
   'Item',
   'Vida Util',
   'Valor en Pesos',
+  'Costo de Mantenimiento',
 ]);
 
 // Campos fecha (Airtable Date)
@@ -259,79 +260,51 @@ async function airtableFetch(path, opts = {}) {
   return { ok: res.ok, status: res.status, data };
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// getFieldId: obtiene el fieldId real de un campo por nombre desde el schema.
-// La Content API requiere fieldId (fldXXX), no el nombre del campo.
-// ─────────────────────────────────────────────────────────────────────────────
 async function getFieldId(fieldName) {
   try {
     const r = await fetch(AIRTABLE_META_API + '/' + AIRTABLE_BASE_ID + '/tables', {
       headers: { Authorization: 'Bearer ' + AIRTABLE_API_KEY }
     });
-    if (!r.ok) { console.warn('[CERT] schema status=' + r.status); return null; }
+    if (!r.ok) return null;
     const d = await r.json();
     const table = (d.tables || []).find(function(t){ return t.name === TABLE_NAME || t.id === TABLE_NAME; });
-    if (!table) { console.warn('[CERT] tabla no encontrada:', TABLE_NAME); return null; }
-    const norm = function(s){ return s.toLowerCase().replace(/[áàä]/g,'a').replace(/[éèë]/g,'e').replace(/[íìï]/g,'i').replace(/[óòö]/g,'o').replace(/[úùü]/g,'u').trim(); };
+    if (!table) return null;
+    const norm = function(s){ return s.toLowerCase().replace(/[áàäéèëíìïóòöúùü]/g, function(c){ return {á:'a',à:'a',ä:'a',é:'e',è:'e',ë:'e',í:'i',ì:'i',ï:'i',ó:'o',ò:'o',ö:'o',ú:'u',ù:'u',ü:'u'}[c]||c; }).trim(); };
     const field = (table.fields || []).find(function(f){ return norm(f.name) === norm(fieldName); });
-    if (!field) { console.warn('[CERT] campo no encontrado:', fieldName, '| campos disponibles:', (table.fields||[]).map(function(f){return f.name;}).join(', ')); return null; }
-    console.log('[CERT] fieldId=' + field.id + ' para campo "' + fieldName + '"');
+    if (!field) { console.warn('[CERT] campo no encontrado en schema:', fieldName); return null; }
+    console.log('[CERT] fieldId=' + field.id + ' para "' + fieldName + '"');
     return field.id;
   } catch(e) { console.warn('[CERT] getFieldId error:', e.message); return null; }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// uploadCertificates: sube PDFs usando la Content API de Airtable.
-// URL: POST content.airtable.com/v0/{baseId}/{recordId}/{fieldId}/uploadAttachment
-// body: { contentType, filename, file: base64 }
-// Cada archivo se sube individualmente (la Content API lo agrega al campo).
-// ─────────────────────────────────────────────────────────────────────────────
 async function uploadCertificates(recordId, fieldName, files) {
   console.log('[CERT] record=' + recordId + ' campo="' + fieldName + '" n=' + (files||[]).length);
   const valid = (files||[]).filter(function(f){ return f && f.base64; });
-  if (!valid.length) { console.warn('[CERT] sin archivos validos'); return {ok:true,uploaded:[],errors:[]}; }
+  if (!valid.length) return {ok:true,uploaded:[],errors:[]};
 
-  // Obtener el fieldId real desde el schema
   const fieldId = await getFieldId(fieldName);
-  if (!fieldId) {
-    return { ok:false, uploaded:[], errors:[{error:'No se encontró el fieldId para "' + fieldName + '". Verifica el nombre exacto del campo en Airtable.'}] };
-  }
+  if (!fieldId) return { ok:false, uploaded:[], errors:[{error:'fieldId no encontrado para "'+fieldName+'"'}] };
 
-  const uploaded = [];
-  const errors = [];
-
-  // Subir cada archivo individualmente a la Content API
-  // La Content API AGREGA el adjunto sin reemplazar los existentes
+  const uploaded = [], errors = [];
   for (let i = 0; i < valid.length; i++) {
     const f = valid[i];
-    let b64 = String(f.base64 || '');
-    const comma = b64.indexOf(','); if (comma !== -1) b64 = b64.slice(comma + 1);
-    const fname = f.filename || f.name || ('cert_' + (f.year||'') + '.pdf');
-    const ctype = f.contentType || f.type || 'application/pdf';
-
-    console.log('[CERT] subiendo ' + (i+1) + '/' + valid.length + ': ' + fname + ' b64len=' + b64.length);
-
-    const url = AIRTABLE_CONTENT_API + '/' + AIRTABLE_BASE_ID + '/' + recordId + '/' + fieldId + '/uploadAttachment';
-    const body = { contentType: ctype, filename: fname, file: b64 };
-
+    let b64 = String(f.base64||''); const c=b64.indexOf(','); if(c!==-1) b64=b64.slice(c+1);
+    const fname = f.filename||f.name||('cert_'+(f.year||'')+'.pdf');
+    const ctype = f.contentType||f.type||'application/pdf';
+    console.log('[CERT] subiendo '+(i+1)+'/'+valid.length+': '+fname+' b64len='+b64.length);
+    const url = AIRTABLE_CONTENT_API+'/'+AIRTABLE_BASE_ID+'/'+recordId+'/'+fieldId+'/uploadAttachment';
     const res = await fetch(url, {
-      method: 'POST',
-      headers: { Authorization: 'Bearer ' + AIRTABLE_API_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+      method:'POST',
+      headers:{Authorization:'Bearer '+AIRTABLE_API_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({contentType:ctype, filename:fname, file:b64}),
     });
     const txt = await res.text();
-    console.log('[CERT] status=' + res.status + ' resp=' + txt.slice(0,200));
-
-    if (res.ok) {
-      uploaded.push({ filename: fname });
-    } else {
-      errors.push({ filename: fname, status: res.status, error: txt });
-    }
+    console.log('[CERT] status='+res.status+' resp='+txt.slice(0,150));
+    if (res.ok) { uploaded.push({filename:fname}); }
+    else { errors.push({filename:fname, status:res.status, error:txt}); }
   }
-
-  const ok = errors.length === 0;
-  console.log('[CERT] resultado: ' + uploaded.length + ' OK, ' + errors.length + ' errores');
-  return { ok, uploaded, errors };
+  console.log('[CERT] OK='+uploaded.length+' errores='+errors.length);
+  return {ok:errors.length===0, uploaded, errors};
 }
 
 // ============================================================================
@@ -529,12 +502,10 @@ exports.handler = async (event) => {
         return json(500, { ok: false, error: 'Registro creado pero no se obtuvo ID.', details: created.data });
       }
 
-      // Adjuntos: subir PDFs via Content API
-      console.log('[POST] certificates=' + certificates.length + ' campo=' + AIRTABLE_CAL_CERT_FIELD);
-      let certRes = { ok:true, uploaded:[], errors:[] };
-      if (certificates.length > 0) {
-        certRes = await uploadCertificates(recordId, AIRTABLE_CAL_CERT_FIELD, certificates);
-      }
+      // Adjuntos
+      console.log('[POST] certs='+certificates.length+' campo='+AIRTABLE_CAL_CERT_FIELD);
+      let certRes = {ok:true,uploaded:[],errors:[]};
+      if (certificates.length > 0) certRes = await uploadCertificates(recordId, AIRTABLE_CAL_CERT_FIELD, certificates);
       const uploaded = certRes.uploaded;
       const uploadErrors = certRes.errors;
 

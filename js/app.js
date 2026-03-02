@@ -422,15 +422,14 @@ async function submitInventarioForm(e) {
     const certPayload = [];
     for (const c of certificates) {
       const b64 = await fileToBase64(c.file);
-      console.log('📎 cert:', c.file.name, 'año:', c.year, 'b64len:', b64.length);
       certPayload.push({
         year: c.year,
         filename: c.file.name,
         contentType: c.file.type || 'application/pdf',
+        // Backend netlify/functions/inventario.js espera la propiedad "base64"
         base64: b64
       });
     }
-    console.log('📤 enviando', certPayload.length, 'cert(s) al backend');
 
     const resp = await axios.post(url, { fields, certificates: certPayload }, {
       headers: { ...getAuthHeader(), 'Content-Type': 'application/json' }
@@ -472,12 +471,6 @@ async function submitInventarioForm(e) {
         if (_css) _css.style.display = 'none';
       } catch (e) {}
 
-      if (resp.data.uploaded && resp.data.uploaded.length > 0)
-        console.log('✅ PDFs subidos:', resp.data.uploaded);
-      if (resp.data.uploadErrors && resp.data.uploadErrors.length > 0) {
-        console.error('❌ Error PDFs:', resp.data.uploadErrors);
-        alert('⚠️ Registro guardado pero ERROR al subir PDF(s):\n' + JSON.stringify(resp.data.uploadErrors[0]));
-      }
       if (typeof loadInventario === 'function') loadInventario();
       alert('✅ Registro guardado correctamente');
     } else {
@@ -756,6 +749,49 @@ function syncCalibrableSelects(origin) {
 
 window.toggleCalCertSection = toggleCalCertSection;
 window.syncCalibrableSelects = syncCalibrableSelects;
+
+// ============================================================
+// PROGRAMACIÓN DE MANTENIMIENTO ANUAL
+// ============================================================
+function generateAnnualSchedule() {
+  const startInput = document.getElementById('invStartDate');
+  const freqSelect = document.getElementById('invFreqSelect');
+  const scheduleArea = document.getElementById('invScheduleAnnual');
+  if (!scheduleArea) return;
+
+  const startVal = startInput ? startInput.value : '';
+  const freq = freqSelect ? freqSelect.value : '';
+
+  if (!startVal) { alert('Selecciona primero la Fecha Programada de Mantenimiento.'); return; }
+  if (!freq)     { alert('Selecciona primero la Frecuencia de MTTO Preventivo.'); return; }
+
+  const monthsMap = {
+    'Mensual': 1, 'Bimestral': 2, 'Trimestral': 3,
+    'Cuatrimestral': 4, 'Semestral': 6, 'Anual': 12
+  };
+  const months = monthsMap[freq];
+  if (!months) { alert('Frecuencia no reconocida: ' + freq); return; }
+
+  const dates = [];
+  const start = new Date(startVal + 'T00:00:00');
+  let current = new Date(start);
+
+  while (dates.length < Math.round(12 / months)) {
+    dates.push(current.toISOString().slice(0, 10));
+    current.setMonth(current.getMonth() + months);
+  }
+
+  scheduleArea.value = dates.join(', ');
+  console.log('📅 Programación anual generada:', scheduleArea.value);
+}
+
+function clearAnnualSchedule() {
+  const scheduleArea = document.getElementById('invScheduleAnnual');
+  if (scheduleArea) scheduleArea.value = '';
+}
+
+window.generateAnnualSchedule = generateAnnualSchedule;
+window.clearAnnualSchedule = clearAnnualSchedule;
 
 function addCalCertRow() {
   const list = document.getElementById('calCertList');
