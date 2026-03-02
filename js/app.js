@@ -302,7 +302,6 @@ async function submitInventarioForm(e) {
   if (_manualInput && _manualInput.files && _manualInput.files[0]) {
     const mf = _manualInput.files[0];
     if (mf.size > 5 * 1024 * 1024) { alert('El PDF del manual supera 5MB.'); return; }
-    if (mf.type && mf.type !== 'application/pdf') { alert('El manual debe ser un archivo PDF.'); return; }
     manualFile = mf;
   }
   const _calId = form.querySelector('#calibrableIdentSelect');
@@ -431,24 +430,15 @@ async function submitInventarioForm(e) {
     const certPayload = [];
     for (const c of certificates) {
       const b64 = await fileToBase64(c.file);
-      console.log('📎 cert:', c.file.name, 'año:', c.year, 'b64len:', b64.length);
-      certPayload.push({
-        year: c.year,
-        filename: c.file.name,
-        contentType: c.file.type || 'application/pdf',
-        base64: b64
-      });
+      console.log('📎 cert:', c.file.name, 'b64len:', b64.length);
+      certPayload.push({ year: c.year, filename: c.file.name, contentType: c.file.type || 'application/pdf', base64: b64 });
     }
-    console.log('📤 enviando', certPayload.length, 'cert(s) al backend');
-
-    // Manual PDF
     let manualPayload = null;
     if (manualFile) {
       const mb64 = await fileToBase64(manualFile);
       console.log('📗 manual:', manualFile.name, 'b64len:', mb64.length);
       manualPayload = { filename: manualFile.name, contentType: manualFile.type || 'application/pdf', base64: mb64 };
     }
-
     const resp = await axios.post(url, { fields, certificates: certPayload, manual: manualPayload }, {
       headers: { ...getAuthHeader(), 'Content-Type': 'application/json' }
     });
@@ -477,7 +467,7 @@ async function submitInventarioForm(e) {
       closeModal('newInventario');
       form.reset();
 
-      // Reset certificados, estado calibrable y manual
+      // Reset certificados, manual y estado calibrable
       try {
         var _list = document.getElementById('calCertList');
         if (_list) { _list.innerHTML = ''; addCalCertRow(); }
@@ -489,10 +479,10 @@ async function submitInventarioForm(e) {
         if (_css) _css.style.display = 'none';
         var _mi = document.getElementById('manualFileInput');
         if (_mi) _mi.value = '';
+        clearWeekSchedule();
       } catch (e) {}
 
-      if (resp.data.uploaded && resp.data.uploaded.length > 0)
-        console.log('✅ PDFs subidos:', resp.data.uploaded);
+      if (resp.data.uploaded && resp.data.uploaded.length > 0) console.log('✅ PDFs subidos:', resp.data.uploaded);
       if (resp.data.uploadErrors && resp.data.uploadErrors.length > 0) {
         console.error('❌ Error PDFs:', resp.data.uploadErrors);
         alert('⚠️ Registro guardado pero ERROR al subir PDF(s):\n' + JSON.stringify(resp.data.uploadErrors[0]));
@@ -776,48 +766,169 @@ function syncCalibrableSelects(origin) {
 window.toggleCalCertSection = toggleCalCertSection;
 window.syncCalibrableSelects = syncCalibrableSelects;
 
-// ============================================================
-// MANUAL DEL EQUIPO
-// ============================================================
+// ─────────────────────────────────────────────────────────────────────────────
+// SELECTOR DE SEMANAS PARA PROGRAMACIÓN DE MANTENIMIENTO
+// ─────────────────────────────────────────────────────────────────────────────
+var _selectedWeeks = new Set();
+
+// Devuelve el lunes de la semana ISO que contiene la fecha dada
+function isoWeekStart(date) {
+  var d = new Date(date);
+  var day = d.getDay() || 7;
+  d.setDate(d.getDate() - day + 1);
+  return d;
+}
+
+// Retorna número de semana ISO y año ISO para una fecha
+function isoWeekNumber(date) {
+  var d = isoWeekStart(date);
+  var jan4 = new Date(d.getFullYear(), 0, 4);
+  var startOfYear = isoWeekStart(jan4);
+  var week = Math.round((d - startOfYear) / (7 * 86400000)) + 1;
+  var year = d.getFullYear();
+  // Ajuste de año para semanas que caen en año siguiente/anterior
+  if (week < 1) { year--; week = isoWeekNumber(new Date(year, 11, 31)).week; }
+  else if (week > 52) {
+    var nextYearStart = isoWeekStart(new Date(year + 1, 0, 4));
+    if (d >= nextYearStart) { year++; week = 1; }
+  }
+  return { year: year, week: week };
+}
+
+// Genera las 52 semanas del año actual con sus fechas de lunes
+function buildWeekList() {
+  var weeks = [];
+  var year = new Date().getFullYear();
+  var jan4 = new Date(year, 0, 4);
+  var start = isoWeekStart(jan4);
+  for (var i = 0; i < 52; i++) {
+    var mon = new Date(start.getTime() + i * 7 * 86400000);
+    var sun = new Date(mon.getTime() + 6 * 86400000);
+    var w = isoWeekNumber(mon);
+    weeks.push({
+      key: w.year + '-W' + String(w.week).padStart(2, '0'),
+      label: 'S' + String(w.week).padStart(2, '0'),
+      tooltip: mon.toLocaleDateString('es-CO', {day:'2-digit',month:'short'}) + ' – ' + sun.toLocaleDateString('es-CO', {day:'2-digit',month:'short'}),
+      date: mon.toISOString().slice(0, 10),
+      weekNum: w.week
+    });
+  }
+  return weeks;
+}
+
+function renderWeekPicker() {
+  var container = document.getElementById('scheduleWeekPicker');
+  if (!container) return;
+  var weeks = buildWeekList();
+  container.innerHTML = '';
+  // Etiqueta de meses
+  var months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  var lastMonth = -1;
+  weeks.forEach(function(w) {
+    var mon = new Date(w.date);
+    var m = mon.getMonth();
+    if (m !== lastMonth) {
+      var sep = document.createElement('div');
+      sep.style.cssText = 'width:100%; font-size:0.7em; font-weight:600; color:#888; margin-top:4px; text-transform:uppercase; letter-spacing:0.05em;';
+      sep.textContent = months[m];
+      container.appendChild(sep);
+      lastMonth = m;
+    }
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = w.label;
+    btn.title = w.tooltip;
+    btn.dataset.key = w.key;
+    btn.dataset.date = w.date;
+    btn.style.cssText = 'padding:4px 8px; border-radius:4px; border:1px solid #ccc; font-size:0.78em; cursor:pointer; background:#fff; transition:all 0.15s; min-width:36px;';
+    if (_selectedWeeks.has(w.key)) {
+      btn.style.background = '#2563eb';
+      btn.style.color = '#fff';
+      btn.style.borderColor = '#2563eb';
+    }
+    btn.onclick = function() { toggleWeek(this); };
+    container.appendChild(btn);
+  });
+}
+
+function toggleWeek(btn) {
+  var key = btn.dataset.key;
+  if (_selectedWeeks.has(key)) {
+    _selectedWeeks.delete(key);
+    btn.style.background = '#fff';
+    btn.style.color = '';
+    btn.style.borderColor = '#ccc';
+  } else {
+    _selectedWeeks.add(key);
+    btn.style.background = '#2563eb';
+    btn.style.color = '#fff';
+    btn.style.borderColor = '#2563eb';
+  }
+  updateScheduleTextarea();
+}
+
+function updateScheduleTextarea() {
+  var ta = document.getElementById('invScheduleAnnual');
+  if (!ta) return;
+  // Ordenar semanas y mostrar como "YYYY-Wxx (lunes YYYY-MM-DD)"
+  var sorted = Array.from(_selectedWeeks).sort();
+  var weeks = buildWeekList();
+  var weekMap = {};
+  weeks.forEach(function(w){ weekMap[w.key] = w.date; });
+  var lines = sorted.map(function(k){ return k + ' (' + (weekMap[k] || '') + ')'; });
+  ta.value = lines.join(', ');
+}
+
+function onFreqChange() {
+  var sel = document.getElementById('invFreqSelect');
+  var grp = document.getElementById('scheduleBuilderGroup');
+  if (!sel || !grp) return;
+  if (sel.value) {
+    grp.style.display = '';
+    _selectedWeeks = new Set();
+    renderWeekPicker();
+    updateScheduleTextarea();
+  } else {
+    grp.style.display = 'none';
+  }
+}
+
+function generateWeekSchedule() {
+  var sel = document.getElementById('invFreqSelect');
+  if (!sel || !sel.value) { alert('Selecciona primero la Frecuencia de MTTO Preventivo.'); return; }
+  var freq = sel.value;
+  var stepMap = { 'Semanal':1,'Quincenal':2,'Mensual':4,'Bimestral':8,'Trimestral':13,'Cuatrimestral':17,'Semestral':26,'Anual':52 };
+  var step = stepMap[freq] || 4;
+  var weeks = buildWeekList();
+  _selectedWeeks = new Set();
+  for (var i = 0; i < weeks.length; i += step) {
+    _selectedWeeks.add(weeks[i].key);
+  }
+  renderWeekPicker();
+  updateScheduleTextarea();
+}
+
+function clearWeekSchedule() {
+  _selectedWeeks = new Set();
+  var grp = document.getElementById('scheduleBuilderGroup');
+  if (grp) grp.style.display = 'none';
+  var sel = document.getElementById('invFreqSelect');
+  if (sel) sel.value = '';
+  var ta = document.getElementById('invScheduleAnnual');
+  if (ta) ta.value = '';
+}
+
 function clearManualFile() {
   var mi = document.getElementById('manualFileInput');
   if (mi) mi.value = '';
 }
+
+window.onFreqChange = onFreqChange;
+window.generateWeekSchedule = generateWeekSchedule;
+window.clearWeekSchedule = clearWeekSchedule;
 window.clearManualFile = clearManualFile;
-
-// ============================================================
-// PROGRAMACIÓN DE MANTENIMIENTO ANUAL
-// ============================================================
-function generateAnnualSchedule() {
-  var startInput = document.getElementById('invStartDate');
-  var freqSelect = document.getElementById('invFreqSelect');
-  var scheduleArea = document.getElementById('invScheduleAnnual');
-  if (!scheduleArea) return;
-  var startVal = startInput ? startInput.value : '';
-  var freq = freqSelect ? freqSelect.value : '';
-  if (!startVal) { alert('Selecciona primero la Fecha Programada de Mantenimiento.'); return; }
-  if (!freq)     { alert('Selecciona primero la Frecuencia de MTTO Preventivo.'); return; }
-  var monthsMap = { 'Mensual':1,'Bimestral':2,'Trimestral':3,'Cuatrimestral':4,'Semestral':6,'Anual':12 };
-  var months = monthsMap[freq];
-  if (!months) { alert('Frecuencia no reconocida: ' + freq); return; }
-  var dates = [];
-  var current = new Date(startVal + 'T00:00:00');
-  var total = Math.round(12 / months);
-  for (var i = 0; i < total; i++) {
-    dates.push(current.toISOString().slice(0, 10));
-    current.setMonth(current.getMonth() + months);
-  }
-  scheduleArea.value = dates.join(', ');
-  console.log('📅 Programación generada:', scheduleArea.value);
-}
-
-function clearAnnualSchedule() {
-  var sa = document.getElementById('invScheduleAnnual');
-  if (sa) sa.value = '';
-}
-
-window.generateAnnualSchedule = generateAnnualSchedule;
-window.clearAnnualSchedule = clearAnnualSchedule;
+window.generateAnnualSchedule = generateWeekSchedule; // alias por compatibilidad
+window.clearAnnualSchedule = clearWeekSchedule;
 
 function addCalCertRow() {
   const list = document.getElementById('calCertList');

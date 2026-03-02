@@ -13,6 +13,7 @@ const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY || process.env.AIRTABLE_TO
 const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID || '';
 const TABLE_NAME = process.env.AIRTABLE_INVENTARIO_TABLE || 'Inventario';
 const AIRTABLE_CAL_CERT_FIELD = process.env.AIRTABLE_CAL_CERT_FIELD || 'Certificados de Calibracion';
+const AIRTABLE_MANUAL_FIELD = process.env.AIRTABLE_MANUAL_FIELD || 'Manual';
 
 const AIRTABLE_API = 'https://api.airtable.com/v0';
 const AIRTABLE_META_API = 'https://api.airtable.com/v0/meta/bases';
@@ -259,48 +260,39 @@ async function airtableFetch(path, opts = {}) {
   return { ok: res.ok, status: res.status, data };
 }
 
-// getFieldId: obtiene fieldId (fldXXX) desde schema de Airtable
 async function getFieldId(fieldName) {
   try {
-    const r = await fetch(AIRTABLE_META_API + '/' + AIRTABLE_BASE_ID + '/tables', {
-      headers: { Authorization: 'Bearer ' + AIRTABLE_API_KEY }
-    });
-    if (!r.ok) return null;
-    const d = await r.json();
-    const table = (d.tables||[]).find(function(t){ return t.name===TABLE_NAME||t.id===TABLE_NAME; });
-    if (!table) return null;
-    const norm = function(s){ return s.toLowerCase().replace(/[áàäéèëíìïóòöúùü]/g,function(c){return{á:'a',à:'a',ä:'a',é:'e',è:'e',ë:'e',í:'i',ì:'i',ï:'i',ó:'o',ò:'o',ö:'o',ú:'u',ù:'u',ü:'u'}[c]||c;}).trim(); };
-    const field = (table.fields||[]).find(function(f){ return norm(f.name)===norm(fieldName); });
-    if (!field) { console.warn('[UPLOAD] campo no encontrado:',fieldName); return null; }
+    const r = await fetch(AIRTABLE_META_API+'/'+AIRTABLE_BASE_ID+'/tables',{headers:{Authorization:'Bearer '+AIRTABLE_API_KEY}});
+    if(!r.ok) return null;
+    const d=await r.json();
+    const table=(d.tables||[]).find(t=>t.name===TABLE_NAME||t.id===TABLE_NAME);
+    if(!table) return null;
+    const norm=s=>s.toLowerCase().replace(/[áàäéèëíìïóòöúùü]/g,c=>({á:'a',à:'a',ä:'a',é:'e',è:'e',ë:'e',í:'i',ì:'i',ï:'i',ó:'o',ò:'o',ö:'o',ú:'u',ù:'u',ü:'u'}[c]||c)).trim();
+    const field=(table.fields||[]).find(f=>norm(f.name)===norm(fieldName));
+    if(!field){console.warn('[UPLOAD] campo no encontrado:',fieldName);return null;}
     console.log('[UPLOAD] fieldId='+field.id+' para "'+fieldName+'"');
     return field.id;
-  } catch(e) { console.warn('[UPLOAD] error:',e.message); return null; }
+  } catch(e){console.warn('[UPLOAD] error:',e.message);return null;}
 }
-
-// uploadFileToField: sube un PDF via Content API de Airtable
-async function uploadFileToField(recordId, fieldName, file) {
-  const fieldId = await getFieldId(fieldName);
-  if (!fieldId) return { ok:false, error:'fieldId no encontrado para "'+fieldName+'"' };
-  let b64 = String(file.base64||''); const c=b64.indexOf(','); if(c!==-1) b64=b64.slice(c+1);
-  const fname = file.filename||file.name||'archivo.pdf';
-  const ctype = file.contentType||file.type||'application/pdf';
+async function uploadFileToField(recordId,fieldName,file){
+  const fieldId=await getFieldId(fieldName);
+  if(!fieldId) return {ok:false,error:'fieldId no encontrado para "'+fieldName+'"'};
+  let b64=String(file.base64||'');const c=b64.indexOf(',');if(c!==-1)b64=b64.slice(c+1);
+  const fname=file.filename||file.name||'archivo.pdf';
+  const ctype=file.contentType||file.type||'application/pdf';
   console.log('[UPLOAD] subiendo "'+fname+'" b64len='+b64.length);
-  const url = AIRTABLE_CONTENT_API+'/'+AIRTABLE_BASE_ID+'/'+recordId+'/'+fieldId+'/uploadAttachment';
-  const res = await fetch(url,{method:'POST',
-    headers:{Authorization:'Bearer '+AIRTABLE_API_KEY,'Content-Type':'application/json'},
-    body:JSON.stringify({contentType:ctype,filename:fname,file:b64})});
-  const txt = await res.text();
+  const url=AIRTABLE_CONTENT_API+'/'+AIRTABLE_BASE_ID+'/'+recordId+'/'+fieldId+'/uploadAttachment';
+  const res=await fetch(url,{method:'POST',headers:{Authorization:'Bearer '+AIRTABLE_API_KEY,'Content-Type':'application/json'},body:JSON.stringify({contentType:ctype,filename:fname,file:b64})});
+  const txt=await res.text();
   console.log('[UPLOAD] status='+res.status+' resp='+txt.slice(0,150));
-  if (!res.ok) return {ok:false,status:res.status,error:txt};
+  if(!res.ok) return {ok:false,status:res.status,error:txt};
   return {ok:true,filename:fname};
 }
-
-// uploadCertificates: sube N PDFs al campo de calibración
-async function uploadCertificates(recordId, fieldName, files) {
-  const valid=(files||[]).filter(function(f){return f&&f.base64;});
-  if (!valid.length) return {ok:true,uploaded:[],errors:[]};
+async function uploadCertificates(recordId,fieldName,files){
+  const valid=(files||[]).filter(f=>f&&f.base64);
+  if(!valid.length) return {ok:true,uploaded:[],errors:[]};
   const uploaded=[],errors=[];
-  for (let i=0;i<valid.length;i++){
+  for(let i=0;i<valid.length;i++){
     const r=await uploadFileToField(recordId,fieldName,valid[i]);
     if(r.ok) uploaded.push({filename:r.filename});
     else errors.push({filename:valid[i].filename||valid[i].name,error:r.error});
@@ -510,13 +502,13 @@ exports.handler = async (event) => {
       const manualData=body.manual;
       let manualResult=null;
       if(manualData&&manualData.base64){
-        manualResult=await uploadFileToField(recordId,AIRTABLE_MANUAL_FIELD||'Manual',manualData);
+        console.log('[POST] subiendo manual:',manualData.filename);
+        manualResult=await uploadFileToField(recordId,AIRTABLE_MANUAL_FIELD,manualData);
         if(!manualResult.ok) console.error('[POST] error manual:',manualResult.error);
       }
       const uploaded=certRes.uploaded;
       const uploadErrors=certRes.errors;
       if(manualResult&&!manualResult.ok) uploadErrors.push({field:'Manual',error:manualResult.error});
-
       return json(200, {
         ok: true,
         record: created.data,
