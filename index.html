@@ -416,13 +416,10 @@
             z-index: 1000;
             align-items: center;
             justify-content: center;
-            overflow-y: auto;
         }
 
         .modal.active {
             display: flex;
-            align-items: flex-start;
-            padding: 24px 16px;
         }
 
         .modal-content {
@@ -432,23 +429,6 @@
             max-width: 500px;
             width: 90%;
             box-shadow: var(--shadow-lg);
-            margin: auto;
-            max-height: calc(100vh - 48px);
-            overflow-y: auto;
-            scrollbar-width: thin;
-            scrollbar-color: #2563eb #f0f4ff;
-        }
-
-        .modal-content::-webkit-scrollbar {
-            width: 7px;
-        }
-        .modal-content::-webkit-scrollbar-track {
-            background: #f0f4ff;
-            border-radius: 8px;
-        }
-        .modal-content::-webkit-scrollbar-thumb {
-            background: #2563eb;
-            border-radius: 8px;
         }
 
         .modal-header {
@@ -1232,7 +1212,7 @@
 
 
     <div id="newInventario" class="modal">
-        <div class="modal-content" style="max-width: 980px; width: 95%;">
+        <div class="modal-content" style="max-width: 980px;">
             <button class="modal-close" onclick="closeModal('newInventario')">✕</button>
             <div class="modal-header">Registro de Inventario</div>
 
@@ -1267,28 +1247,7 @@
                                 <label>SERIE</label>
                                 <input name="SERIE" type="text" placeholder="Ej: SN123456">
                             </div>
-                            <div class="form-group">
-                                <label>¿ES CALIBRABLE?</label>
-                                <select name="CALIBRABLE_IDENT" id="calibrableIdentSelect" onchange="toggleCalCertSection()">
-                                    <option value="">(Seleccionar)</option>
-                                    <option value="SI">SI</option>
-                                    <option value="NO">NO</option>
-                                </select>
-                            </div>
-                            <div class="form-group" id="calCertSection" style="display:none;">
-                                <label>CERTIFICADOS DE CALIBRACIÓN (PDF)</label>
-                                <div id="calCertList" class="cal-cert-list">
-                                    <div class="cal-cert-row">
-                                        <input name="CAL_CERT_YEAR" type="number" min="2000" max="2100" step="1" placeholder="Año" value="2025" style="max-width:140px;">
-                                        <input name="CAL_CERT_FILE" type="file" accept="application/pdf" style="flex:1;">
-                                        <button type="button" class="btn btn-secondary btn-small" onclick="removeCalCertRow(this)" title="Quitar">✕</button>
-                                    </div>
-                                </div>
-                                <div class="btn-row" style="margin-top:8px;">
-                                    <button type="button" class="btn btn-secondary btn-small" onclick="addCalCertRow()">➕ Agregar certificado</button>
-                                </div>
-                                <div class="text-muted" style="margin-top:6px;">Máximo 5&nbsp;MB por PDF. El año se guardará en el nombre del archivo.</div>
-                            </div>
+
                             <div class="form-group">
                                 <label>PLACA</label>
                                 <input name="PLACA" type="text" placeholder="Ej: HSLV-PL-0098">
@@ -1426,12 +1385,30 @@
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label>N. CERTIFICADO</label>
-                                <input name="N. CERTIFICADO" type="text" placeholder="Ej: CAL-2025-009">
+                                <label>¿ES CALIBRABLE?</label>
+                                <select name="CALIBRABLE_IDENT" id="calibrableIdentSelect" onchange="toggleCalCertSection()" style="max-width:320px;">
+                                    <option value="">(Seleccionar)</option>
+                                    <option value="SI">SI</option>
+                                    <option value="NO">NO</option>
+                                </select>
                             </div>
-                            <div class="form-group">
+                            <div class="form-group" id="calCertSection" style="display:none;">
+                                <label>CERTIFICADOS DE CALIBRACIÓN (PDF)</label>
+                                <div id="calCertList" class="cal-cert-list">
+                                    <div class="cal-cert-row">
+                                        <input name="CAL_CERT_YEAR" type="number" min="2000" max="2100" step="1" placeholder="Año" value="2025" style="max-width:140px;">
+                                        <input name="CAL_CERT_FILE" type="file" accept="application/pdf" style="flex:1;">
+                                        <button type="button" class="btn btn-secondary btn-small" onclick="removeCalCertRow(this)" title="Quitar">✕</button>
+                                    </div>
+                                </div>
+                                <div class="btn-row" style="margin-top:8px;">
+                                    <button type="button" class="btn btn-secondary btn-small" onclick="addCalCertRow()">➕ Agregar certificado</button>
+                                </div>
+                                <div class="text-muted" style="margin-top:6px;">Máximo 5&nbsp;MB por PDF. El año se guardará en el nombre del archivo.</div>
+                            </div>
+                            <div class="form-group" style="grid-column:1/-1;">
                                 <label>FRECUENCIA DE MTTO PREVENTIVO</label>
-                                <select name="FRECUENCIA DE MTTO PREVENTIVO" id="invFreqSelect">
+                                <select name="FRECUENCIA DE MTTO PREVENTIVO" id="invFreqSelect" onchange="onFreqChange()" style="max-width:320px;">
                                     <option value="">(Seleccionar)</option>
                                     <option value="Mensual">Mensual</option>
                                     <option value="Bimestral">Bimestral</option>
@@ -1441,27 +1418,24 @@
                                     <option value="Anual">Anual</option>
                                 </select>
                             </div>
-                            <div class="form-group">
-                                <label>FECHA PROGRAMADA DE MANTENIMINETO</label>
-                                <input name="FECHA PROGRAMADA DE MANTENIMINETO" id="invStartDate" type="date">
-                                <div class="text-muted mt-3" style="margin-top:8px;">Usada como fecha inicial para generar programación anual (opcional).</div>
-                            </div>
-                            <div class="form-group">
-                                <label>FRECUENCIA DE MANTENIMIENTO</label>
-                                <input name="FRECUENCIA DE MANTENIMIENTO" type="text" placeholder="Ej: Cada 3 meses">
-                            </div>
-                            <div class="form-group">
+                            <div class="form-group" id="scheduleBuilderGroup" style="grid-column:1/-1; display:none;">
                                 <label>PROGRAMACION DE MANTENIMIENTO ANUAL</label>
-                                <textarea name="PROGRAMACION DE MANTENIMIENTO ANUAL" id="invScheduleAnnual" rows="4" placeholder="Ej: 2026-03-01, 2026-06-01, 2026-09-01, 2026-12-01"></textarea>
-                                <div class="btn-row" style="margin-top:10px;">
-                                    <button type="button" class="btn btn-small btn-secondary" onclick="generateAnnualSchedule()">⚙️ Generar programación</button>
-                                    <button type="button" class="btn btn-small btn-secondary" onclick="clearAnnualSchedule()">🧹 Limpiar</button>
+                                <div id="scheduleMonthGrid" style="display:flex; flex-direction:column; gap:8px; margin-bottom:10px;"></div>
+                                <textarea name="PROGRAMACION DE MANTENIMIENTO ANUAL" id="invScheduleAnnual" rows="2"
+                                    style="background:#f8f8f8; font-size:0.82em; resize:vertical;" readonly
+                                    placeholder="Selecciona mes y semana para cada mantenimiento..."></textarea>
+                                <div style="display:flex; gap:8px; margin-top:6px;">
+                                    <button type="button" class="btn btn-small btn-secondary" onclick="clearMttoSchedule()">🧹 Limpiar</button>
                                 </div>
+                                <div class="text-muted" style="margin-top:4px; font-size:0.82em;">Escoge el mes y la semana (S1–S4) para cada periodo.</div>
                             </div>
                             <div class="form-group">
-                                <label>MANUAL</label>
-                                <input name="MANUAL" type="url" placeholder="Pega un link público (Drive/OneDrive) o URL del manual">
-                                <div class="text-muted mt-3" style="margin-top:8px;">Si deseas adjuntar en Airtable, pega un enlace público (Airtable lo guarda como adjunto por URL).</div>
+                                <label>MANUAL DEL EQUIPO (PDF)</label>
+                                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                                    <input id="manualFileInput" name="MANUAL_FILE" type="file" accept="application/pdf" style="flex:1; min-width:200px;">
+                                    <button type="button" class="btn btn-secondary btn-small" onclick="clearManualFile()">✕ Quitar</button>
+                                </div>
+                                <div class="text-muted" style="margin-top:6px;">Máximo 5&nbsp;MB. Se adjuntará como PDF en Airtable.</div>
                             </div>
                         </div>
                     </div>
