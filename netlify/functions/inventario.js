@@ -12,6 +12,101 @@ const AIRTABLE_CAL_CERT_FIELD = process.env.AIRTABLE_CAL_CERT_FIELD || 'Certific
 const AIRTABLE_API = 'https://api.airtable.com/v0';
 const AIRTABLE_CONTENT_API = 'https://content.airtable.com/v0';
 
+// ----------------------- Normalización de campos ----------------------------
+// Nota: Airtable NO permite crear opciones de Single Select con tokens limitados.
+// Por eso: limpiamos valores (comillas/espacios/caracteres invisibles) y,
+// si un valor no está en la lista permitida, lo OMITIMOS para evitar 422.
+
+const NUMBER_FIELDS = new Set([
+  'Item',
+  'Vida Util',
+]);
+
+const BOOL_FIELDS = new Set([
+  'Calibrable',
+]);
+
+const DATE_FIELDS = new Set([
+  'Fecha Fabrica',
+]);
+
+// Single Selects (usa exactamente los textos de tus opciones en Airtable)
+const SINGLE_SELECT_MAP = {
+  'Servicio': [
+    'Cirugia Adulto',
+    'Consulta Externa',
+    'Urgencias Adulto',
+    'Urgencias Pediatria',
+    'Laboratorio Clinico',
+    'Imagenes Diagnosticas',
+    'Uci Adultos',
+    'Hospitalización Pediatria',
+  ],
+  'Clasificacion Biomedica': [
+    'Terapéuticos/Tratamiento',
+    'Soporte Vital',
+    'Laboratorio/Análisis',
+    'Diagnostico',
+  ],
+  'Clasificacion de la Tecnologia': [
+    'Equipo Biomedico',
+    'Equipo Industrial',
+  ],
+  'Clasificacion del Riesgo': [
+    'Clase I (Riesgo Bajo)',
+    'Clase IIa (Riesgo Moderado)',
+    'Clase IIb (Riesgo Alto)',
+    'Clase III (Riesgo muy alto)',
+  ],
+};
+
+// ------------------------------ Helpers -------------------------------------
+
+function cleanText(v) {
+  if (v === null || v === undefined) return '';
+  let s = String(v);
+  try { s = s.normalize('NFKC'); } catch (_) {}
+  s = s.replace(/[\u200B-\u200D\uFEFF]/g, '');
+  s = s.replace(/\u00A0/g, ' ');
+  s = s.trim();
+  s = s.replace(/^["'`]+|["'`]+$/g, '').trim();
+  s = s.replace(/^"+|"+$/g, '').trim();
+  return s;
+}
+
+function toNumber(v) {
+  if (v === null || v === undefined || v === '') return null;
+  if (typeof v === 'number' && Number.isFinite(v)) return v;
+  const s = cleanText(v).toLowerCase();
+  const m = s.match(/-?\d+(?:[\.,]\d+)?/);
+  if (!m) return null;
+  const n = Number(m[0].replace(',', '.'));
+  return Number.isFinite(n) ? n : null;
+}
+
+function toBoolean(v) {
+  if (typeof v === 'boolean') return v;
+  const s = cleanText(v).toLowerCase();
+  if (['si','sí','s','true','1','yes','y'].includes(s)) return true;
+  if (['no','false','0','n'].includes(s)) return false;
+  return null;
+}
+
+function looksLikeISODate(v) {
+  const s = cleanText(v);
+  return /^\d{4}-\d{2}-\d{2}/.test(s);
+}
+
+function toSingleSelect(fieldName, v) {
+  const allowed = SINGLE_SELECT_MAP[fieldName];
+  const cleaned = cleanText(v);
+  if (!cleaned) return null;
+  if (!allowed) return cleaned;
+  if (allowed.includes(cleaned)) return cleaned;
+  const found = allowed.find(opt => cleanText(opt).toLowerCase() === cleaned.toLowerCase());
+  return found || null;
+}
+
 function json(statusCode, body) {
   return {
     statusCode,
@@ -133,19 +228,9 @@ function _normKey(str) {
 function _cleanValue(v) {
   if (v === null || v === undefined) return '';
   let s = String(v);
-
-  // 1) Normaliza unicode y elimina caracteres invisibles
-  try { s = s.normalize('NFKC'); } catch(e) {}
-  s = s.replace(/[\u200B-\u200D\uFEFF]/g, ''); // zero-width
-
-  // 2) Quita comillas envolventes repetidas
+  // quita comillas envolventes (por si el <option value="\"x\"">)
   s = s.replace(/^[\s'"“”‘’]+/, '').replace(/[\s'"“”‘’]+$/, '');
-
-  // 3) Quita comillas restantes dentro del texto (evita ""Consulta Externa"")
-  s = s.replace(/["“”‘’]+/g, '');
-
-  // 4) Normaliza espacios
-  s = s.replace(/[\u00A0\s]+/g, ' ').trim();
+  s = s.replace(/[ \s]+/g, ' ').trim();
   return s;
 }
 
