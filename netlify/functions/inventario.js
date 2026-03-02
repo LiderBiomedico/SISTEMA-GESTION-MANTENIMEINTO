@@ -260,57 +260,61 @@ async function airtableFetch(path, opts = {}) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// uploadCertificates: sube 1..N PDFs al campo adjunto de Airtable.
+// uploadCertificates — sube PDFs de calibración al campo adjunto de Airtable.
 //
-// Método oficial documentado por Airtable (api.airtable.com PATCH):
-//   body: { fields: { "Campo": [{ filename, content }] } }
-//   - "content" = base64 PURO, sin prefijo "data:...;base64,"
-//   - Todos los archivos van en UN solo PATCH → no se reemplazan entre sí
-//   - Los adjuntos previos se conservan pasando su { url }
+// Usa api.airtable.com PATCH con array [{ filename, content: base64 }].
+// Todos los archivos van en UN SOLO PATCH. Los ya existentes se conservan.
 // ─────────────────────────────────────────────────────────────────────────────
 async function uploadCertificates(recordId, fieldName, files) {
-  const validFiles = (files || []).filter(function(f) { return f && f.base64; });
+  console.log('[CERT] Iniciando upload para record:', recordId, '| campo:', fieldName, '| archivos:', files.length);
+
+  const validFiles = (files || []).filter(function(f) {
+    if (!f || !f.base64) { console.warn('[CERT] Archivo sin base64, omitido:', f && f.filename); return false; }
+    return true;
+  });
   if (validFiles.length === 0) {
+    console.warn('[CERT] No hay archivos válidos para subir.');
     return { ok: true, uploaded: [], errors: [] };
   }
 
   // 1. Leer adjuntos ya existentes para no borrarlos
   var existingAttachments = [];
   try {
-    var getRes = await fetch(
-      AIRTABLE_API + '/' + AIRTABLE_BASE_ID + '/' + encodeURIComponent(TABLE_NAME) + '/' + recordId + '?fields[]=' + encodeURIComponent(fieldName),
-      { headers: { Authorization: 'Bearer ' + AIRTABLE_API_KEY } }
-    );
+    var getUrl = AIRTABLE_API + '/' + AIRTABLE_BASE_ID + '/' + encodeURIComponent(TABLE_NAME) + '/' + recordId + '?fields[]=' + encodeURIComponent(fieldName);
+    console.log('[CERT] GET existentes:', getUrl);
+    var getRes = await fetch(getUrl, { headers: { Authorization: 'Bearer ' + AIRTABLE_API_KEY } });
+    var getBody = await getRes.text();
+    console.log('[CERT] GET status:', getRes.status, '| body:', getBody.slice(0, 200));
     if (getRes.ok) {
-      var getData = await getRes.json();
+      var getData = JSON.parse(getBody);
       var existing = (getData.fields || {})[fieldName];
       if (Array.isArray(existing) && existing.length > 0) {
         existingAttachments = existing.map(function(a) { return { url: a.url }; });
+        console.log('[CERT] Adjuntos existentes encontrados:', existingAttachments.length);
       }
     }
   } catch (e) {
-    console.warn('uploadCertificates: no se pudo leer adjuntos existentes:', e.message);
+    console.warn('[CERT] Error leyendo existentes:', e.message);
   }
 
-  // 2. Preparar nuevos adjuntos con base64 puro (sin prefijo data:...)
+  // 2. Preparar nuevos adjuntos: { filename, content: base64_puro }
   var newAttachments = validFiles.map(function(f) {
-    var b64 = f.base64 || '';
+    var b64 = String(f.base64 || '');
     var comma = b64.indexOf(',');
     if (comma !== -1) { b64 = b64.slice(comma + 1); }
-    return {
-      filename: f.filename || f.name || 'certificado.pdf',
-      content: b64,
-    };
+    var fname = f.filename || f.name || ('certificado_' + (f.year || '') + '.pdf');
+    console.log('[CERT] Archivo listo:', fname, '| base64 length:', b64.length);
+    return { filename: fname, content: b64 };
   });
 
-  // 3. PATCH con TODOS los adjuntos en una sola llamada
+  // 3. PATCH con todos los adjuntos en una sola llamada
   var patchUrl = AIRTABLE_API + '/' + AIRTABLE_BASE_ID + '/' + encodeURIComponent(TABLE_NAME) + '/' + recordId;
   var patchFields = {};
   patchFields[fieldName] = existingAttachments.concat(newAttachments);
 
-  console.log('uploadCertificates: enviando', newAttachments.length, 'nuevo(s) al campo "' + fieldName + '" (record ' + recordId + ')');
+  console.log('[CERT] PATCH', patchUrl, '| total adjuntos:', patchFields[fieldName].length);
 
-  var res = await fetch(patchUrl, {
+  var patchRes = await fetch(patchUrl, {
     method: 'PATCH',
     headers: {
       Authorization: 'Bearer ' + AIRTABLE_API_KEY,
@@ -319,16 +323,15 @@ async function uploadCertificates(recordId, fieldName, files) {
     body: JSON.stringify({ fields: patchFields }),
   });
 
-  var text = await res.text();
-  var data;
-  try { data = text ? JSON.parse(text) : {}; } catch (e) { data = { raw: text }; }
+  var patchBody = await patchRes.text();
+  console.log('[CERT] PATCH status:', patchRes.status, '| response:', patchBody.slice(0, 400));
 
-  if (!res.ok) {
-    console.error('uploadCertificates ERROR', res.status, JSON.stringify(data).slice(0, 400));
-    return { ok: false, uploaded: [], errors: [{ status: res.status, error: data }] };
+  if (!patchRes.ok) {
+    console.error('[CERT] ERROR en PATCH:', patchRes.status, patchBody);
+    return { ok: false, uploaded: [], errors: [{ status: patchRes.status, error: patchBody }] };
   }
 
-  console.log('uploadCertificates OK:', newAttachments.length, 'archivo(s) subido(s)');
+  console.log('[CERT] OK —', validFiles.length, 'archivo(s) subido(s) correctamente.');
   return {
     ok: true,
     uploaded: validFiles.map(function(f) { return { filename: f.filename || f.name }; }),
@@ -532,12 +535,10 @@ exports.handler = async (event) => {
       }
 
       // Adjuntos: subir todos los PDFs en un solo PATCH
+      console.log('[POST] Certificados recibidos:', certificates.length, '| campo:', AIRTABLE_CAL_CERT_FIELD);
       var certResult = { ok: true, uploaded: [], errors: [] };
       if (certificates.length > 0) {
         certResult = await uploadCertificates(recordId, AIRTABLE_CAL_CERT_FIELD, certificates);
-        if (!certResult.ok) {
-          console.error('uploadCertificates falló:', JSON.stringify(certResult.errors));
-        }
       }
       const uploaded = certResult.uploaded;
       const uploadErrors = certResult.errors;
