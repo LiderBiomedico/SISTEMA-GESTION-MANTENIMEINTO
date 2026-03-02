@@ -408,20 +408,16 @@
         .modal {
             display: none;
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
             background: rgba(0, 0, 0, 0.5);
             z-index: 1000;
-            align-items: center;
+            align-items: flex-start;
             justify-content: center;
+            overflow-y: auto;
+            padding: 30px 16px;
         }
-
-        .modal.active {
-            display: flex;
-        }
-
+        .modal.active { display: flex; }
         .modal-content {
             background: white;
             border-radius: 8px;
@@ -429,6 +425,11 @@
             max-width: 500px;
             width: 90%;
             box-shadow: var(--shadow-lg);
+            margin: auto;
+        }
+        #newInventario .modal-content {
+            max-width: 980px;
+            width: 95%;
         }
 
         .modal-header {
@@ -1247,7 +1248,28 @@
                                 <label>SERIE</label>
                                 <input name="SERIE" type="text" placeholder="Ej: SN123456">
                             </div>
-
+                            <div class="form-group">
+                                <label>¿ES CALIBRABLE?</label>
+                                <select name="CALIBRABLE_IDENT" id="calibrableIdentSelect" onchange="toggleCalCertSection()">
+                                    <option value="">(Seleccionar)</option>
+                                    <option value="SI">SI</option>
+                                    <option value="NO">NO</option>
+                                </select>
+                            </div>
+                            <div class="form-group" id="calCertSection" style="display:none;">
+                                <label>CERTIFICADOS DE CALIBRACIÓN (PDF)</label>
+                                <div id="calCertList" class="cal-cert-list">
+                                    <div class="cal-cert-row">
+                                        <input name="CAL_CERT_YEAR" type="number" min="2000" max="2100" step="1" placeholder="Año" value="2025" style="max-width:140px;">
+                                        <input name="CAL_CERT_FILE" type="file" accept="application/pdf" style="flex:1;">
+                                        <button type="button" class="btn btn-secondary btn-small" onclick="removeCalCertRow(this)" title="Quitar">✕</button>
+                                    </div>
+                                </div>
+                                <div class="btn-row" style="margin-top:8px;">
+                                    <button type="button" class="btn btn-secondary btn-small" onclick="addCalCertRow()">➕ Agregar certificado</button>
+                                </div>
+                                <div class="text-muted" style="margin-top:6px;">Máximo 5&nbsp;MB por PDF. El año se guardará en el nombre del archivo.</div>
+                            </div>
                             <div class="form-group">
                                 <label>PLACA</label>
                                 <input name="PLACA" type="text" placeholder="Ej: HSLV-PL-0098">
@@ -1368,44 +1390,6 @@
                     <summary>4) Mantenimiento, calibración y programación <span class="summary-hint">frecuencia, costos, anual</span></summary>
                     <div class="section-body">
                         <div class="form-grid">
-                            <div class="form-group">
-                                <label>TIPO DE MTTO</label>
-                                <input name="TIPO DE MTTO" type="text" placeholder="Ej: Preventivo / Correctivo / Calibración">
-                            </div>
-                            <div class="form-group">
-                                <label>COSTO DE MANTENIMIENTO</label>
-                                <input name="COSTO DE MANTENIMIENTO" type="number" step="1" placeholder="Ej: 450000">
-                            </div>
-                            <div class="form-group">
-                                <label>CALIBRABLE</label>
-                                <select name="CALIBRABLE" id="calibrableMainSelect" onchange="syncCalibrableSelects('main')">
-                                    <option value="">(Seleccionar)</option>
-                                    <option value="SI">SI</option>
-                                    <option value="NO">NO</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>¿ES CALIBRABLE?</label>
-                                <select name="CALIBRABLE_IDENT" id="calibrableIdentSelect" onchange="toggleCalCertSection()" style="max-width:320px;">
-                                    <option value="">(Seleccionar)</option>
-                                    <option value="SI">SI</option>
-                                    <option value="NO">NO</option>
-                                </select>
-                            </div>
-                            <div class="form-group" id="calCertSection" style="display:none;">
-                                <label>CERTIFICADOS DE CALIBRACIÓN (PDF)</label>
-                                <div id="calCertList" class="cal-cert-list">
-                                    <div class="cal-cert-row">
-                                        <input name="CAL_CERT_YEAR" type="number" min="2000" max="2100" step="1" placeholder="Año" value="2025" style="max-width:140px;">
-                                        <input name="CAL_CERT_FILE" type="file" accept="application/pdf" style="flex:1;">
-                                        <button type="button" class="btn btn-secondary btn-small" onclick="removeCalCertRow(this)" title="Quitar">✕</button>
-                                    </div>
-                                </div>
-                                <div class="btn-row" style="margin-top:8px;">
-                                    <button type="button" class="btn btn-secondary btn-small" onclick="addCalCertRow()">➕ Agregar certificado</button>
-                                </div>
-                                <div class="text-muted" style="margin-top:6px;">Máximo 5&nbsp;MB por PDF. El año se guardará en el nombre del archivo.</div>
-                            </div>
                             <div class="form-group" style="grid-column:1/-1;">
                                 <label>FRECUENCIA DE MTTO PREVENTIVO</label>
                                 <select name="FRECUENCIA DE MTTO PREVENTIVO" id="invFreqSelect" onchange="onFreqChange()" style="max-width:320px;">
