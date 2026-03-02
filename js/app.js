@@ -426,7 +426,8 @@ async function submitInventarioForm(e) {
         year: c.year,
         filename: c.file.name,
         contentType: c.file.type || 'application/pdf',
-        fileBase64: b64
+        // Backend netlify/functions/inventario.js espera la propiedad "base64"
+        base64: b64
       });
     }
 
@@ -434,14 +435,26 @@ async function submitInventarioForm(e) {
       headers: { ...getAuthHeader(), 'Content-Type': 'application/json' }
     });
 
-    if (resp.data && (resp.data.ok || resp.data.record)) {
-      // Validación extra: si Airtable creó el registro pero sin campos visibles, avisar (suele pasar por filtros de campos)
+    if (resp.data && (resp.data.ok || resp.data.record || resp.data.data)) {
+      // Compatibilidad: el backend puede devolver {record} o {data}
+      const record = resp.data.record || resp.data.data || null;
+
+      // Si el backend tuvo que remover selects por valores no válidos, avisar exactamente cuáles
+      const removedSelects = (resp.data?.record && resp.data.record.__removedSelects) ||
+                            (resp.data?.data && resp.data.data.__removedSelects) ||
+                            resp.data?.__removedSelects;
+      if (Array.isArray(removedSelects) && removedSelects.length) {
+        alert('⚠️ El registro se guardó, pero Airtable rechazó estas listas desplegables: ' + removedSelects.join(', ') +
+              '.\nRevisa que el texto enviado coincida EXACTO con las opciones del campo (incluyendo tildes y espacios).');
+      }
+
+      // Validación real: si Airtable devolvió un record pero sin fields, entonces sí es un problema.
       const sentCount = Object.keys(fields || {}).length;
-      const recFields = resp.data.record && resp.data.record.fields ? resp.data.record.fields : {};
+      const recFields = (record && record.fields) ? record.fields : {};
       const recCount = Object.keys(recFields || {}).length;
       if (sentCount > 0 && recCount === 0) {
-        console.warn('⚠️ Registro creado pero sin campos. Revisa nombres de columnas en Airtable.', { sent: fields, record: resp.data.record });
-        alert('⚠️ Se creó el registro pero quedó vacío en Airtable. Esto suele ocurrir por nombres de columnas diferentes. Te recomiendo revisar el nombre exacto de las columnas en Airtable.');
+        console.warn('⚠️ Registro creado pero sin fields devueltos por Airtable.', { sent: fields, record });
+        alert('⚠️ Se creó el registro pero Airtable no devolvió campos. Revisa nombres exactos de columnas y permisos del token.');
       }
       closeModal('newInventario');
       form.reset();
@@ -479,51 +492,199 @@ async function submitInventarioForm(e) {
 }
 
 // ============================================================================
-// BÚSQUEDA DE INVENTARIO (para el módulo principal, no inventario-module.js)
+// INVENTARIO - Estado y carga de datos (reemplaza inventario-module.js si no carga)
 // ============================================================================
 
-let inventarioOffset = null;
+var _invState = window.__HSLV_INVENTARIO_STATE || (window.__HSLV_INVENTARIO_STATE = {
+  currentPage: 0,
+  currentOffset: null,
+  searchQuery: '',
+  searchTimeout: null,
+  allRecords: [],
+  currentEditId: null,
+  pageSize: 50
+});
+
+// Función principal de carga — se llama desde switchModule('inventario') y botón Actualizar
+async function loadInventario(forceRefresh) {
+  // Si inventario-module.js ya está cargado y tiene su propia implementación completa, usarla.
+  // Detectamos si ya fue inicializada correctamente verificando que el módulo esté listo.
+  if (window.__HSLV_INVENTARIO_MODULE_LOADED && typeof window.__invModuleLoadInventario === 'function') {
+    return window.__invModuleLoadInventario(forceRefresh);
+  }
+
+  const tbody = document.getElementById('inventarioTbody');
+  if (!tbody) { console.warn('⚠️ No se encontró #inventarioTbody'); return; }
+
+  tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;padding:18px;color:#607d8b;">⏳ Cargando inventario...</td></tr>`;
+
+  try {
+    const params = new URLSearchParams({ pageSize: '50' });
+    if (_invState.currentOffset) params.set('offset', _invState.currentOffset);
+    const q = (_invState.searchQuery || '').trim();
+    if (q) params.set('q', q);
+
+    const res = await fetch(`${API_BASE_URL}/inventario?${params}`, {
+      headers: getAuthHeader()
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || `HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+    _invState.allRecords = data.records || data.data || [];
+    _invState.currentOffset = data.offset || null;
+
+    const total = data.count || _invState.allRecords.length;
+    const countEl = document.getElementById('inventarioCount');
+    if (countEl) countEl.textContent = `${total} registros`;
+
+    console.log('✅ Inventario cargado:', _invState.allRecords.length, 'registros');
+    _renderInventarioTable();
+    _updateInventarioPagination();
+
+  } catch (err) {
+    console.error('❌ Error cargando inventario:', err);
+    tbody.innerHTML = `
+      <tr><td colspan="11" style="text-align:center;padding:18px;color:#c62828;">
+        ⚠️ Error al cargar el inventario: <strong>${escapeHtml(err.message)}</strong><br>
+        <button class="btn btn-primary" onclick="loadInventario(true)" style="margin-top:10px">🔄 Reintentar</button>
+      </td></tr>`;
+  }
+}
+
+function _renderInventarioTable() {
+  const tbody = document.getElementById('inventarioTbody');
+  if (!tbody) return;
+
+  if (!_invState.allRecords.length) {
+    tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;padding:18px;color:#607d8b;">
+      📦 No hay equipos registrados.<br><small>Comienza agregando tu primer equipo al inventario.</small>
+    </td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = _invState.allRecords.map(record => {
+    const f = record.fields || {};
+    const get = (...keys) => { for (const k of keys) { if (f[k] != null && f[k] !== '') return f[k]; } return ''; };
+    const item     = get('Item','ITEM');
+    const equipo   = get('Equipo','EQUIPO');
+    const marca    = get('Marca','MARCA');
+    const modelo   = get('Modelo','MODELO');
+    const serie    = get('Serie','SERIE');
+    const placa    = get('Numero de Placa','PLACA','Número de Placa');
+    const servicio = get('Servicio','SERVICIO');
+    const ubic     = get('Ubicacion','Ubicación','UBICACIÓN');
+    const vida     = get('Vida Util','VIDA UTIL');
+    const fecha    = get('Fecha Programada de Mantenimiento','FECHA PROGRAMADA DE MANTENIMINETO');
+
+    let fechaStr = '—';
+    if (fecha) {
+      try { fechaStr = new Date(fecha).toLocaleDateString('es-CO', {year:'numeric',month:'short',day:'numeric'}); }
+      catch(e) { fechaStr = fecha; }
+    }
+
+    const esc = escapeHtml;
+    return `<tr>
+      <td>${esc(String(item))}</td>
+      <td>${esc(equipo)}</td>
+      <td>${esc(marca)}</td>
+      <td>${esc(modelo)}</td>
+      <td>${esc(serie)}</td>
+      <td>${esc(placa)}</td>
+      <td>${esc(servicio)}</td>
+      <td>${esc(ubic)}</td>
+      <td>${esc(String(vida))}</td>
+      <td>${fechaStr}</td>
+      <td>
+        <button class="btn btn-small btn-secondary" onclick="editEquipo('${record.id}')" title="Editar">✏️</button>
+        <button class="btn btn-small" onclick="deleteEquipo('${record.id}','${esc(equipo)}')" title="Eliminar" style="color:#c62828;">🗑️</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function _updateInventarioPagination() {
+  const prev = document.getElementById('inventarioPrevBtn');
+  const next = document.getElementById('inventarioNextBtn');
+  if (prev) prev.disabled = (_invState.currentPage === 0);
+  if (next) next.disabled = !_invState.currentOffset;
+}
+
 let inventarioSearchTimer = null;
 
 function debouncedInventarioSearch() {
   clearTimeout(inventarioSearchTimer);
   inventarioSearchTimer = setTimeout(() => {
-    const searchEl = document.getElementById('inventarioSearch');
-    if (searchEl) {
-      inventarioOffset = null;
-      if (typeof loadInventario === 'function') loadInventario();
-    }
-  }, 300);
+    const el = document.getElementById('inventarioSearch');
+    _invState.searchQuery = el ? el.value.trim() : '';
+    _invState.currentOffset = null;
+    _invState.currentPage = 0;
+    loadInventario();
+  }, 400);
 }
 
 function inventarioNextPage() {
-  if (!inventarioOffset) return;
-  if (typeof loadInventario === 'function') loadInventario();
+  if (!_invState.currentOffset) return;
+  _invState.currentPage++;
+  loadInventario();
 }
 
 function inventarioPrevPage() {
-  inventarioOffset = null;
-  if (typeof loadInventario === 'function') loadInventario();
+  if (_invState.currentPage <= 0) return;
+  _invState.currentPage--;
+  _invState.currentOffset = null;
+  loadInventario();
+}
+
+// Editar y Eliminar — se exponen para los botones inline de la tabla
+async function editEquipo(recordId) {
+  const record = (_invState.allRecords || []).find(r => r.id === recordId);
+  if (!record) { alert('Equipo no encontrado'); return; }
+  openModal('newInventario');
+  const form = document.getElementById('inventarioForm');
+  if (!form) return;
+  const fields = record.fields || {};
+  form.querySelectorAll('input,select,textarea').forEach(input => {
+    if (!input.name) return;
+    // Intentar con el nombre del campo tal cual y con el mapeado
+    const val = fields[input.name] || '';
+    input.value = val || '';
+  });
+  _invState.currentEditId = recordId;
+}
+
+async function deleteEquipo(recordId, equipoName) {
+  if (!confirm(`¿Eliminar "${equipoName}"?\nEsta acción no se puede deshacer.`)) return;
+  try {
+    const res = await fetch(`${API_BASE_URL}/inventario?id=${recordId}`, {
+      method: 'DELETE', headers: getAuthHeader()
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    _invState.currentOffset = null;
+    _invState.currentPage = 0;
+    await loadInventario();
+  } catch (err) {
+    alert('Error al eliminar: ' + err.message);
+  }
 }
 
 function exportInventarioCSV() {
-  const rows = [];
-  rows.push(['Item','Equipo','Marca','Modelo','Serie','Placa','Servicio','Ubicación','Vida Util','Prox Mtto'].join(','));
-
-  const tbody = document.getElementById('inventarioTableBody') || document.getElementById('tableBody');
-  if (!tbody) return;
-  tbody.querySelectorAll('tr').forEach(tr => {
-    const cols = Array.from(tr.querySelectorAll('td')).slice(0,10).map(td => `"${(td.textContent||'').replaceAll('"','""')}"`);
-    if (cols.length) rows.push(cols.join(','));
+  if (!_invState.allRecords.length) { alert('No hay datos para exportar'); return; }
+  const headers = ['Item','Equipo','Marca','Modelo','Serie','Numero de Placa','Servicio','Ubicacion','Vida Util','Fecha Programada de Mantenimiento'];
+  const rows = [headers.join(',')];
+  _invState.allRecords.forEach(r => {
+    const f = r.fields || {};
+    const row = headers.map(h => { const v = String(f[h] || '').replace(/"/g,'""'); return v.includes(',') ? `"${v}"` : v; });
+    rows.push(row.join(','));
   });
-
   const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = `inventario_${new Date().toISOString().slice(0,10)}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
 
 // ============================================================================
@@ -657,9 +818,12 @@ document.addEventListener('DOMContentLoaded', () => {
 window.switchModule = switchModule;
 window.openModal = openModal;
 window.closeModal = closeModal;
+window.loadInventario = loadInventario;
 window.debouncedInventarioSearch = debouncedInventarioSearch;
 window.inventarioNextPage = inventarioNextPage;
 window.inventarioPrevPage = inventarioPrevPage;
 window.exportInventarioCSV = exportInventarioCSV;
+window.editEquipo = editEquipo;
+window.deleteEquipo = deleteEquipo;
 window.addCalCertRow = addCalCertRow;
 window.removeCalCertRow = removeCalCertRow;

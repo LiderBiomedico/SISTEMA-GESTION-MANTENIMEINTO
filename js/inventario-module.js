@@ -99,9 +99,13 @@ async function loadInventario() {
             headers: getHeaders()
         });
 
-        const data = response.data;
-        state.allRecords = data.data || [];
+        const data = response.data || {};
+        // La function devuelve el formato nativo de Airtable:
+        // { ok:true, records:[...], offset?:"..." }
+        // En versiones previas el frontend esperaba { data:[...] }, por eso quedaba vacío.
+        state.allRecords = (data.records || data.data || []);
         state.currentOffset = data.offset || null;
+        // Airtable no entrega 'count' en el REST. Mostramos al menos los cargados.
         state.totalRecords = data.count || state.allRecords.length;
 
         console.log('✅ Inventario cargado:', state.allRecords.length, 'registros');
@@ -321,13 +325,15 @@ function esc(str) {
         .replace(/'/g, '&#039;');
 }
 
-// Exponer funciones
-window.loadInventario = loadInventario;
-window.inventarioNextPage = inventarioNextPage;
-window.inventarioPrevPage = inventarioPrevPage;
-window.debouncedInventarioSearch = debouncedInventarioSearch;
-window.exportInventarioCSV = exportInventarioCSV;
-window.editEquipo = editEquipo;
-window.deleteEquipo = deleteEquipo;
+// Registrar como respaldo para app.js (que tiene la implementación principal)
+// Solo sobreescribir si app.js NO las definió primero
+window.__invModuleLoadInventario = loadInventario;
+if (typeof window.loadInventario !== 'function') window.loadInventario = loadInventario;
+if (typeof window.inventarioNextPage !== 'function') window.inventarioNextPage = inventarioNextPage;
+if (typeof window.inventarioPrevPage !== 'function') window.inventarioPrevPage = inventarioPrevPage;
+if (typeof window.debouncedInventarioSearch !== 'function') window.debouncedInventarioSearch = debouncedInventarioSearch;
+if (typeof window.exportInventarioCSV !== 'function') window.exportInventarioCSV = exportInventarioCSV;
+if (typeof window.editEquipo !== 'function') window.editEquipo = editEquipo;
+if (typeof window.deleteEquipo !== 'function') window.deleteEquipo = deleteEquipo;
 
 })();
