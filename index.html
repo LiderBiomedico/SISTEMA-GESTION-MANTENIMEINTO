@@ -1393,10 +1393,7 @@
                                 <label>TIPO DE MTTO</label>
                                 <input name="TIPO DE MTTO" type="text" placeholder="Ej: Preventivo / Correctivo / Calibración">
                             </div>
-                            <div class="form-group">
-                                <label>COSTO DE MANTENIMIENTO</label>
-                                <input name="COSTO DE MANTENIMIENTO" type="number" step="1" placeholder="Ej: 450000">
-                            </div>
+
                             <div class="form-group">
                                 <label>CALIBRABLE</label>
                                 <select name="CALIBRABLE" id="calibrableMainSelect" onchange="syncCalibrableSelects('main')">
@@ -1439,9 +1436,12 @@
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label>MANUAL</label>
-                                <input name="MANUAL" type="url" placeholder="Pega un link público (Drive/OneDrive) o URL del manual">
-                                <div class="text-muted mt-3" style="margin-top:8px;">Si deseas adjuntar en Airtable, pega un enlace público (Airtable lo guarda como adjunto por URL).</div>
+                                <label>MANUAL DEL EQUIPO (PDF)</label>
+                                <div id="manualFileRow" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                                    <input id="manualFileInput" name="MANUAL_FILE" type="file" accept="application/pdf" style="flex:1; min-width:200px;">
+                                    <button type="button" class="btn btn-secondary btn-small" onclick="clearManualFile()" title="Quitar">✕ Quitar</button>
+                                </div>
+                                <div class="text-muted" style="margin-top:6px;">Máximo 5&nbsp;MB. Se adjuntará como PDF en Airtable.</div>
                             </div>
                         </div>
                     </div>

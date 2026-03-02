@@ -296,6 +296,15 @@ async function submitInventarioForm(e) {
 
   // Certificados de calibración (PDF) - se envían aparte, no dentro de fields
   const certificates = [];
+  // Manual del equipo (PDF)
+  let manualFile = null;
+  const _manualInput = form.querySelector('#manualFileInput');
+  if (_manualInput && _manualInput.files && _manualInput.files[0]) {
+    const mf = _manualInput.files[0];
+    if (mf.size > 5 * 1024 * 1024) { alert('El PDF del manual supera 5MB.'); return; }
+    if (mf.type && mf.type !== 'application/pdf') { alert('El manual debe ser un archivo PDF.'); return; }
+    manualFile = mf;
+  }
   const _calId = form.querySelector('#calibrableIdentSelect');
   const _calMn = form.querySelector('#calibrableMainSelect');
   const esCalibrableSI = (_calId && _calId.value === 'SI') || (_calMn && _calMn.value === 'SI');
@@ -422,16 +431,25 @@ async function submitInventarioForm(e) {
     const certPayload = [];
     for (const c of certificates) {
       const b64 = await fileToBase64(c.file);
+      console.log('📎 cert:', c.file.name, 'año:', c.year, 'b64len:', b64.length);
       certPayload.push({
         year: c.year,
         filename: c.file.name,
         contentType: c.file.type || 'application/pdf',
-        // Backend netlify/functions/inventario.js espera la propiedad "base64"
         base64: b64
       });
     }
+    console.log('📤 enviando', certPayload.length, 'cert(s) al backend');
 
-    const resp = await axios.post(url, { fields, certificates: certPayload }, {
+    // Manual PDF
+    let manualPayload = null;
+    if (manualFile) {
+      const mb64 = await fileToBase64(manualFile);
+      console.log('📗 manual:', manualFile.name, 'b64len:', mb64.length);
+      manualPayload = { filename: manualFile.name, contentType: manualFile.type || 'application/pdf', base64: mb64 };
+    }
+
+    const resp = await axios.post(url, { fields, certificates: certPayload, manual: manualPayload }, {
       headers: { ...getAuthHeader(), 'Content-Type': 'application/json' }
     });
 
@@ -459,7 +477,7 @@ async function submitInventarioForm(e) {
       closeModal('newInventario');
       form.reset();
 
-      // Reset certificados y estado calibrable
+      // Reset certificados, estado calibrable y manual
       try {
         var _list = document.getElementById('calCertList');
         if (_list) { _list.innerHTML = ''; addCalCertRow(); }
@@ -469,8 +487,16 @@ async function submitInventarioForm(e) {
         if (_ids) _ids.value = '';
         if (_mns) _mns.value = '';
         if (_css) _css.style.display = 'none';
+        var _mi = document.getElementById('manualFileInput');
+        if (_mi) _mi.value = '';
       } catch (e) {}
 
+      if (resp.data.uploaded && resp.data.uploaded.length > 0)
+        console.log('✅ PDFs subidos:', resp.data.uploaded);
+      if (resp.data.uploadErrors && resp.data.uploadErrors.length > 0) {
+        console.error('❌ Error PDFs:', resp.data.uploadErrors);
+        alert('⚠️ Registro guardado pero ERROR al subir PDF(s):\n' + JSON.stringify(resp.data.uploadErrors[0]));
+      }
       if (typeof loadInventario === 'function') loadInventario();
       alert('✅ Registro guardado correctamente');
     } else {
@@ -751,43 +777,43 @@ window.toggleCalCertSection = toggleCalCertSection;
 window.syncCalibrableSelects = syncCalibrableSelects;
 
 // ============================================================
+// MANUAL DEL EQUIPO
+// ============================================================
+function clearManualFile() {
+  var mi = document.getElementById('manualFileInput');
+  if (mi) mi.value = '';
+}
+window.clearManualFile = clearManualFile;
+
+// ============================================================
 // PROGRAMACIÓN DE MANTENIMIENTO ANUAL
 // ============================================================
 function generateAnnualSchedule() {
-  const startInput = document.getElementById('invStartDate');
-  const freqSelect = document.getElementById('invFreqSelect');
-  const scheduleArea = document.getElementById('invScheduleAnnual');
+  var startInput = document.getElementById('invStartDate');
+  var freqSelect = document.getElementById('invFreqSelect');
+  var scheduleArea = document.getElementById('invScheduleAnnual');
   if (!scheduleArea) return;
-
-  const startVal = startInput ? startInput.value : '';
-  const freq = freqSelect ? freqSelect.value : '';
-
+  var startVal = startInput ? startInput.value : '';
+  var freq = freqSelect ? freqSelect.value : '';
   if (!startVal) { alert('Selecciona primero la Fecha Programada de Mantenimiento.'); return; }
   if (!freq)     { alert('Selecciona primero la Frecuencia de MTTO Preventivo.'); return; }
-
-  const monthsMap = {
-    'Mensual': 1, 'Bimestral': 2, 'Trimestral': 3,
-    'Cuatrimestral': 4, 'Semestral': 6, 'Anual': 12
-  };
-  const months = monthsMap[freq];
+  var monthsMap = { 'Mensual':1,'Bimestral':2,'Trimestral':3,'Cuatrimestral':4,'Semestral':6,'Anual':12 };
+  var months = monthsMap[freq];
   if (!months) { alert('Frecuencia no reconocida: ' + freq); return; }
-
-  const dates = [];
-  const start = new Date(startVal + 'T00:00:00');
-  let current = new Date(start);
-
-  while (dates.length < Math.round(12 / months)) {
+  var dates = [];
+  var current = new Date(startVal + 'T00:00:00');
+  var total = Math.round(12 / months);
+  for (var i = 0; i < total; i++) {
     dates.push(current.toISOString().slice(0, 10));
     current.setMonth(current.getMonth() + months);
   }
-
   scheduleArea.value = dates.join(', ');
-  console.log('📅 Programación anual generada:', scheduleArea.value);
+  console.log('📅 Programación generada:', scheduleArea.value);
 }
 
 function clearAnnualSchedule() {
-  const scheduleArea = document.getElementById('invScheduleAnnual');
-  if (scheduleArea) scheduleArea.value = '';
+  var sa = document.getElementById('invScheduleAnnual');
+  if (sa) sa.value = '';
 }
 
 window.generateAnnualSchedule = generateAnnualSchedule;
