@@ -72,12 +72,6 @@ const FIELD_MAP = {
   'SERVICIO': 'Servicio',
   'UBICACIÓN': 'Ubicacion',
   'UBICACION': 'Ubicacion',
-  'CLASIFICACION BIOMEDICA': 'Clasificacion Biomedica',
-  'CLASIFICACIÓN BIOMÉDICA': 'Clasificacion Biomedica',
-  'CLASIFICACION DE LA TECNOLOGIA': 'Clasificacion de la Tecnologia',
-  'CLASIFICACIÓN DE LA TECNOLOGÍA': 'Clasificacion de la Tecnologia',
-  'CLASIFICACION DEL RIESGO': 'Clasificacion del Riesgo',
-  'CLASIFICACIÓN DEL RIESGO': 'Clasificacion del Riesgo',
   'VIDA UTIL': 'Vida Util',
   'VIDA ÚTIL': 'Vida Util',
   'FECHA FABRICA': 'Fecha Fabrica',
@@ -86,8 +80,6 @@ const FIELD_MAP = {
   'VALOR EN PESOS': 'Valor en Pesos',
   'TIPO DE ADQUISICION': 'Tipo de Adquisicion',
   'NO. DE CONTRATO': 'No. de Contrato',
-  'CALIBRABLE': 'Calibrable',
-  'CALIBRABLE_IDENT': 'Calibrable',
 };
 
 function normalizeKey(k) {
@@ -106,6 +98,16 @@ function cleanSelectValue(v) {
   s = s.replace(/\u200B|\u200C|\u200D|\uFEFF/g, '');
   // trim y normaliza espacios
   s = s.trim().replace(/\s+/g, ' ');
+  return s;
+}
+
+// Normaliza valores del campo Calibrable para que coincidan con opciones típicas (SI/NO)
+function normalizeCalibrable(v) {
+  const s = cleanSelectValue(v);
+  if (!s) return s;
+  const low = s.toLowerCase();
+  if (['si', 'sí', 's', 'true', '1', 'yes'].includes(low)) return 'SI';
+  if (['no', 'n', 'false', '0'].includes(low)) return 'NO';
   return s;
 }
 
@@ -209,7 +211,7 @@ function mapAndNormalizeFields(inputFields) {
     }
 
     if (SINGLE_SELECT_FIELDS.has(mappedKey)) {
-      const s = cleanSelectValue(v);
+      const s = (mappedKey === 'Calibrable') ? normalizeCalibrable(v) : cleanSelectValue(v);
       if (!s) { removed.push(mappedKey); return; }
       out[mappedKey] = s;
       return;
@@ -227,12 +229,14 @@ function mapAndNormalizeFields(inputFields) {
 }
 
 async function createRecord(fields) {
-  return airtableFetch('', { method: 'POST', body: JSON.stringify({ fields }) });
+  // typecast=true: evita rechazos por leves diferencias (mayúsculas/acentos/espacios)
+  // en campos de selección; Airtable crea la opción si no existe.
+  return airtableFetch('', { method: 'POST', body: JSON.stringify({ fields, typecast: true }) });
 }
 
 async function updateRecord(id, fields) {
   const path = `/${id}`;
-  return airtableFetch(path, { method: 'PATCH', body: JSON.stringify({ fields }) });
+  return airtableFetch(path, { method: 'PATCH', body: JSON.stringify({ fields, typecast: true }) });
 }
 
 async function deleteRecord(id) {
@@ -253,23 +257,6 @@ exports.handler = async (event) => {
     // ===========================
     if (event.httpMethod === 'GET') {
       const params = event.queryStringParameters || {};
-
-      // ---------------------------
-      // nextItem=1 -> calcula el próximo Autonumber (Item) solo para mostrar en UI.
-      // NOTA: El campo Item NO se debe enviar en POST (Airtable lo asigna solo).
-      // ---------------------------
-      if (String(params.nextItem || '') === '1') {
-        // Trae el último Item (desc) y suma 1.
-        const path = `?pageSize=1&sort%5B0%5D%5Bfield%5D=Item&sort%5B0%5D%5Bdirection%5D=desc`;
-        const r = await airtableFetch(path, { method: 'GET' });
-        if (!r.ok) return json(r.status, { ok: false, error: r.data?.error || r.data, details: r.data });
-
-        const rec0 = (r.data && r.data.records && r.data.records[0]) ? r.data.records[0] : null;
-        const last = rec0 && rec0.fields && (rec0.fields.Item ?? rec0.fields['ITEM']);
-        const next = (typeof last === 'number' && Number.isFinite(last)) ? (last + 1) : null;
-        return json(200, { ok: true, nextItem: next, nextItemDisplay: next != null ? String(next) : '' });
-      }
-
       const pageSize = Math.min(Number(params.pageSize || 50) || 50, 100);
       const offset = params.offset ? `&offset=${encodeURIComponent(params.offset)}` : '';
       const sort = '&sort%5B0%5D%5Bfield%5D=Item&sort%5B0%5D%5Bdirection%5D=asc';
@@ -356,8 +343,7 @@ exports.handler = async (event) => {
         uploaded.push({ ok: up.ok, status: up.status, filename: file.filename || file.name, response: up.data });
       }
 
-      // Compatibilidad: algunos frontends esperan "record".
-      return json(200, { ok: true, record: created.data, data: created.data, uploaded, removedFields, mappedSent: fields });
+      return json(200, { ok: true, data: created.data, uploaded, removedFields, mappedSent: fields });
     }
 
     // ===========================
@@ -373,7 +359,7 @@ exports.handler = async (event) => {
       const r = await updateRecord(id, fields);
       if (!r.ok) return json(r.status, { ok: false, error: r.data?.error || r.data, details: r.data, removedFields, mappedSent: fields });
 
-      return json(200, { ok: true, record: r.data, data: r.data, removedFields, mappedSent: fields });
+      return json(200, { ok: true, data: r.data, removedFields, mappedSent: fields });
     }
 
     // ===========================
