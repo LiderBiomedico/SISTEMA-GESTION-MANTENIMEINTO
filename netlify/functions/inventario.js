@@ -36,7 +36,6 @@ const NUMBER_FIELDS = new Set([
   'Item',
   'Vida Util',
   'Valor en Pesos',
-  'Costo de Mantenimiento',
 ]);
 
 // Campos fecha (Airtable Date)
@@ -260,12 +259,14 @@ async function airtableFetch(path, opts = {}) {
   return { ok: res.ok, status: res.status, data };
 }
 
+// Sube UN archivo individual usando la Content API de Airtable.
 async function contentUploadAttachment(recordId, fieldName, file) {
   const url = `${AIRTABLE_CONTENT_API}/${AIRTABLE_BASE_ID}/${encodeURIComponent(TABLE_NAME)}/${recordId}/${encodeURIComponent(fieldName)}`;
+  // Airtable Content API requiere "content" (no "file") para el base64
   const body = {
     contentType: file.contentType || file.type || 'application/octet-stream',
     filename: file.filename || file.name || 'archivo',
-    file: file.base64,
+    content: file.base64,
   };
   const res = await fetch(url, {
     method: 'POST',
@@ -279,6 +280,52 @@ async function contentUploadAttachment(recordId, fieldName, file) {
   let data;
   try { data = text ? JSON.parse(text) : {}; } catch { data = { raw: text }; }
   return { ok: res.ok, status: res.status, data };
+}
+
+// Sube MULTIPLES archivos al mismo campo sin que se reemplacen entre si.
+// Sube uno a uno via Content API, luego hace PATCH para consolidarlos.
+async function uploadAllAttachments(recordId, fieldName, files) {
+  const uploaded = [];
+  const errors = [];
+
+  for (const file of files) {
+    if (!file || !file.base64) continue;
+    const up = await contentUploadAttachment(recordId, fieldName, file);
+    if (up.ok) {
+      const att = (up.data && up.data.attachment) ? up.data.attachment : up.data;
+      uploaded.push({ ok: true, filename: file.filename || file.name, attachment: att });
+    } else {
+      errors.push({ ok: false, filename: file.filename || file.name, status: up.status, error: up.data });
+    }
+  }
+
+  // Si hay mas de un archivo, consolidar todos en el campo via PATCH
+  if (uploaded.length > 1) {
+    const attArray = uploaded
+      .map(u => u.attachment)
+      .filter(a => a && (a.id || a.url))
+      .map(a => (a.url ? { url: a.url } : { id: a.id }));
+
+    if (attArray.length > 1) {
+      const patchUrl = `${AIRTABLE_API}/${AIRTABLE_BASE_ID}/${encodeURIComponent(TABLE_NAME)}/${recordId}`;
+      const patchRes = await fetch(patchUrl, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${AIRTABLE_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ fields: { [fieldName]: attArray } }),
+      });
+      const patchText = await patchRes.text();
+      let patchData;
+      try { patchData = patchText ? JSON.parse(patchText) : {}; } catch { patchData = { raw: patchText }; }
+      if (!patchRes.ok) {
+        errors.push({ ok: false, step: 'consolidate_patch', status: patchRes.status, error: patchData });
+      }
+    }
+  }
+
+  return { uploaded, errors };
 }
 
 // ============================================================================
@@ -476,19 +523,17 @@ exports.handler = async (event) => {
         return json(500, { ok: false, error: 'Registro creado pero no se obtuvo ID.', details: created.data });
       }
 
-      // Adjuntos
-      const uploaded = [];
-      for (const file of certificates) {
-        if (!file || !file.base64) continue;
-        const up = await contentUploadAttachment(recordId, AIRTABLE_CAL_CERT_FIELD, file);
-        uploaded.push({ ok: up.ok, status: up.status, filename: file.filename || file.name, response: up.data });
-      }
+      // Adjuntos: subir todos los certificados sin que se reemplacen entre si
+      const { uploaded, errors: uploadErrors } = certificates.length > 0
+        ? await uploadAllAttachments(recordId, AIRTABLE_CAL_CERT_FIELD, certificates)
+        : { uploaded: [], errors: [] };
 
       return json(200, {
         ok: true,
         record: created.data,
         data: created.data,
         uploaded,
+        uploadErrors,
         removedFields,
         resolvedFields,
         mappedSent: fields,
