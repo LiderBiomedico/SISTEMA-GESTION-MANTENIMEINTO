@@ -327,12 +327,8 @@ async function submitInventarioForm(e) {
     if (v instanceof File) continue;
 
     let val = String(v);
-    try { val = val.normalize('NFKC'); } catch(e) {}
-    val = val.replace(/[\u200B-\u200D\uFEFF]/g, ''); // zero-width
-    val = val.replace(/[\u00A0\s]+/g, ' ').trim();
-    // quita comillas envolventes y también comillas internas (evita ""Consulta Externa"")
-    val = val.replace(/^[\s'\"“”‘’]+/, '').replace(/[\s'\"“”‘’]+$/, '');
-    val = val.replace(/["“”‘’]+/g, '').trim();
+      val = val.replace(/[\u00A0\s]+/g, ' ').trim();
+      val = val.replace(/^[\s'\"“”‘’]+/, '').replace(/[\s'\"“”‘’]+$/, '');
     if (val === '') continue;
     if (k === 'CALIBRABLE' || k === 'Calibrable') {
       if (val === 'SI' || val === 'si' || val === 'true') rawFields[k] = 'SI';
