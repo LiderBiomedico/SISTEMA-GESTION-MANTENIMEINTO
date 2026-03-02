@@ -99,9 +99,13 @@ async function loadInventario() {
             headers: getHeaders()
         });
 
-        const data = response.data;
-        state.allRecords = data.data || [];
+        const data = response.data || {};
+        // La function devuelve el formato nativo de Airtable:
+        // { ok:true, records:[...], offset?:"..." }
+        // En versiones previas el frontend esperaba { data:[...] }, por eso quedaba vacío.
+        state.allRecords = (data.records || data.data || []);
         state.currentOffset = data.offset || null;
+        // Airtable no entrega 'count' en el REST. Mostramos al menos los cargados.
         state.totalRecords = data.count || state.allRecords.length;
 
         console.log('✅ Inventario cargado:', state.allRecords.length, 'registros');
