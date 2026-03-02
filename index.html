@@ -1389,23 +1389,10 @@
                     <summary>4) Mantenimiento, calibración y programación <span class="summary-hint">frecuencia, costos, anual</span></summary>
                     <div class="section-body">
                         <div class="form-grid">
-                            <div class="form-group">
-                                <label>TIPO DE MTTO</label>
-                                <input name="TIPO DE MTTO" type="text" placeholder="Ej: Preventivo / Correctivo / Calibración">
-                            </div>
 
-                            <div class="form-group">
-                                <label>CALIBRABLE</label>
-                                <select name="CALIBRABLE" id="calibrableMainSelect" onchange="syncCalibrableSelects('main')">
-                                    <option value="">(Seleccionar)</option>
-                                    <option value="SI">SI</option>
-                                    <option value="NO">NO</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>N. CERTIFICADO</label>
-                                <input name="N. CERTIFICADO" type="text" placeholder="Ej: CAL-2025-009">
-                            </div>
+
+
+
                             <div class="form-group">
                                 <label>FRECUENCIA DE MTTO PREVENTIVO</label>
                                 <select name="FRECUENCIA DE MTTO PREVENTIVO" id="invFreqSelect">
@@ -1423,10 +1410,7 @@
                                 <input name="FECHA PROGRAMADA DE MANTENIMINETO" id="invStartDate" type="date">
                                 <div class="text-muted mt-3" style="margin-top:8px;">Usada como fecha inicial para generar programación anual (opcional).</div>
                             </div>
-                            <div class="form-group">
-                                <label>FRECUENCIA DE MANTENIMIENTO</label>
-                                <input name="FRECUENCIA DE MANTENIMIENTO" type="text" placeholder="Ej: Cada 3 meses">
-                            </div>
+
                             <div class="form-group">
                                 <label>PROGRAMACION DE MANTENIMIENTO ANUAL</label>
                                 <textarea name="PROGRAMACION DE MANTENIMIENTO ANUAL" id="invScheduleAnnual" rows="4" placeholder="Ej: 2026-03-01, 2026-06-01, 2026-09-01, 2026-12-01"></textarea>
@@ -1437,7 +1421,7 @@
                             </div>
                             <div class="form-group">
                                 <label>MANUAL DEL EQUIPO (PDF)</label>
-                                <div id="manualFileRow" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
                                     <input id="manualFileInput" name="MANUAL_FILE" type="file" accept="application/pdf" style="flex:1; min-width:200px;">
                                     <button type="button" class="btn btn-secondary btn-small" onclick="clearManualFile()" title="Quitar">✕ Quitar</button>
                                 </div>
