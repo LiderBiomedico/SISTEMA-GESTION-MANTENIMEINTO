@@ -133,9 +133,19 @@ function _normKey(str) {
 function _cleanValue(v) {
   if (v === null || v === undefined) return '';
   let s = String(v);
-  // quita comillas envolventes (por si el <option value="\"x\"">)
+
+  // 1) Normaliza unicode y elimina caracteres invisibles
+  try { s = s.normalize('NFKC'); } catch(e) {}
+  s = s.replace(/[\u200B-\u200D\uFEFF]/g, ''); // zero-width
+
+  // 2) Quita comillas envolventes repetidas
   s = s.replace(/^[\s'"“”‘’]+/, '').replace(/[\s'"“”‘’]+$/, '');
-  s = s.replace(/[ \s]+/g, ' ').trim();
+
+  // 3) Quita comillas restantes dentro del texto (evita ""Consulta Externa"")
+  s = s.replace(/["“”‘’]+/g, '');
+
+  // 4) Normaliza espacios
+  s = s.replace(/[\u00A0\s]+/g, ' ').trim();
   return s;
 }
 
@@ -190,60 +200,6 @@ Object.keys(RAW_SINGLE_SELECT_OPTIONS).forEach((fname) => {
     SINGLE_SELECT_INDEX[fNorm][_normKey(opt)] = opt;
   });
 });
-
-
-// -----------------------------------------------------------------------------
-// Tipos de campos (FIX: evitar ReferenceError: NUMBER_FIELDS / BOOL_FIELDS / DATE_FIELDS)
-// -----------------------------------------------------------------------------
-const SINGLE_SELECT_MAP = RAW_SINGLE_SELECT_OPTIONS;
-
-// Campos numéricos en Airtable (ajusta si agregas más)
-const NUMBER_FIELDS = new Set([
-  'Item',
-  'Vida Util',
-]);
-
-// Campos booleanos reales (si alguno es checkbox en Airtable)
-const BOOL_FIELDS = new Set([
-  // Ejemplo: 'Activo',
-]);
-
-// Campos de fecha (formato YYYY-MM-DD)
-const DATE_FIELDS = new Set([
-  'Fecha Fabrica',
-  'Fecha Compra',
-  'Fecha Instalacion',
-  'Fecha Fin Garantia',
-  'Fecha Inicio Garantia',
-]);
-
-function looksLikeISODate(v) {
-  if (v === null || typeof v === 'undefined') return false;
-  const s = String(v).trim();
-  return /^\d{4}-\d{2}-\d{2}/.test(s);
-}
-
-function toNumber(v) {
-  if (v === null || typeof v === 'undefined' || v === '') return null;
-  if (typeof v === 'number') return Number.isFinite(v) ? v : null;
-
-  let s = String(v);
-  // "10 años" -> "10"
-  s = s.replace(/[,]/g, '.');
-  const m = s.match(/-?\d+(?:\.\d+)?/);
-  if (!m) return null;
-  const n = parseFloat(m[0]);
-  return Number.isFinite(n) ? n : null;
-}
-
-function toBoolean(v) {
-  if (v === null || typeof v === 'undefined') return null;
-  if (typeof v === 'boolean') return v;
-  const s = String(v).trim().toLowerCase();
-  if (['1','true','si','sí','yes','y','on'].includes(s)) return true;
-  if (['0','false','no','n','off'].includes(s)) return false;
-  return null;
-}
 
 function toSingleSelect(fieldName, value) {
   const s = _cleanValue(value);
