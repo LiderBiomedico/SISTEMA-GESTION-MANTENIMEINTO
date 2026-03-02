@@ -207,6 +207,74 @@ function toSingleSelect(fieldName, value) {
   return null;
 }
 
+
+// =============================================================================
+// TIPOS DE CAMPOS (evita ReferenceError en runtime)
+// =============================================================================
+// NOTA: Estos sets se usan para normalizar tipos antes de enviar a Airtable.
+// Si en tu base agregas nuevos campos numéricos/fecha, inclúyelos aquí.
+const NUMBER_FIELDS = new Set([
+  'Valor en Pesos',
+  'Costo de Mantenimiento'
+]);
+
+// Si en el futuro agregas checkbox/bool, añade aquí los nombres exactos en Airtable.
+const BOOL_FIELDS = new Set([]);
+
+// Campos tipo "date" en Airtable (formato YYYY-MM-DD)
+const DATE_FIELDS = new Set([
+  'Fecha Fabrica',
+  'Fecha de Compra',
+  'Fecha de Recepcion',
+  'Fecha de Instalacion',
+  'Inicio de Garantia',
+  'Termino de Garantia',
+  'Fecha Programada de Mantenimiento'
+]);
+
+// Single Select controlados (si está en este mapa, se valida contra opciones permitidas)
+const SINGLE_SELECT_MAP = Object.create(null);
+Object.keys(RAW_SINGLE_SELECT_OPTIONS).forEach((k) => { SINGLE_SELECT_MAP[k] = true; });
+
+// =============================================================================
+// Helpers de normalización
+// =============================================================================
+function toNumber(v) {
+  if (v === null || v === undefined) return v;
+  if (typeof v === 'number') return v;
+  let s = String(v).trim();
+  if (!s) return v;
+  // Remover símbolos de moneda y separadores (tolerante)
+  s = s.replace(/[^0-9,\.\-]/g, '');
+  // Si tiene coma y punto, asumimos coma como miles y punto como decimal
+  if (s.includes(',') && s.includes('.')) {
+    s = s.replace(/,/g, '');
+  } else if (s.includes(',') && !s.includes('.')) {
+    // Si solo tiene coma, asumir coma decimal
+    s = s.replace(/,/g, '.');
+  }
+  const n = Number(s);
+  return Number.isFinite(n) ? n : v;
+}
+
+function toBoolean(v) {
+  if (v === true || v === false) return v;
+  const s = String(v || '').trim().toLowerCase();
+  if (['si','sí','true','1','on','yes'].includes(s)) return true;
+  if (['no','false','0','off',''].includes(s)) return false;
+  return v;
+}
+
+function looksLikeISODate(v) {
+  const s = String(v || '').trim();
+  return /^\d{4}-\d{2}-\d{2}/.test(s);
+}
+
+function isUrl(v) {
+  const s = String(v || '').trim();
+  return /^https?:\/\//i.test(s);
+}
+
 function normalizeValue(fieldName, value) {
   if (value === null || typeof value === 'undefined') return value;
   if (NUMBER_FIELDS.has(fieldName)) return toNumber(value);
