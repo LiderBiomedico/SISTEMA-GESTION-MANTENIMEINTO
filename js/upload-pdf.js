@@ -43,11 +43,15 @@ exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return json(405, { ok: false, error: 'Method not allowed' });
 
   try {
-    const body = event.body ? JSON.parse(event.body) : {};
+    let rawBody = event.body || '';
+    if (event.isBase64Encoded) rawBody = Buffer.from(rawBody, 'base64').toString('utf8');
+    const body = rawBody ? JSON.parse(rawBody) : {};
     const { recordId, fieldName, filename, contentType, base64 } = body;
 
+    console.log('[upload-pdf] recordId:', recordId, '| fieldName:', fieldName, '| b64 length:', base64 ? base64.length : 0, '| bodySize:', rawBody.length);
+
     if (!recordId || !fieldName || !base64) {
-      return json(400, { ok: false, error: 'Faltan parámetros: recordId, fieldName, base64' });
+      return json(400, { ok: false, error: 'Faltan parámetros: recordId=' + recordId + ' fieldName=' + fieldName + ' base64=' + !!base64 });
     }
 
     const fieldId = await getFieldId(fieldName);
