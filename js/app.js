@@ -299,35 +299,29 @@ async function submitInventarioForm(e) {
 
   // PDF Manual del Equipo
   let manualFile = null;
-  const _manualInput = document.getElementById('manualFileInput');
-  console.log('🔎 manualFileInput encontrado:', !!_manualInput, _manualInput ? _manualInput.files.length + ' archivos' : 'NULL');
+  const _manualInput = form.querySelector('#manualFileInput');
   if (_manualInput && _manualInput.files && _manualInput.files[0]) {
     const _mf = _manualInput.files[0];
     if (_mf.size > 5 * 1024 * 1024) { alert('El PDF del Manual supera 5MB.'); return; }
     manualFile = _mf;
-    console.log('✅ manualFile capturado:', _mf.name, _mf.size, 'bytes');
   }
 
   // PDF Registro INVIMA
   let invimaFile = null;
-  const _invimaInput = document.getElementById('invimaFileInput');
-  console.log('🔎 invimaFileInput encontrado:', !!_invimaInput, _invimaInput ? _invimaInput.files.length + ' archivos' : 'NULL');
+  const _invimaInput = form.querySelector('#invimaFileInput');
   if (_invimaInput && _invimaInput.files && _invimaInput.files[0]) {
     const _if = _invimaInput.files[0];
     if (_if.size > 5 * 1024 * 1024) { alert('El PDF del Registro INVIMA supera 5MB.'); return; }
     invimaFile = _if;
-    console.log('✅ invimaFile capturado:', _if.name, _if.size, 'bytes');
   }
 
   // PDF Registro de Importación
   let importacionFile = null;
-  const _importInput = document.getElementById('importacionFileInput');
-  console.log('🔎 importacionFileInput encontrado:', !!_importInput, _importInput ? _importInput.files.length + ' archivos' : 'NULL');
+  const _importInput = form.querySelector('#importacionFileInput');
   if (_importInput && _importInput.files && _importInput.files[0]) {
     const _impf = _importInput.files[0];
     if (_impf.size > 5 * 1024 * 1024) { alert('El PDF del Registro de Importación supera 5MB.'); return; }
     importacionFile = _impf;
-    console.log('✅ importacionFile capturado:', _impf.name, _impf.size, 'bytes');
   }
 
   const _calId = form.querySelector('#calibrableIdentSelect');
@@ -466,11 +460,11 @@ async function submitInventarioForm(e) {
       // Compatibilidad: el backend puede devolver {record} o {data}
       const record = resp.data.record || resp.data.data || null;
       const newRecordId = resp.data.recordId || (record && (record.id || (record.records && record.records[0] && record.records[0].id)));
-      console.log('🔍 resp.data:', JSON.stringify({ok:resp.data.ok, recordId:resp.data.recordId, hasRecord:!!resp.data.record}));
+      console.log('🔍 resp.data completo:', JSON.stringify(resp.data).slice(0,300));
       console.log('📋 newRecordId:', newRecordId, '| manualFile:', !!manualFile, '| invimaFile:', !!invimaFile, '| importacionFile:', !!importacionFile);
 
       // Subir Manual, INVIMA e Importacion via upload-pdf (evitar límite 6MB de Netlify)
-      const uploadUrl = `${API_BASE_URL}/upload-pdf`;
+      const uploadUrl = `${API_BASE_URL}/inventario?action=uploadPdf`;
 
       // Helper para subir un PDF via upload-pdf
       async function uploadPdf(file, fieldName, label) {

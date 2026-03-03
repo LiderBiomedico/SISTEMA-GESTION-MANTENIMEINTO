@@ -376,6 +376,26 @@ exports.handler = async (event) => {
   try {
     if (event.httpMethod === 'OPTIONS') return json(200, { ok: true });
 
+    // =========================================================================
+    // ACTION: uploadPdf — sube un PDF a Airtable via Content API
+    // POST /inventario?action=uploadPdf
+    // Body: { recordId, fieldName, filename, contentType, base64 }
+    // =========================================================================
+    const _qs = event.queryStringParameters || {};
+    if (_qs.action === 'uploadPdf' && event.httpMethod === 'POST') {
+      let rawBody = event.body || '';
+      if (event.isBase64Encoded) rawBody = Buffer.from(rawBody, 'base64').toString('utf8');
+      const body = rawBody ? JSON.parse(rawBody) : {};
+      const { recordId, fieldName, filename, contentType, base64 } = body;
+      console.log('[uploadPdf] recordId:', recordId, '| field:', fieldName, '| b64len:', base64 ? base64.length : 0);
+      if (!recordId || !fieldName || !base64) {
+        return json(400, { ok: false, error: 'Faltan parametros: recordId=' + recordId + ' fieldName=' + fieldName + ' base64=' + !!base64 });
+      }
+      const result = await uploadFileToField(recordId, fieldName, { base64, filename, contentType });
+      console.log('[uploadPdf] resultado:', result.ok, result.error || 'OK');
+      return json(200, result);
+    }
+
     if (!AIRTABLE_API_KEY || !AIRTABLE_BASE_ID) {
       return json(500, { ok: false, error: 'Faltan variables de entorno AIRTABLE_API_KEY/AIRTABLE_BASE_ID en Netlify.' });
     }
