@@ -297,6 +297,15 @@ async function submitInventarioForm(e) {
   // Certificados de calibración (PDF) - se envían aparte, no dentro de fields
   const certificates = [];
 
+  // PDF Manual del Equipo
+  let manualFile = null;
+  const _manualInput = form.querySelector('#manualFileInput');
+  if (_manualInput && _manualInput.files && _manualInput.files[0]) {
+    const _mf = _manualInput.files[0];
+    if (_mf.size > 5 * 1024 * 1024) { alert('El PDF del Manual supera 5MB.'); return; }
+    manualFile = _mf;
+  }
+
   // PDF Registro INVIMA
   let invimaFile = null;
   const _invimaInput = form.querySelector('#invimaFileInput');
@@ -452,9 +461,23 @@ async function submitInventarioForm(e) {
       const record = resp.data.record || resp.data.data || null;
       const newRecordId = resp.data.recordId || (record && (record.id || (record.records && record.records[0] && record.records[0].id)));
 
-      // Subir PDFs INVIMA e Importacion por separado (evitar límite 6MB de Netlify)
+      // Subir Manual, INVIMA e Importacion via upload-pdf (evitar límite 6MB de Netlify)
       const uploadUrl = `${API_BASE_URL}/upload-pdf`;
       console.log('📋 newRecordId para uploads:', newRecordId);
+      if (manualFile && newRecordId) {
+        try {
+          const mb64 = await fileToBase64(manualFile);
+          console.log('📗 subiendo manual:', manualFile.name, 'b64len:', mb64.length);
+          const manResp = await axios.post(uploadUrl, {
+            recordId: newRecordId,
+            fieldName: 'Manual',
+            filename: manualFile.name,
+            contentType: manualFile.type || 'application/pdf',
+            base64: mb64
+          }, { headers: { ...getAuthHeader(), 'Content-Type': 'application/json' } });
+          console.log('📗 manual resultado:', manResp.data);
+        } catch(e) { console.error('❌ Error subiendo Manual:', e.response ? e.response.data : e.message); }
+      }
       if (invimaFile && newRecordId) {
         try {
           const ib64 = await fileToBase64(invimaFile);
@@ -518,6 +541,8 @@ async function submitInventarioForm(e) {
         if (_ids) _ids.value = '';
         if (_mns) _mns.value = '';
         if (_css) _css.style.display = 'none';
+        var _mi = document.getElementById('manualFileInput');
+        if (_mi) _mi.value = '';
         var _ii = document.getElementById('invimaFileInput');
         if (_ii) _ii.value = '';
         var _imp = document.getElementById('importacionFileInput');
