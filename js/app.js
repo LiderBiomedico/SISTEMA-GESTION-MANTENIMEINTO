@@ -324,9 +324,15 @@ async function submitInventarioForm(e) {
     importacionFile = _impf;
   }
 
-  const _calId = form.querySelector('#calibrableIdentSelect');
-  const _calMn = form.querySelector('#calibrableMainSelect');
+  const _calId = document.getElementById('calibrableIdentSelect');
+  const _calMn = document.getElementById('calibrableMainSelect');
   const esCalibrableSI = (_calId && _calId.value === 'SI') || (_calMn && _calMn.value === 'SI');
+  // Guardar SI/NO en campo Calibrable de Airtable
+  const _calibrableVal = (_calId && _calId.value && _calId.value !== '') ? _calId.value :
+                         (_calMn && _calMn.value && _calMn.value !== '') ? _calMn.value : null;
+  if (_calibrableVal === 'SI' || _calibrableVal === 'NO') {
+    rawFields['CALIBRABLE'] = _calibrableVal;
+  }
   try {
     const rows = form.querySelectorAll('#calCertList .cal-cert-row');
     rows.forEach((row) => {
@@ -464,7 +470,7 @@ async function submitInventarioForm(e) {
       console.log('📋 newRecordId:', newRecordId, '| manualFile:', !!manualFile, '| invimaFile:', !!invimaFile, '| importacionFile:', !!importacionFile);
 
       // Subir Manual, INVIMA e Importacion via upload-pdf (evitar límite 6MB de Netlify)
-      const uploadUrl = `${API_BASE_URL}/inventario?action=uploadPdf`;
+      const uploadUrl = `${API_BASE_URL}/upload-pdf`;
 
       // Helper para subir un PDF via upload-pdf
       async function uploadPdf(file, fieldName, label) {
