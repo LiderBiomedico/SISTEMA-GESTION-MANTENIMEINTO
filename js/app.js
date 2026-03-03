@@ -454,31 +454,38 @@ async function submitInventarioForm(e) {
 
       // Subir PDFs INVIMA e Importacion por separado (evitar límite 6MB de Netlify)
       const uploadUrl = `${API_BASE_URL}/upload-pdf`;
+      console.log('📋 newRecordId para uploads:', newRecordId);
       if (invimaFile && newRecordId) {
         try {
           const ib64 = await fileToBase64(invimaFile);
-          console.log('📄 subiendo invima:', invimaFile.name);
-          await axios.post(uploadUrl, {
+          console.log('📄 subiendo invima:', invimaFile.name, 'recordId:', newRecordId, 'b64len:', ib64.length);
+          const invResp = await axios.post(uploadUrl, {
             recordId: newRecordId,
             fieldName: 'Registro Invima pdf',
             filename: invimaFile.name,
             contentType: invimaFile.type || 'application/pdf',
             base64: ib64
           }, { headers: { ...getAuthHeader(), 'Content-Type': 'application/json' } });
-        } catch(e) { console.warn('⚠️ Error subiendo INVIMA PDF:', e.message); }
+          console.log('📄 invima resultado:', invResp.data);
+        } catch(e) { console.error('❌ Error subiendo INVIMA PDF:', e.response ? e.response.data : e.message); }
+      } else {
+        console.log('ℹ️ invima skip — invimaFile:', !!invimaFile, 'newRecordId:', newRecordId);
       }
       if (importacionFile && newRecordId) {
         try {
           const imp64 = await fileToBase64(importacionFile);
-          console.log('📦 subiendo importacion:', importacionFile.name);
-          await axios.post(uploadUrl, {
+          console.log('📦 subiendo importacion:', importacionFile.name, 'recordId:', newRecordId, 'b64len:', imp64.length);
+          const impResp = await axios.post(uploadUrl, {
             recordId: newRecordId,
             fieldName: 'Registro de importacion',
             filename: importacionFile.name,
             contentType: importacionFile.type || 'application/pdf',
             base64: imp64
           }, { headers: { ...getAuthHeader(), 'Content-Type': 'application/json' } });
-        } catch(e) { console.warn('⚠️ Error subiendo Importacion PDF:', e.message); }
+          console.log('📦 importacion resultado:', impResp.data);
+        } catch(e) { console.error('❌ Error subiendo Importacion PDF:', e.response ? e.response.data : e.message); }
+      } else {
+        console.log('ℹ️ importacion skip — importacionFile:', !!importacionFile, 'newRecordId:', newRecordId);
       }
 
       // Si el backend tuvo que remover selects por valores no válidos, avisar exactamente cuáles
