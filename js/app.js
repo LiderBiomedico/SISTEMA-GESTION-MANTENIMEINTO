@@ -464,15 +464,13 @@ async function submitInventarioForm(e) {
       console.log('📋 newRecordId:', newRecordId, '| manualFile:', !!manualFile, '| invimaFile:', !!invimaFile, '| importacionFile:', !!importacionFile);
 
       // Subir Manual, INVIMA e Importacion via upload-pdf (evitar límite 6MB de Netlify)
-      const uploadUrl = `${API_BASE_URL}/upload-pdf`;
-
-      // Helper para subir un PDF via upload-pdf
-      async function uploadPdf(file, fieldName, label) {
+      const _uploadUrl = `${API_BASE_URL}/upload-pdf`;
+      const _uploadPdf = async (file, fieldName, label) => {
         if (!file || !newRecordId) { console.log('⏭️ skip', label, '— file:', !!file, 'recordId:', newRecordId); return; }
         try {
           const b64 = await fileToBase64(file);
-          console.log('⬆️ subiendo', label, '→', fieldName, '| bytes b64:', b64.length);
-          const r = await axios.post(uploadUrl, {
+          console.log('⬆️ subiendo', label, '->', fieldName, '| b64 bytes:', b64.length);
+          const r = await axios.post(_uploadUrl, {
             recordId: newRecordId,
             fieldName: fieldName,
             filename: file.name,
@@ -483,11 +481,10 @@ async function submitInventarioForm(e) {
         } catch(e) {
           console.error('❌', label, 'error:', e.response ? JSON.stringify(e.response.data) : e.message);
         }
-      }
-
-      await uploadPdf(manualFile,      'Manual',                  'Manual');
-      await uploadPdf(invimaFile,      'Registro Invima pdf',     'INVIMA');
-      await uploadPdf(importacionFile, 'Registro de importacion', 'Importacion');
+      };
+      await _uploadPdf(manualFile,      'Manual',                  'Manual');
+      await _uploadPdf(invimaFile,      'Registro Invima pdf',     'INVIMA');
+      await _uploadPdf(importacionFile, 'Registro de importacion', 'Importacion');
 
 
 
