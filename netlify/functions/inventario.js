@@ -501,24 +501,10 @@ exports.handler = async (event) => {
         manualResult=await uploadFileToField(recordId,AIRTABLE_MANUAL_FIELD,manualData);
         if(!manualResult.ok) console.error('[POST] error manual:',manualResult.error);
       }
-      const invimaData=body.invima;
-      let invimaResult=null;
-      if(invimaData&&invimaData.base64){
-        invimaResult=await uploadFileToField(recordId,AIRTABLE_INVIMA_FIELD,invimaData);
-        if(!invimaResult.ok) console.error('[POST] error invima:',invimaResult.error);
-      }
-      const importacionData=body.importacion;
-      let importacionResult=null;
-      if(importacionData&&importacionData.base64){
-        importacionResult=await uploadFileToField(recordId,AIRTABLE_IMPORTACION_FIELD,importacionData);
-        if(!importacionResult.ok) console.error('[POST] error importacion:',importacionResult.error);
-      }
       const uploaded=certRes.uploaded;
       const uploadErrors=certRes.errors;
       if(manualResult&&!manualResult.ok) uploadErrors.push({field:'Manual',error:manualResult.error});
-      if(invimaResult&&!invimaResult.ok) uploadErrors.push({field:'INVIMA',error:invimaResult.error});
-      if(importacionResult&&!importacionResult.ok) uploadErrors.push({field:'Importacion',error:importacionResult.error});
-      return json(200, {ok:true, record:created.data, data:created.data, uploaded, uploadErrors, manualUploaded:manualResult?manualResult.ok:false, invimaUploaded:invimaResult?invimaResult.ok:false, importacionUploaded:importacionResult?importacionResult.ok:false, removedFields, resolvedFields, mappedSent:fields});
+      return json(200, {ok:true, record:created.data, data:created.data, recordId, uploaded, uploadErrors, manualUploaded:manualResult?manualResult.ok:false, removedFields, resolvedFields, mappedSent:fields});
     }
 
     // =========================================================================

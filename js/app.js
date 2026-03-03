@@ -443,25 +443,43 @@ async function submitInventarioForm(e) {
       const b64 = await fileToBase64(c.file);
       certPayload.push({ year: c.year, filename: c.file.name, contentType: c.file.type || 'application/pdf', base64: b64 });
     }
-    let invimaPayload = null;
-    if (invimaFile) {
-      const ib64 = await fileToBase64(invimaFile);
-      console.log('📄 invima:', invimaFile.name);
-      invimaPayload = { filename: invimaFile.name, contentType: invimaFile.type || 'application/pdf', base64: ib64 };
-    }
-    let importacionPayload = null;
-    if (importacionFile) {
-      const imp64 = await fileToBase64(importacionFile);
-      console.log('📦 importacion:', importacionFile.name);
-      importacionPayload = { filename: importacionFile.name, contentType: importacionFile.type || 'application/pdf', base64: imp64 };
-    }
-    const resp = await axios.post(url, { fields, certificates: certPayload, invima: invimaPayload, importacion: importacionPayload }, {
+    const resp = await axios.post(url, { fields, certificates: certPayload }, {
       headers: { ...getAuthHeader(), 'Content-Type': 'application/json' }
     });
 
     if (resp.data && (resp.data.ok || resp.data.record || resp.data.data)) {
       // Compatibilidad: el backend puede devolver {record} o {data}
       const record = resp.data.record || resp.data.data || null;
+      const newRecordId = resp.data.recordId || (record && (record.id || (record.records && record.records[0] && record.records[0].id)));
+
+      // Subir PDFs INVIMA e Importacion por separado (evitar límite 6MB de Netlify)
+      const uploadUrl = `${API_BASE_URL}/upload-pdf`;
+      if (invimaFile && newRecordId) {
+        try {
+          const ib64 = await fileToBase64(invimaFile);
+          console.log('📄 subiendo invima:', invimaFile.name);
+          await axios.post(uploadUrl, {
+            recordId: newRecordId,
+            fieldName: 'Registro Invima pdf',
+            filename: invimaFile.name,
+            contentType: invimaFile.type || 'application/pdf',
+            base64: ib64
+          }, { headers: { ...getAuthHeader(), 'Content-Type': 'application/json' } });
+        } catch(e) { console.warn('⚠️ Error subiendo INVIMA PDF:', e.message); }
+      }
+      if (importacionFile && newRecordId) {
+        try {
+          const imp64 = await fileToBase64(importacionFile);
+          console.log('📦 subiendo importacion:', importacionFile.name);
+          await axios.post(uploadUrl, {
+            recordId: newRecordId,
+            fieldName: 'Registro de importacion',
+            filename: importacionFile.name,
+            contentType: importacionFile.type || 'application/pdf',
+            base64: imp64
+          }, { headers: { ...getAuthHeader(), 'Content-Type': 'application/json' } });
+        } catch(e) { console.warn('⚠️ Error subiendo Importacion PDF:', e.message); }
+      }
 
       // Si el backend tuvo que remover selects por valores no válidos, avisar exactamente cuáles
       const removedSelects = (resp.data?.record && resp.data.record.__removedSelects) ||
