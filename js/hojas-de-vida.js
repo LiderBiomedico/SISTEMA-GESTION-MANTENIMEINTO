@@ -198,6 +198,28 @@
     if (!container) return;
 
     container.innerHTML = `
+    <style>
+      .hv-sheet { font-family: Arial, sans-serif; font-size: 12px; color: #212121; }
+      .hv-header { display:flex; justify-content:space-between; align-items:flex-start; border:2px solid #1976d2; border-radius:4px; padding:12px 16px; margin-bottom:6px; background:#f4f8ff; gap:16px; }
+      .hv-header-left { display:flex; align-items:center; gap:14px; }
+      .hv-logo img { width:64px; height:64px; object-fit:contain; }
+      .hv-hospital-name { font-weight:800; font-size:14px; color:#1976d2; }
+      .hv-dept { font-size:12px; font-weight:600; color:#263238; }
+      .hv-address { font-size:11px; color:#607d8b; margin-top:2px; }
+      .hv-header-center { text-align:center; flex:1; }
+      .hv-doc-title { font-weight:800; font-size:16px; color:#1976d2; letter-spacing:1px; text-transform:uppercase; }
+      .hv-code { font-weight:700; font-size:13px; color:#263238; }
+      .hv-page { font-size:11px; color:#607d8b; margin-top:4px; }
+      .hv-header-right { text-align:right; }
+      .hv-section-title { background:linear-gradient(90deg,#1976d2,#1e88e5); color:white; font-weight:700; padding:5px 10px; font-size:12px; text-transform:uppercase; letter-spacing:0.5px; margin:8px 0 0; border-radius:3px; }
+      .hv-table { width:100%; border-collapse:collapse; font-size:11.5px; margin-top:1px; }
+      .hv-table td, .hv-table th { border:1px solid #b0bec5; padding:5px 8px; vertical-align:top; }
+      .hv-label { background:#eceff1; font-weight:700; font-size:10.5px; color:#37474f; text-transform:uppercase; letter-spacing:0.3px; white-space:nowrap; }
+      .hv-value { min-height:22px; font-size:11.5px; color:#212121; }
+      .hv-subheader { background:#cfd8dc; font-weight:700; text-align:center; font-size:11px; text-transform:uppercase; color:#263238; }
+      .hv-check-cell { text-align:center; font-size:15px; color:#1976d2; font-weight:700; }
+      .hv-footer { margin-top:16px; font-size:10px; color:#9e9e9e; border-top:1px solid #e0e0e0; padding-top:6px; display:flex; justify-content:space-between; }
+    </style>
     <div class="hv-sheet" id="hvPrintArea">
 
       <!-- ENCABEZADO -->
