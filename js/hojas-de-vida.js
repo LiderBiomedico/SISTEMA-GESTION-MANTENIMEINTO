@@ -93,7 +93,7 @@
       const rb = riesgoBadge[riesgo] || { bg:'#eceff1', c:'#546e7a', label: riesgo };
 
       return `<tr>
-        <td style="font-weight:700;color:#1976d2;font-family:'JetBrains Mono',monospace;">${esc(String(item))}</td>
+        <td style="font-weight:700;color:#42a5f5;font-family:'JetBrains Mono',monospace;">${esc(String(item))}</td>
         <td style="font-weight:600;">${esc(equipo)}</td>
         <td>${esc(marca)}</td>
         <td style="font-family:'JetBrains Mono',monospace;font-size:12px;">${esc(serie)}</td>
@@ -200,24 +200,24 @@
     container.innerHTML = `
     <style>
       .hv-sheet { font-family: Arial, sans-serif; font-size: 12px; color: #212121; }
-      .hv-header { display:flex; justify-content:space-between; align-items:flex-start; border:2px solid #1976d2; border-radius:4px; padding:12px 16px; margin-bottom:6px; background:#f4f8ff; gap:16px; }
+      .hv-header { display:flex; justify-content:space-between; align-items:flex-start; border:2px solid #42a5f5; border-radius:4px; padding:12px 16px; margin-bottom:6px; background:#e3f2fd; gap:16px; }
       .hv-header-left { display:flex; align-items:center; gap:14px; }
       .hv-logo img { width:64px; height:64px; object-fit:contain; }
-      .hv-hospital-name { font-weight:800; font-size:14px; color:#1976d2; }
+      .hv-hospital-name { font-weight:800; font-size:14px; color:#42a5f5; }
       .hv-dept { font-size:12px; font-weight:600; color:#263238; }
       .hv-address { font-size:11px; color:#607d8b; margin-top:2px; }
       .hv-header-center { text-align:center; flex:1; }
-      .hv-doc-title { font-weight:800; font-size:16px; color:#1976d2; letter-spacing:1px; text-transform:uppercase; }
+      .hv-doc-title { font-weight:800; font-size:16px; color:#42a5f5; letter-spacing:1px; text-transform:uppercase; }
       .hv-code { font-weight:700; font-size:13px; color:#263238; }
       .hv-page { font-size:11px; color:#607d8b; margin-top:4px; }
       .hv-header-right { text-align:right; }
-      .hv-section-title { background:linear-gradient(90deg,#1976d2,#1e88e5); color:white; font-weight:700; padding:5px 10px; font-size:12px; text-transform:uppercase; letter-spacing:0.5px; margin:8px 0 0; border-radius:3px; }
+      .hv-section-title { background:linear-gradient(90deg,#42a5f5,#64b5f6); color:white; font-weight:700; padding:5px 10px; font-size:12px; text-transform:uppercase; letter-spacing:0.5px; margin:8px 0 0; border-radius:3px; }
       .hv-table { width:100%; border-collapse:collapse; font-size:11.5px; margin-top:1px; }
       .hv-table td, .hv-table th { border:1px solid #b0bec5; padding:5px 8px; vertical-align:top; }
       .hv-label { background:#eceff1; font-weight:700; font-size:10.5px; color:#37474f; text-transform:uppercase; letter-spacing:0.3px; white-space:nowrap; }
       .hv-value { min-height:22px; font-size:11.5px; color:#212121; }
       .hv-subheader { background:#cfd8dc; font-weight:700; text-align:center; font-size:11px; text-transform:uppercase; color:#263238; }
-      .hv-check-cell { text-align:center; font-size:15px; color:#1976d2; font-weight:700; }
+      .hv-check-cell { text-align:center; font-size:15px; color:#42a5f5; font-weight:700; }
       .hv-footer { margin-top:16px; font-size:10px; color:#9e9e9e; border-top:1px solid #e0e0e0; padding-top:6px; display:flex; justify-content:space-between; }
     </style>
     <div class="hv-sheet" id="hvPrintArea">
@@ -554,7 +554,7 @@
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          border: 2px solid #1976d2;
+          border: 2px solid #42a5f5;
           border-radius: 4px;
           padding: 10px 14px;
           margin-bottom: 6px;
@@ -563,17 +563,17 @@
         }
         .hv-header-left { display: flex; align-items: center; gap: 12px; }
         .hv-logo img { width: 56px; height: 56px; object-fit: contain; }
-        .hv-hospital-name { font-weight: 800; font-size: 13px; color: #1976d2; }
+        .hv-hospital-name { font-weight: 800; font-size: 13px; color: #42a5f5; }
         .hv-dept { font-size: 11px; font-weight: 600; color: #263238; margin-top: 2px; }
         .hv-address { font-size: 10px; color: #607d8b; margin-top: 2px; }
         .hv-header-center { text-align: center; flex: 1; }
-        .hv-doc-title { font-weight: 800; font-size: 15px; color: #1976d2; letter-spacing: 1px; text-transform: uppercase; }
+        .hv-doc-title { font-weight: 800; font-size: 15px; color: #42a5f5; letter-spacing: 1px; text-transform: uppercase; }
         .hv-code { font-weight: 700; font-size: 12px; color: #263238; margin-top: 4px; }
         .hv-page { font-size: 10px; color: #607d8b; margin-top: 3px; }
 
         /* ── TÍTULOS DE SECCIÓN ── */
         .hv-section-title {
-          background: #1976d2;
+          background: #42a5f5;
           color: white !important;
           font-weight: 700;
           padding: 5px 10px;
@@ -628,7 +628,7 @@
         .hv-check-cell {
           text-align: center;
           font-size: 14px;
-          color: #1976d2;
+          color: #42a5f5;
           font-weight: 700;
         }
 
@@ -647,7 +647,7 @@
         @media print {
           @page { size: A4 portrait; margin: 10mm; }
           body { padding: 0; }
-          .hv-section-title { background: #1976d2 !important; color: white !important; }
+          .hv-section-title { background: #42a5f5 !important; color: white !important; }
           .hv-label { background: #eceff1 !important; }
           .hv-subheader { background: #cfd8dc !important; }
           .hv-header { background: #f4f8ff !important; }
