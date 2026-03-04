@@ -19,6 +19,7 @@
     inventario: [],
     invLoaded: false,
     filterTipo: 'TODOS',
+    filterEstado: 'TODOS',
     filterSearch: '',
   });
 
@@ -81,6 +82,7 @@
           filename: att.filename||att.name||'reporte.pdf',
           url: att.url,
           fecha: extractDateFromFilename(att.filename||''),
+          estado: extractEstadoFromFilename(att.filename||''),
           size: att.size,
         });
       });
@@ -96,6 +98,7 @@
           filename: att.filename||att.name||'reporte.pdf',
           url: att.url,
           fecha: extractDateFromFilename(att.filename||''),
+          estado: extractEstadoFromFilename(att.filename||''),
           size: att.size,
         });
       });
@@ -108,6 +111,14 @@
     // Intenta extraer YYYY-MM-DD del nombre del archivo
     const m = fn.match(/(\d{4}-\d{2}-\d{2})/);
     return m ? m[1] : '';
+  }
+
+  function extractEstadoFromFilename(fn) {
+    // Intenta extraer estado del nombre del archivo (ej: _Completado_, _EnProceso_)
+    if (/completado/i.test(fn)) return 'Completado';
+    if (/en.?proceso/i.test(fn)) return 'En Proceso';
+    if (/pendiente/i.test(fn)) return 'Pendiente';
+    return 'Completado'; // default para registros sin estado en nombre
   }
 
   // ── STATS ──────────────────────────────────────────────────────────────────
@@ -131,6 +142,7 @@
     const q = mtState.filterSearch.toLowerCase();
     const filtered = mtState.reports.filter(r => {
       if (mtState.filterTipo !== 'TODOS' && r.tipo !== mtState.filterTipo) return false;
+      if (mtState.filterEstado !== 'TODOS' && r.estado !== mtState.filterEstado) return false;
       if (q && !r.equipo.toLowerCase().includes(q) && !r.placa.toLowerCase().includes(q) && !r.servicio.toLowerCase().includes(q) && !r.filename.toLowerCase().includes(q)) return false;
       return true;
     });
@@ -184,6 +196,12 @@
     renderList();
   };
 
+  // Filtro por estado: Completado / En Proceso / Pendiente / TODOS
+  window.mtFilterEstado = function(v) {
+    mtState.filterEstado = v || 'TODOS';
+    renderList();
+  };
+
   // ── FORM OPEN ──────────────────────────────────────────────────────────────
   window.openMantForm = async function(tipo) {
     const modal = document.getElementById('mantFormModal');
@@ -193,6 +211,28 @@
     document.getElementById('mantFormTipoHidden').value = isPrev ? 'Preventivo' : 'Correctivo';
 
     document.getElementById('mantFormBody').innerHTML = buildFormHTML(isPrev);
+
+    // Si el inventario no está cargado, cargarlo ahora antes de poblar el select
+    if (!mtState.invLoaded || mtState.inventario.length === 0) {
+      const sel = document.getElementById('mfEquipoSelect');
+      if (sel) sel.innerHTML = '<option value="">⏳ Cargando inventario...</option>';
+      try {
+        let inv=[], ioff=null;
+        do {
+          const p = new URLSearchParams({pageSize:'100'}); if(ioff) p.set('offset',ioff);
+          const r = await axios.get(`${BASE}/inventario?${p}`, {headers:hdr()});
+          const d = r.data||{};
+          inv = inv.concat(d.records||d.data||[]);
+          ioff = d.offset||null;
+        } while(ioff);
+        mtState.inventario = inv;
+        mtState.invLoaded = true;
+      } catch(err) {
+        const sel2 = document.getElementById('mfEquipoSelect');
+        if (sel2) sel2.innerHTML = '<option value="">⚠️ Error al cargar inventario</option>';
+      }
+    }
+
     loadInvSelect();
 
     modal.style.display='flex';
