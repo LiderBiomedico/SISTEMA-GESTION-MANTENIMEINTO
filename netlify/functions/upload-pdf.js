@@ -65,7 +65,7 @@ exports.handler = async (event) => {
     const res = await fetch(url, {
       method: 'POST',
       headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contentType: contentType || 'application/pdf', filename: filename || 'archivo.pdf', file: b64 })
+      body: JSON.stringify({ contentType: contentType || 'text/html', filename: filename || 'archivo.pdf', file: b64 })
     });
 
     if (!res.ok) {
