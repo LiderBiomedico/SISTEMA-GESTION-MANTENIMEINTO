@@ -203,45 +203,65 @@
   };
 
   // ── FORM OPEN ──────────────────────────────────────────────────────────────
-  window.openMantForm = async function(tipo) {
+  window.openMantForm = function(tipo) {
     const modal = document.getElementById('mantFormModal');
     if (!modal) return;
     const isPrev = tipo==='prev';
-    document.getElementById('mantFormTitle').textContent = isPrev ? '🛡️ Registrar Mantenimiento Preventivo' : '🔧 Registrar Mantenimiento Correctivo';
-    document.getElementById('mantFormTipoHidden').value = isPrev ? 'Preventivo' : 'Correctivo';
 
+    // Actualizar título e inyectar formulario
+    document.getElementById('mantFormTitle').textContent = isPrev
+      ? '🛡️ Registrar Mantenimiento Preventivo'
+      : '🔧 Registrar Mantenimiento Correctivo';
+    document.getElementById('mantFormTipoHidden').value = isPrev ? 'Preventivo' : 'Correctivo';
     document.getElementById('mantFormBody').innerHTML = buildFormHTML(isPrev);
 
-    // Si el inventario no está cargado, cargarlo ahora antes de poblar el select
-    if (!mtState.invLoaded || mtState.inventario.length === 0) {
-      const sel = document.getElementById('mfEquipoSelect');
-      if (sel) sel.innerHTML = '<option value="">⏳ Cargando inventario...</option>';
-      try {
-        let inv=[], ioff=null;
-        do {
-          const p = new URLSearchParams({pageSize:'100'}); if(ioff) p.set('offset',ioff);
-          const r = await axios.get(`${BASE}/inventario?${p}`, {headers:hdr()});
-          const d = r.data||{};
-          inv = inv.concat(d.records||d.data||[]);
-          ioff = d.offset||null;
-        } while(ioff);
-        mtState.inventario = inv;
-        mtState.invLoaded = true;
-      } catch(err) {
-        const sel2 = document.getElementById('mfEquipoSelect');
-        if (sel2) sel2.innerHTML = '<option value="">⚠️ Error al cargar inventario</option>';
-      }
-    }
+    // Mostrar modal INMEDIATAMENTE (sin await)
+    modal.style.display = 'flex';
+    modal.style.pointerEvents = 'auto';
+    requestAnimationFrame(function() {
+      modal.classList.add('active');
+    });
 
+    // Poblar select de equipos (async, no bloquea el modal)
     loadInvSelect();
-
-    modal.style.display='flex';
-    setTimeout(()=>modal.classList.add('active'),10);
+    if (!mtState.invLoaded || mtState.inventario.length === 0) {
+      loadInventarioForForm();
+    }
   };
 
+  // Carga el inventario en background y actualiza el select del formulario
+  async function loadInventarioForForm() {
+    const sel = document.getElementById('mfEquipoSelect');
+    if (sel) sel.innerHTML = '<option value="">⏳ Cargando equipos...</option>';
+    try {
+      let inv = [], ioff = null;
+      do {
+        const p = new URLSearchParams({ pageSize: '100' });
+        if (ioff) p.set('offset', ioff);
+        const r = await axios.get(BASE + '/inventario?' + p, { headers: hdr() });
+        const d = r.data || {};
+        inv = inv.concat(d.records || d.data || []);
+        ioff = d.offset || null;
+      } while (ioff);
+      mtState.inventario = inv;
+      mtState.invLoaded = true;
+      loadInvSelect(); // Repoblar con datos reales
+    } catch (err) {
+      const sel2 = document.getElementById('mfEquipoSelect');
+      if (sel2) sel2.innerHTML = '<option value="">⚠️ Error al cargar equipos</option>';
+      console.error('loadInventarioForForm:', err);
+    }
+  }
+
   window.closeMantForm = function(){
-    const m=document.getElementById('mantFormModal');
-    if(m){m.classList.remove('active');setTimeout(()=>m.style.display='none',250);}
+    const m = document.getElementById('mantFormModal');
+    if (m) {
+      m.classList.remove('active');
+      m.style.pointerEvents = 'none';
+      setTimeout(function() {
+        m.style.display = 'none';
+      }, 260);
+    }
   };
 
   function loadInvSelect() {
