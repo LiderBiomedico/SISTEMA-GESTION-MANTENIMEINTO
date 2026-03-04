@@ -52,7 +52,8 @@ function switchModule(moduleName, evt) {
     documentos: '📄 Gestión Documental',
     kpis: '📈 Indicadores de Desempeño',
     reportes: '📝 Reportes e Informes',
-    auditoria: '🔍 Auditoría y Trazabilidad'
+    auditoria: '🔍 Auditoría y Trazabilidad',
+    'hojas-vida': '📋 Hojas de Vida · SLV-GAT-GAB-12-F02'
   };
   const t = document.getElementById('moduleTitle');
   if (t) t.textContent = titles[moduleName] || moduleName;
@@ -79,6 +80,9 @@ function loadModuleData(moduleName) {
       break;
     case 'kpis':
       loadKPIs();
+      break;
+    case 'hojas-vida':
+      if (typeof loadHojasVida === 'function') loadHojasVida(true);
       break;
   }
 }
