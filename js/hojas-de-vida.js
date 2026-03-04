@@ -203,11 +203,11 @@
       .hv-header { display:flex; justify-content:space-between; align-items:flex-start; border:2px solid #90caf9; border-radius:4px; padding:12px 16px; margin-bottom:6px; background:#f0f7ff; gap:16px; }
       .hv-header-left { display:flex; align-items:center; gap:14px; }
       .hv-logo img { width:64px; height:64px; object-fit:contain; }
-      .hv-hospital-name { font-weight:800; font-size:14px; color:#90caf9; }
+      .hv-hospital-name { font-weight:800; font-size:14px; color:#212121; text-transform:uppercase; }
       .hv-dept { font-size:12px; font-weight:600; color:#263238; }
       .hv-address { font-size:11px; color:#607d8b; margin-top:2px; }
       .hv-header-center { text-align:center; flex:1; }
-      .hv-doc-title { font-weight:800; font-size:16px; color:#90caf9; letter-spacing:1px; text-transform:uppercase; }
+      .hv-doc-title { font-weight:800; font-size:16px; color:#212121; letter-spacing:1px; text-transform:uppercase; text-align:center; }
       .hv-code { font-weight:700; font-size:13px; color:#263238; }
       .hv-page { font-size:11px; color:#607d8b; margin-top:4px; }
       .hv-header-right { text-align:right; }
@@ -563,11 +563,11 @@
         }
         .hv-header-left { display: flex; align-items: center; gap: 12px; }
         .hv-logo img { width: 56px; height: 56px; object-fit: contain; }
-        .hv-hospital-name { font-weight: 800; font-size: 13px; color: #90caf9; }
+        .hv-hospital-name { font-weight: 800; font-size: 13px; color: #212121; text-transform: uppercase; }
         .hv-dept { font-size: 11px; font-weight: 600; color: #263238; margin-top: 2px; }
         .hv-address { font-size: 10px; color: #607d8b; margin-top: 2px; }
         .hv-header-center { text-align: center; flex: 1; }
-        .hv-doc-title { font-weight: 800; font-size: 15px; color: #90caf9; letter-spacing: 1px; text-transform: uppercase; }
+        .hv-doc-title { font-weight: 800; font-size: 15px; color: #212121; letter-spacing: 1px; text-transform: uppercase; text-align: center; }
         .hv-code { font-weight: 700; font-size: 12px; color: #263238; margin-top: 4px; }
         .hv-page { font-size: 10px; color: #607d8b; margin-top: 3px; }
 
