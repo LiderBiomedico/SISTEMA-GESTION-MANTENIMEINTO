@@ -80,6 +80,9 @@ function loadModuleData(moduleName) {
     case 'mantenimientos':
       if (typeof loadMantenimientosModule === 'function') loadMantenimientosModule(false);
       break;
+    case 'documentos':
+      if (typeof loadDocumentos === 'function') loadDocumentos(false);
+      break;
     case 'metrologia':
       const meYl = document.getElementById('meYearLabel');
       if (meYl) meYl.textContent = new Date().getFullYear();
