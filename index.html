@@ -795,6 +795,10 @@
                     <span class="nav-item-icon">📋</span>
                     <span>Mantenimientos</span>
                 </div>
+                <div class="nav-item" onclick="switchModule('metrologia')">
+                    <span class="nav-item-icon">⚖️</span>
+                    <span>Cronograma Metrología</span>
+                </div>
                 <div class="nav-item" onclick="switchModule('planificacion')">
                     <span class="nav-item-icon">📅</span>
                     <span>Cronograma Preventivo</span>
@@ -1157,6 +1161,105 @@
 
                     <div style="padding:8px 4px;font-size:13px;color:#607d8b;font-weight:600" id="mtCount"></div>
                     <div id="mantBody"><div class="mt-loading"><div class="mt-spinner"></div><p>Cargando mantenimientos...</p></div></div>
+                </div>
+
+
+                <!-- METROLOGÍA MODULE -->
+                <div id="metrologia" class="module">
+
+                    <!-- KPI Cards -->
+                    <div class="cr-stats-row">
+                        <div class="cr-stat-card" style="border-left-color:#4a148c">
+                            <div class="cr-stat-icon">⚖️</div>
+                            <div>
+                                <div class="cr-stat-value" id="meStatTotal">—</div>
+                                <div class="cr-stat-label">Equipos Calibrables</div>
+                            </div>
+                        </div>
+                        <div class="cr-stat-card cr-stat-success">
+                            <div class="cr-stat-icon">✅</div>
+                            <div>
+                                <div class="cr-stat-value" id="meStatVigente">—</div>
+                                <div class="cr-stat-label">Calibración Vigente</div>
+                            </div>
+                        </div>
+                        <div class="cr-stat-card cr-stat-warning">
+                            <div class="cr-stat-icon">⏰</div>
+                            <div>
+                                <div class="cr-stat-value" id="meStatProximo">—</div>
+                                <div class="cr-stat-label">Próximos a Calibrar</div>
+                            </div>
+                        </div>
+                        <div class="cr-stat-card" style="border-left-color:#c62828">
+                            <div class="cr-stat-icon">🚨</div>
+                            <div>
+                                <div class="cr-stat-value" id="meStatVencido">—</div>
+                                <div class="cr-stat-label">Calibración Vencida</div>
+                            </div>
+                        </div>
+                        <div class="cr-stat-card cr-stat-accent">
+                            <div class="cr-stat-icon">📅</div>
+                            <div>
+                                <div class="cr-stat-value" id="meStatMes">—</div>
+                                <div class="cr-stat-label">Calibraciones este mes</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Toolbar -->
+                    <div class="cr-toolbar">
+                        <div class="cr-toolbar-left">
+                            <div class="cr-year-badge" style="background:linear-gradient(135deg,#4a148c,#6a1b9a);color:white;padding:8px 16px;border-radius:8px;font-weight:700;font-size:14px">
+                                ⚖️ Metrología <strong id="meYearLabel"></strong>
+                            </div>
+                            <div class="cr-search-wrap">
+                                <input id="metroSearchInput" type="text" oninput="metroSearch()"
+                                    placeholder="Buscar equipo, placa, servicio..."
+                                    class="cr-search-input">
+                                <span class="cr-search-icon">🔍</span>
+                            </div>
+                        </div>
+                        <div class="cr-toolbar-right">
+                            <select class="mt-select-filter" onchange="metroFilterEstado(this.value)" style="border-radius:8px;padding:9px 12px;border:1.5px solid #cfd8dc;font-family:inherit">
+                                <option value="TODOS">— Todos los estados —</option>
+                                <option value="vigente">✅ Vigente</option>
+                                <option value="proximo">⏰ Próximo</option>
+                                <option value="vencido">🚨 Vencido</option>
+                                <option value="programado">📅 Programado</option>
+                            </select>
+                            <button class="cr-btn cr-btn-secondary" onclick="loadMetrologia(true)">🔄 Actualizar</button>
+                            <button class="cr-btn cr-btn-secondary" onclick="exportMetrologiaCSV()">💾 Exportar CSV</button>
+                            <button class="cr-btn cr-btn-primary" style="background:linear-gradient(135deg,#4a148c,#6a1b9a)" onclick="printMetrologia()">🖨️ Imprimir</button>
+                        </div>
+                    </div>
+
+                    <!-- Service Tabs -->
+                    <div class="cr-tabs-wrap">
+                        <div id="metroServiceTabs" class="cr-tabs">
+                            <button class="cr-tab active">TODOS</button>
+                        </div>
+                    </div>
+
+                    <!-- Grilla de Metrología -->
+                    <div id="metrologiaBody" class="cr-body">
+                        <div class="cr-loading">
+                            <div class="cr-spinner"></div>
+                            <p>Haz clic en "Cronograma Metrología" para cargar.</p>
+                        </div>
+                    </div>
+
+                    <!-- Estilo badge de estado metrología -->
+                    <style>
+                    .metro-estado-badge {
+                        display: inline-block;
+                        padding: 3px 8px;
+                        border-radius: 6px;
+                        border: 1.5px solid;
+                        font-size: 11px;
+                        font-weight: 700;
+                        font-family: 'Outfit', sans-serif;
+                    }
+                    </style>
                 </div>
 
                 <!-- CRONOGRAMA MODULE -->
@@ -2452,6 +2555,7 @@
     </style>
 
     <script src="js/mantenimientos.js"></script>
+    <script src="js/metrologia.js"></script>
     <script src="js/cronograma.js"></script>
 </body>
     @keyframes hvSlideUp { from { opacity:0; transform:translateY(30px); } to { opacity:1; transform:translateY(0); } }

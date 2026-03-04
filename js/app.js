@@ -48,6 +48,7 @@ function switchModule(moduleName, evt) {
     equipos: '🔧 Gestión de Equipos',
     mantenimientos: '📋 Historial de Intervenciones',
     mantenimientos: '🔧 Mantenimientos · Preventivo & Correctivo',
+    metrologia: '⚖️ Cronograma de Metrología / Calibración',
     planificacion: `📅 Cronograma de Mantenimiento Preventivo ${new Date().getFullYear()}`,
     repuestos: '📦 Gestión de Repuestos',
     documentos: '📄 Gestión Documental',
@@ -78,6 +79,11 @@ function loadModuleData(moduleName) {
       break;
     case 'mantenimientos':
       if (typeof loadMantenimientosModule === 'function') loadMantenimientosModule(false);
+      break;
+    case 'metrologia':
+      const meYl = document.getElementById('meYearLabel');
+      if (meYl) meYl.textContent = new Date().getFullYear();
+      if (typeof loadMetrologia === 'function') loadMetrologia(false);
       break;
     case 'planificacion':
       // Set year label
