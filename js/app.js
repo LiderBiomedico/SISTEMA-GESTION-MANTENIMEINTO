@@ -47,7 +47,7 @@ function switchModule(moduleName, evt) {
     inventario: '🗂️ Inventario Maestro',
     equipos: '🔧 Gestión de Equipos',
     mantenimientos: '📋 Historial de Intervenciones',
-    planificacion: '📅 Planificación y Programación',
+    planificacion: `📅 Cronograma de Mantenimiento Preventivo ${new Date().getFullYear()}`,
     repuestos: '📦 Gestión de Repuestos',
     documentos: '📄 Gestión Documental',
     kpis: '📈 Indicadores de Desempeño',
@@ -77,6 +77,12 @@ function loadModuleData(moduleName) {
       break;
     case 'mantenimientos':
       loadMantenimientos();
+      break;
+    case 'planificacion':
+      // Set year label
+      const yl = document.getElementById('crYearLabel');
+      if (yl) yl.textContent = new Date().getFullYear();
+      if (typeof loadCronograma === 'function') loadCronograma();
       break;
     case 'kpis':
       loadKPIs();

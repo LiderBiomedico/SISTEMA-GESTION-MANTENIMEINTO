@@ -797,7 +797,7 @@
                 </div>
                 <div class="nav-item" onclick="switchModule('planificacion')">
                     <span class="nav-item-icon">📅</span>
-                    <span>Planificación</span>
+                    <span>Cronograma Preventivo</span>
                 </div>
             </div>
 
@@ -1141,13 +1141,74 @@
                     </div>
                 </div>
 
-                <!-- PLANIFICACIÓN MODULE -->
+                <!-- CRONOGRAMA MODULE -->
                 <div id="planificacion" class="module">
-                    <div class="mb-3">
-                        <button class="btn btn-primary" onclick="openModal('newPlan')">+ Crear Plan Preventivo</button>
+
+                    <!-- KPI Cards -->
+                    <div class="cr-stats-row">
+                        <div class="cr-stat-card">
+                            <div class="cr-stat-icon">📦</div>
+                            <div>
+                                <div class="cr-stat-value" id="crStatTotal">—</div>
+                                <div class="cr-stat-label">Total Equipos</div>
+                            </div>
+                        </div>
+                        <div class="cr-stat-card cr-stat-success">
+                            <div class="cr-stat-icon">✅</div>
+                            <div>
+                                <div class="cr-stat-value" id="crStatProg">—</div>
+                                <div class="cr-stat-label">Con Programación</div>
+                            </div>
+                        </div>
+                        <div class="cr-stat-card cr-stat-warning">
+                            <div class="cr-stat-icon">⚠️</div>
+                            <div>
+                                <div class="cr-stat-value" id="crStatNoProg">—</div>
+                                <div class="cr-stat-label">Sin Programación</div>
+                            </div>
+                        </div>
+                        <div class="cr-stat-card cr-stat-accent">
+                            <div class="cr-stat-icon">📅</div>
+                            <div>
+                                <div class="cr-stat-value" id="crStatMonth">—</div>
+                                <div class="cr-stat-label">Mantenimientos este mes</div>
+                            </div>
+                        </div>
                     </div>
-                    <div style="background: white; padding: 20px; border-radius: 8px; text-align: center; color: var(--border);">
-                        Calendario de mantenimientos programados
+
+                    <!-- Toolbar -->
+                    <div class="cr-toolbar">
+                        <div class="cr-toolbar-left">
+                            <div class="cr-year-badge">📅 Año <strong id="crYearLabel"></strong></div>
+                            <div class="cr-search-wrap">
+                                <input id="crSearchInput" type="text" oninput="crSearch()"
+                                    placeholder="Buscar equipo, placa, servicio..."
+                                    class="cr-search-input">
+                                <span class="cr-search-icon">🔍</span>
+                            </div>
+                        </div>
+                        <div class="cr-toolbar-right">
+                            <button class="cr-btn cr-btn-secondary" onclick="loadCronograma()">🔄 Actualizar</button>
+                            <button class="cr-btn cr-btn-secondary" onclick="exportCronogramaCSV()">💾 Exportar CSV</button>
+                            <button class="cr-btn cr-btn-primary" onclick="printCronograma()">🖨️ Imprimir</button>
+                        </div>
+                    </div>
+
+                    <!-- Service Tabs -->
+                    <div class="cr-tabs-wrap">
+                        <div id="crServiceTabs" class="cr-tabs">
+                            <button class="cr-tab active">TODOS</button>
+                        </div>
+                    </div>
+
+                    <!-- Cronograma Grid -->
+                    <div id="cronogramaContent">
+                        <div id="cronogramaBody" class="cr-body">
+                            <div class="cr-loading">
+                                <div class="cr-spinner"></div>
+                                <p>Haz clic en "Cronograma Preventivo" para cargar el cronograma.</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -1856,8 +1917,257 @@
         </div>
     </div>
 
-    <!-- ESTILOS Hojas de Vida -->
+    <!-- ESTILOS CRONOGRAMA -->
     <style>
+    /* ── Stats row ─────────────────────────────────────────────────── */
+    .cr-stats-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+        margin-bottom: 20px;
+    }
+    .cr-stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 18px 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        border-left: 5px solid #0d47a1;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        transition: transform 0.2s;
+    }
+    .cr-stat-card:hover { transform: translateY(-3px); }
+    .cr-stat-card.cr-stat-success { border-left-color: #2e7d32; }
+    .cr-stat-card.cr-stat-warning { border-left-color: #f57f17; }
+    .cr-stat-card.cr-stat-accent  { border-left-color: #6a1b9a; }
+    .cr-stat-icon { font-size: 28px; }
+    .cr-stat-value { font-size: 28px; font-weight: 800; color: #0d47a1; font-family: 'JetBrains Mono', monospace; line-height: 1; }
+    .cr-stat-label { font-size: 12px; color: #78909c; font-weight: 600; text-transform: uppercase; margin-top: 4px; }
+
+    /* ── Toolbar ────────────────────────────────────────────────────── */
+    .cr-toolbar {
+        background: white;
+        border-radius: 12px;
+        padding: 16px 20px;
+        margin-bottom: 16px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+    .cr-toolbar-left { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+    .cr-toolbar-right { display: flex; gap: 10px; flex-wrap: wrap; }
+    .cr-year-badge {
+        background: linear-gradient(135deg,#0d47a1,#1565c0);
+        color: white;
+        padding: 8px 18px;
+        border-radius: 20px;
+        font-size: 14px;
+        white-space: nowrap;
+    }
+    .cr-search-wrap { position: relative; }
+    .cr-search-input {
+        padding: 10px 38px 10px 14px;
+        border: 1.5px solid #cfd8dc;
+        border-radius: 10px;
+        font-size: 14px;
+        width: 300px;
+        max-width: 100%;
+        transition: all 0.2s;
+        font-family: 'Outfit', sans-serif;
+    }
+    .cr-search-input:focus { outline: none; border-color: #0d47a1; box-shadow: 0 0 0 3px rgba(13,71,161,0.1); }
+    .cr-search-icon { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); pointer-events: none; font-size: 16px; }
+    .cr-btn {
+        padding: 9px 18px;
+        border: none;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        font-family: 'Outfit', sans-serif;
+        transition: all 0.2s;
+        white-space: nowrap;
+    }
+    .cr-btn-primary { background: linear-gradient(135deg,#0d47a1,#1565c0); color: white; }
+    .cr-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(13,71,161,0.3); }
+    .cr-btn-secondary { background: #eceff1; color: #37474f; }
+    .cr-btn-secondary:hover { background: #cfd8dc; transform: translateY(-2px); }
+
+    /* ── Service Tabs ──────────────────────────────────────────────── */
+    .cr-tabs-wrap {
+        background: white;
+        border-radius: 12px;
+        padding: 12px 16px;
+        margin-bottom: 16px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+        overflow-x: auto;
+    }
+    .cr-tabs { display: flex; gap: 8px; flex-wrap: nowrap; min-width: max-content; }
+    .cr-tab {
+        padding: 7px 16px;
+        border: 1.5px solid #cfd8dc;
+        border-radius: 20px;
+        background: white;
+        color: #546e7a;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: all 0.2s;
+        font-family: 'Outfit', sans-serif;
+    }
+    .cr-tab:hover { border-color: #0d47a1; color: #0d47a1; }
+    .cr-tab.active { background: #0d47a1; border-color: #0d47a1; color: white; }
+
+    /* ── Body / loading ────────────────────────────────────────────── */
+    .cr-body { display: flex; flex-direction: column; gap: 20px; }
+    .cr-loading { text-align: center; padding: 60px 20px; color: #90a4ae; }
+    .cr-spinner {
+        width: 44px; height: 44px;
+        border: 4px solid #eceff1;
+        border-top-color: #0d47a1;
+        border-radius: 50%;
+        animation: crSpin 0.9s linear infinite;
+        margin: 0 auto 16px;
+    }
+    @keyframes crSpin { to { transform: rotate(360deg); } }
+
+    /* ── Service block ─────────────────────────────────────────────── */
+    .cr-service-block {
+        background: white;
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    }
+    .cr-service-header {
+        background: linear-gradient(90deg,#0d47a1,#1565c0);
+        color: white;
+        padding: 12px 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .cr-service-icon { font-size: 18px; }
+    .cr-service-name { font-size: 15px; font-weight: 700; font-family: 'Outfit', sans-serif; flex: 1; }
+    .cr-service-badge {
+        background: rgba(255,255,255,0.2);
+        padding: 3px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    .cr-table-wrap { overflow-x: auto; }
+
+    /* ── Table ─────────────────────────────────────────────────────── */
+    .cr-table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 1100px; }
+    .cr-table thead th {
+        background: #eceff1;
+        padding: 10px 6px;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: #37474f;
+        border-bottom: 2px solid #cfd8dc;
+        border-right: 1px solid #eceff1;
+        text-align: center;
+        white-space: nowrap;
+    }
+    .cr-th-equipo { text-align: left !important; min-width: 200px; padding-left: 16px !important; }
+    .cr-th-freq { min-width: 110px; }
+    .cr-th-mes { min-width: 72px; }
+    .cr-th-total { min-width: 50px; }
+    .cr-mes-current { background: #fff8e1 !important; color: #e65100 !important; }
+
+    .cr-row { border-bottom: 1px solid #f0f4f8; transition: background 0.15s; }
+    .cr-row:hover { background: #f5f7ff; }
+    .cr-row:last-child { border-bottom: none; }
+
+    .cr-td-equipo { padding: 10px 10px 10px 16px; min-width: 200px; }
+    .cr-equipo-name { font-weight: 700; color: #0a1628; font-size: 13px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .cr-equipo-sub  { font-size: 11px; color: #78909c; font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
+
+    .cr-td-freq { padding: 8px 6px; text-align: center; }
+    .cr-freq-badge {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 700;
+        background: #e3f2fd;
+        color: #0d47a1;
+        white-space: nowrap;
+    }
+
+    .cr-cell-empty {
+        padding: 8px 4px;
+        border-right: 1px solid #f0f4f8;
+        min-width: 72px;
+    }
+    .cr-cell-active {
+        padding: 6px 4px;
+        border-right: 1px solid #f0f4f8;
+        min-width: 72px;
+        text-align: center;
+    }
+    .cr-cell-current-month { background: rgba(255,243,224,0.6) !important; }
+    .cr-cell-past { opacity: 0.7; }
+    .cr-cell-inner { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+
+    .cr-week-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        border: 1.5px solid;
+        font-size: 11px;
+        font-weight: 700;
+        font-family: 'JetBrains Mono', monospace;
+        white-space: nowrap;
+    }
+
+    .cr-td-total {
+        padding: 8px 10px;
+        text-align: center;
+        font-size: 14px;
+        color: #0d47a1;
+        border-left: 1px solid #eceff1;
+    }
+
+    /* ── Legend ────────────────────────────────────────────────────── */
+    .cr-legend {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        padding: 14px 20px;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        font-size: 13px;
+    }
+    .cr-legend-title { font-weight: 700; color: #37474f; }
+    .cr-legend-item {
+        padding: 4px 14px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 700;
+        font-family: 'JetBrains Mono', monospace;
+    }
+    .cr-legend-note { font-size: 12px; color: #90a4ae; }
+
+    @media (max-width: 768px) {
+        .cr-stats-row { grid-template-columns: 1fr 1fr; }
+        .cr-search-input { width: 100%; }
+        .cr-toolbar { flex-direction: column; align-items: stretch; }
+        .cr-toolbar-right { justify-content: flex-end; }
+    }
+    </style>
+
+    <script src="js/cronograma.js"></script>
+</body>
     @keyframes hvSlideUp { from { opacity:0; transform:translateY(30px); } to { opacity:1; transform:translateY(0); } }
 
     /* Botón de ver HV en la tabla */
