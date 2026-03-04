@@ -518,33 +518,122 @@
   function printHojaVida() {
     const area = document.getElementById('hvPrintArea');
     if (!area) return;
-    const w = window.open('', '_blank', 'width=900,height=700');
+    const w = window.open('', '_blank', 'width=1000,height=800');
     w.document.write(`<!DOCTYPE html><html lang="es"><head>
       <meta charset="UTF-8">
       <title>Hoja de Vida - SLV-GAT-GAB-12-F02</title>
       <style>
-        body { font-family: Arial, sans-serif; font-size: 11px; color: #000; margin: 0; padding: 15px; }
-        .hv-header { display:flex; justify-content:space-between; align-items:flex-start; border:2px solid #1976d2; padding:10px; margin-bottom:4px; }
-        .hv-hospital-name { font-weight:700; font-size:12px; color:#1976d2; }
-        .hv-dept { font-size:10px; }
-        .hv-address { font-size:9px; color:#555; }
-        .hv-header-center { text-align:center; }
-        .hv-doc-title { font-weight:700; font-size:14px; color:#1976d2; letter-spacing:1px; }
-        .hv-code { font-weight:700; font-size:11px; }
-        .hv-page { font-size:9px; color:#555; }
-        .hv-section-title { background:#1976d2; color:white; font-weight:700; padding:4px 8px; font-size:11px; text-transform:uppercase; margin:6px 0 0; }
-        .hv-table { width:100%; border-collapse:collapse; font-size:10px; }
-        .hv-table td, .hv-table th { border:1px solid #bbb; padding:3px 5px; }
-        .hv-label { background:#eceff1; font-weight:600; font-size:9px; color:#37474f; }
-        .hv-value { min-height:18px; font-size:10px; }
-        .hv-subheader { background:#cfd8dc; font-weight:700; text-align:center; font-size:9px; }
-        .hv-check-cell { text-align:center; font-size:13px; }
-        .hv-footer { margin-top:12px; font-size:9px; color:#777; border-top:1px solid #ccc; padding-top:4px; display:flex; justify-content:space-between; }
-        @media print { @page { size: A4 portrait; margin:10mm; } body { padding:0; } }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: Arial, sans-serif; font-size: 11px; color: #212121; background: white; padding: 14px; }
+
+        /* ── ENCABEZADO ── */
+        .hv-sheet { font-family: Arial, sans-serif; }
+        .hv-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          border: 2px solid #1976d2;
+          border-radius: 4px;
+          padding: 10px 14px;
+          margin-bottom: 6px;
+          background: #f4f8ff;
+          gap: 14px;
+        }
+        .hv-header-left { display: flex; align-items: center; gap: 12px; }
+        .hv-logo img { width: 56px; height: 56px; object-fit: contain; }
+        .hv-hospital-name { font-weight: 800; font-size: 13px; color: #1976d2; }
+        .hv-dept { font-size: 11px; font-weight: 600; color: #263238; margin-top: 2px; }
+        .hv-address { font-size: 10px; color: #607d8b; margin-top: 2px; }
+        .hv-header-center { text-align: center; flex: 1; }
+        .hv-doc-title { font-weight: 800; font-size: 15px; color: #1976d2; letter-spacing: 1px; text-transform: uppercase; }
+        .hv-code { font-weight: 700; font-size: 12px; color: #263238; margin-top: 4px; }
+        .hv-page { font-size: 10px; color: #607d8b; margin-top: 3px; }
+
+        /* ── TÍTULOS DE SECCIÓN ── */
+        .hv-section-title {
+          background: #1976d2;
+          color: white !important;
+          font-weight: 700;
+          padding: 5px 10px;
+          font-size: 11px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          margin: 7px 0 0;
+          border-radius: 3px;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+
+        /* ── TABLAS ── */
+        .hv-table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 10.5px;
+          margin-top: 1px;
+        }
+        .hv-table td,
+        .hv-table th {
+          border: 1px solid #b0bec5;
+          padding: 4px 7px;
+          vertical-align: top;
+        }
+        .hv-label {
+          background: #eceff1 !important;
+          font-weight: 700;
+          font-size: 10px;
+          color: #37474f;
+          text-transform: uppercase;
+          letter-spacing: 0.3px;
+          white-space: nowrap;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+        .hv-value {
+          min-height: 20px;
+          font-size: 11px;
+          color: #212121;
+        }
+        .hv-subheader {
+          background: #cfd8dc !important;
+          font-weight: 700;
+          text-align: center;
+          font-size: 10px;
+          text-transform: uppercase;
+          color: #263238;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+        .hv-check-cell {
+          text-align: center;
+          font-size: 14px;
+          color: #1976d2;
+          font-weight: 700;
+        }
+
+        /* ── PIE DE PÁGINA ── */
+        .hv-footer {
+          margin-top: 14px;
+          font-size: 10px;
+          color: #9e9e9e;
+          border-top: 1px solid #e0e0e0;
+          padding-top: 5px;
+          display: flex;
+          justify-content: space-between;
+        }
+
+        /* ── PRINT ── */
+        @media print {
+          @page { size: A4 portrait; margin: 10mm; }
+          body { padding: 0; }
+          .hv-section-title { background: #1976d2 !important; color: white !important; }
+          .hv-label { background: #eceff1 !important; }
+          .hv-subheader { background: #cfd8dc !important; }
+          .hv-header { background: #f4f8ff !important; }
+        }
       </style>
     </head><body>${area.innerHTML}</body></html>`);
     w.document.close();
-    setTimeout(() => { w.focus(); w.print(); }, 400);
+    setTimeout(() => { w.focus(); w.print(); }, 500);
   }
 
   // ── UTILS ─────────────────────────────────────────────────────────────────
