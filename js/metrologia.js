@@ -37,50 +37,88 @@
   function safeErr(e){ try{ if(e&&e.response&&e.response.data) return e.response.data.error||JSON.stringify(e.response.data); }catch(_){} return (e&&e.message)?e.message:'Error'; }
 
   // ── PARSEAR MES DE CALIBRACIÓN ────────────────────────────────────────────
-  // Devuelve array de índices de mes (0-11) donde se debe calibrar este año
+  // Devuelve objeto con meses programados, estado y metadatos de calibración
   function parseCalibrationMonths(record) {
     const f = record.fields || {};
 
-    // 1. Intentar leer campo "Años de Calibracion" para saber si hay cert del año actual
-    const aniosCal  = String(f['Años de Calibracion'] || f['AÑOS DE CALIBRACION'] || '');
-    const nCert     = String(f['N. Certificado'] || f['N. CERTIFICADO'] || '');
-    const calibrable= String(f['Calibrable'] || f['CALIBRABLE'] || '').toUpperCase();
-    const freq      = String(f['Frecuencia de MTTO Preventivo'] || f['Frecuencia de Mantenimiento'] || f['FRECUENCIA DE MTTO PREVENTIVO'] || '').toLowerCase();
-
-    // Solo equipos marcados como calibrables
+    const calibrable   = String(f['Calibrable'] || f['CALIBRABLE'] || '').toUpperCase();
     if (calibrable !== 'SI') return null; // null = no calibrable
 
-    // 2. Determinar meses según frecuencia
-    const freqMap = {
-      mensual     : [0,1,2,3,4,5,6,7,8,9,10,11],
-      bimestral   : [0,2,4,6,8,10],
-      trimestral  : [0,3,6,9],
-      cuatrimestral:[0,4,8],
-      semestral   : [0,6],
-      anual       : [0],
-    };
-    let months = [0]; // default: enero
-    for (const [key, vals] of Object.entries(freqMap)) {
-      if (freq.includes(key)) { months = vals; break; }
+    const nCert        = String(f['N. Certificado'] || f['N. CERTIFICADO'] || '');
+    const aniosCal     = String(f['Años de Calibracion'] || '');
+    const freqRaw      = String(f['Frecuencia de MTTO Preventivo'] || f['Frecuencia de Mantenimiento'] || '');
+    const freq         = freqRaw.toLowerCase();
+
+    // ── Fecha última calibración (campo Fecha de calibracion en Airtable) ──
+    const fechaCalRaw  = f['Fecha de calibracion'] || f['Fecha de Calibracion'] || '';
+    const fechaCal     = fechaCalRaw ? new Date(fechaCalRaw + 'T00:00:00') : null;
+    const fechaCalStr  = fechaCal && !isNaN(fechaCal) ? fechaCal.toLocaleDateString('es-CO') : '';
+
+    // ── Fecha próxima calibración ──
+    const fechaProxRaw = f['Fecha Proxima Calibracion'] || f['Fecha Próxima Calibración'] || '';
+    const fechaProx    = fechaProxRaw ? new Date(fechaProxRaw + 'T00:00:00') : null;
+    const fechaProxStr = fechaProx && !isNaN(fechaProx) ? fechaProx.toLocaleDateString('es-CO') : '';
+
+    const hoy = new Date();
+    hoy.setHours(0,0,0,0);
+
+    // ── Determinar meses del cronograma ──
+    let months = [];
+
+    // Opción 1: usar Fecha de calibracion + frecuencia para proyectar meses este año
+    if (fechaCal && !isNaN(fechaCal) && freqRaw) {
+      const mesesMap = { semestral:6, anual:12, bianual:24, mensual:1, trimestral:3, cuatrimestral:4 };
+      let intervalMeses = null;
+      for (const [k,v] of Object.entries(mesesMap)) { if (freq.includes(k)) { intervalMeses=v; break; } }
+      if (intervalMeses) {
+        // Calcular todas las fechas de calibración proyectadas en el año actual
+        let d = new Date(fechaCal);
+        d.setMonth(d.getMonth() + intervalMeses);
+        while (d.getFullYear() <= YEAR) {
+          if (d.getFullYear() === YEAR) months.push(d.getMonth());
+          d.setMonth(d.getMonth() + intervalMeses);
+        }
+      }
     }
 
-    // 3. Determinar estado de la calibración
-    const tieneCertAno = aniosCal.includes(String(YEAR));
-    const ultimoAno = aniosCal.split(',').map(s=>parseInt(s.trim())).filter(Boolean).sort().pop() || 0;
-    const mesActual = new Date().getMonth();
+    // Opción 2: si hay Fecha Proxima Calibracion, usarla como referencia
+    if (!months.length && fechaProx && !isNaN(fechaProx) && fechaProx.getFullYear() === YEAR) {
+      months = [fechaProx.getMonth()];
+    }
 
+    // Opción 3: fallback por frecuencia pura
+    if (!months.length) {
+      const freqMap = {
+        mensual:[0,1,2,3,4,5,6,7,8,9,10,11], bimestral:[0,2,4,6,8,10],
+        trimestral:[0,3,6,9], cuatrimestral:[0,4,8], semestral:[0,6], anual:[0],
+      };
+      for (const [k,v] of Object.entries(freqMap)) { if (freq.includes(k)) { months=v; break; } }
+      if (!months.length) months = [0];
+    }
+
+    // ── Estado ──
     let estado = 'programado';
-    if (tieneCertAno) {
-      estado = 'vigente';
-    } else if (ultimoAno === YEAR - 1) {
-      // Cert del año pasado - próximo a vencer según mes
-      const mesesRestantes = months[0] - mesActual;
-      estado = mesesRestantes <= 1 ? 'proximo' : 'programado';
-    } else if (ultimoAno > 0 && ultimoAno < YEAR - 1) {
-      estado = 'vencido';
+    let diasRestantes = null;
+
+    if (fechaProx && !isNaN(fechaProx)) {
+      diasRestantes = Math.round((fechaProx - hoy) / (1000*60*60*24));
+      if (diasRestantes < 0)       estado = 'vencido';
+      else if (diasRestantes <= 60) estado = 'proximo';
+      else                          estado = 'vigente';
+    } else if (fechaCal && !isNaN(fechaCal)) {
+      // Sin fecha próxima: estimar por la fecha de calibración + frecuencia
+      const tieneCertAno = aniosCal.includes(String(YEAR));
+      if (tieneCertAno) estado = 'vigente';
+      else {
+        const ultimoAno = aniosCal.split(',').map(s=>parseInt(s.trim())).filter(Boolean).sort().pop()||0;
+        if      (ultimoAno >= YEAR)     estado = 'vigente';
+        else if (ultimoAno === YEAR-1)  estado = 'proximo';
+        else if (ultimoAno > 0)         estado = 'vencido';
+      }
     }
 
-    return { months, estado, aniosCal, nCert, freq };
+    return { months, estado, aniosCal, nCert, freq: freqRaw,
+             fechaCalStr, fechaProxStr, diasRestantes };
   }
 
   // ── LOAD ──────────────────────────────────────────────────────────────────
@@ -255,6 +293,13 @@
       const total = cal.months.length;
       const estadoBadge = `<span class="metro-estado-badge" style="background:${color.bg};border:1.5px solid ${color.border};color:${color.text};">${color.label}</span>`;
 
+      // Info de fechas para columna de estado
+      const diasInfo = cal.diasRestantes !== null
+        ? (cal.diasRestantes < 0
+            ? `<span style="font-size:10px;color:#c62828;font-weight:700">⚠️ Vencida hace ${Math.abs(cal.diasRestantes)} días</span>`
+            : `<span style="font-size:10px;color:${cal.diasRestantes<=60?'#f57f17':'#2e7d32'}">${cal.diasRestantes} días restantes</span>`)
+        : '';
+
       return `<tr class="cr-row">
         <td class="cr-td-equipo">
           <div class="cr-equipo-name" title="${esc(equipo)}">${esc(equipo)}</div>
@@ -264,8 +309,10 @@
         <td class="cr-td-freq">
           <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-start">
             ${estadoBadge}
-            <span style="font-size:10px;color:#78909c">Cert: ${esc(nCert)}</span>
-            <span style="font-size:10px;color:#78909c">Años: ${esc(anios)}</span>
+            ${cal.fechaCalStr  ? `<span style="font-size:10px;color:#546e7a">📅 Última: ${esc(cal.fechaCalStr)}</span>` : ''}
+            ${cal.fechaProxStr ? `<span style="font-size:10px;color:#546e7a">⏭️ Próxima: ${esc(cal.fechaProxStr)}</span>` : ''}
+            ${diasInfo}
+            ${nCert ? `<span style="font-size:10px;color:#78909c">🔖 ${esc(nCert)}</span>` : ''}
           </div>
         </td>
         ${cells}

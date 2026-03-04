@@ -1637,7 +1637,7 @@
                                     <option value="NO">NO</option>
                                 </select>
                             </div>
-                            <div class="form-group" id="calCertSection" style="display:none;">
+                            <div class="form-group" id="calCertSection" style="display:none; grid-column:1/-1;">
                                 <label>CERTIFICADOS DE CALIBRACIÓN (PDF)</label>
                                 <div id="calCertList" class="cal-cert-list">
                                     <div class="cal-cert-row">
@@ -1650,6 +1650,51 @@
                                     <button type="button" class="btn btn-secondary btn-small" onclick="addCalCertRow()">➕ Agregar certificado</button>
                                 </div>
                                 <div class="text-muted" style="margin-top:6px;">Máximo 5&nbsp;MB por PDF. El año se guardará en el nombre del archivo.</div>
+
+                                <!-- Fechas de calibración: aparecen solo si el equipo es calibrable -->
+                                <div style="margin-top:18px; padding-top:16px; border-top:1px dashed #b0bec5;">
+                                    <div style="font-size:12px; font-weight:700; color:#4a148c; text-transform:uppercase; letter-spacing:.5px; margin-bottom:12px;">
+                                        📅 Fechas de calibración
+                                    </div>
+                                    <div class="form-grid" style="gap:12px;">
+                                        <div class="form-group">
+                                            <label>FECHA DE CALIBRACIÓN</label>
+                                            <input name="FECHA DE CALIBRACION" id="invFechaCalibracion" type="date"
+                                                style="max-width:240px;"
+                                                title="Fecha del último certificado de calibración">
+                                            <div class="text-muted" style="margin-top:4px; font-size:0.82em;">
+                                                Fecha del último certificado emitido.
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>FECHA PRÓXIMA CALIBRACIÓN</label>
+                                            <input name="FECHA PROXIMA CALIBRACION" id="invFechaProximaCal" type="date"
+                                                style="max-width:240px;"
+                                                title="Fecha programada para la próxima calibración">
+                                            <div class="text-muted" style="margin-top:4px; font-size:0.82em;">
+                                                Se calcula automáticamente al ingresar la frecuencia, o puedes editarla.
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>N° CERTIFICADO DE CALIBRACIÓN</label>
+                                            <input name="N. CERTIFICADO" type="text"
+                                                placeholder="Ej: CAL-2025-0042"
+                                                style="max-width:280px;">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>FRECUENCIA DE CALIBRACIÓN</label>
+                                            <select name="FRECUENCIA DE MTTO Preventivo" id="invFreqCalSelect"
+                                                onchange="calcProximaCalibracion()"
+                                                style="max-width:240px;">
+                                                <option value="">(Seleccionar)</option>
+                                                <option value="Semestral">Semestral (cada 6 meses)</option>
+                                                <option value="Anual">Anual (cada 12 meses)</option>
+                                                <option value="Bianual">Bianual (cada 2 años)</option>
+                                                <option value="Según fabricante">Según fabricante</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                             <div class="form-group" style="grid-column:1/-1;">
                                 <label>FRECUENCIA DE MTTO PREVENTIVO</label>

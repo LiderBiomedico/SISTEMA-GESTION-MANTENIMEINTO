@@ -50,6 +50,8 @@ const DATE_FIELDS = new Set([
   'Fecha de Instalacion',
   'Inicio de Garantia',
   'Termino de Garantia',
+  'Fecha de calibracion',
+  'Fecha Proxima Calibracion',
 ]);
 
 // Campos booleanos
@@ -107,6 +109,8 @@ const FIELD_MAP = {
   'TIPO DE MTTO': 'Tipo de MTTO',
   'COSTO DE MANTENIMIENTO': 'Costo de Mantenimiento',
   'N. CERTIFICADO': 'N. Certificado',
+  'FECHA DE CALIBRACION': 'Fecha de calibracion',
+  'FECHA PROXIMA CALIBRACION': 'Fecha Proxima Calibracion',
   'FRECUENCIA DE MTTO PREVENTIVO': 'Frecuencia de MTTO Preventivo',
   'FECHA PROGRAMADA DE MANTENIMINETO': 'Fecha Programada de Mantenimiento',
   'FRECUENCIA DE MANTENIMIENTO': 'Frecuencia de Mantenimiento',
