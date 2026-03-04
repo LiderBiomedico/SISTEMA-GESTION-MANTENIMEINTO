@@ -77,9 +77,6 @@ function loadModuleData(moduleName) {
       loadEquipos();
       break;
     case 'mantenimientos':
-      loadMantenimientos();
-      break;
-    case 'mantenimientos':
       if (typeof loadMantenimientosModule === 'function') loadMantenimientosModule(false);
       break;
     case 'planificacion':
