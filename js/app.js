@@ -47,6 +47,7 @@ function switchModule(moduleName, evt) {
     inventario: '🗂️ Inventario Maestro',
     equipos: '🔧 Gestión de Equipos',
     mantenimientos: '📋 Historial de Intervenciones',
+    mantenimientos: '🔧 Mantenimientos · Preventivo & Correctivo',
     planificacion: `📅 Cronograma de Mantenimiento Preventivo ${new Date().getFullYear()}`,
     repuestos: '📦 Gestión de Repuestos',
     documentos: '📄 Gestión Documental',
@@ -77,6 +78,9 @@ function loadModuleData(moduleName) {
       break;
     case 'mantenimientos':
       loadMantenimientos();
+      break;
+    case 'mantenimientos':
+      if (typeof loadMantenimientosModule === 'function') loadMantenimientosModule(false);
       break;
     case 'planificacion':
       // Set year label
