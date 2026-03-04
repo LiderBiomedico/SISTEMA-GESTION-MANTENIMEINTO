@@ -1661,37 +1661,23 @@
                                             <label>FECHA DE CALIBRACIÓN</label>
                                             <input name="FECHA DE CALIBRACION" id="invFechaCalibracion" type="date"
                                                 style="max-width:240px;"
-                                                title="Fecha del último certificado de calibración">
+                                                title="Fecha del último certificado de calibración"
+                                                oninput="calcProximaCalibracion()">
                                             <div class="text-muted" style="margin-top:4px; font-size:0.82em;">
                                                 Fecha del último certificado emitido.
                                             </div>
                                         </div>
                                         <div class="form-group">
-                                            <label>FECHA PRÓXIMA CALIBRACIÓN</label>
+                                            <label>FECHA PRÓXIMA CALIBRACIÓN
+                                                <span style="font-size:10px; font-weight:400; color:#7b1fa2; margin-left:6px;">⚙️ Automático (+12 meses)</span>
+                                            </label>
                                             <input name="FECHA PROXIMA CALIBRACION" id="invFechaProximaCal" type="date"
-                                                style="max-width:240px;"
-                                                title="Fecha programada para la próxima calibración">
-                                            <div class="text-muted" style="margin-top:4px; font-size:0.82em;">
-                                                Se calcula automáticamente al ingresar la frecuencia, o puedes editarla.
+                                                style="max-width:240px; background:#f3e5f5; color:#4a148c; font-weight:600; cursor:not-allowed;"
+                                                readonly
+                                                title="Se calcula automáticamente: fecha de calibración + 12 meses">
+                                            <div class="text-muted" id="invProximaCalInfo" style="margin-top:4px; font-size:0.82em;">
+                                                Se calcula automáticamente sumando 12 meses a la fecha de calibración.
                                             </div>
-                                        </div>
-                                        <div class="form-group">
-                                            <label>N° CERTIFICADO DE CALIBRACIÓN</label>
-                                            <input name="N. CERTIFICADO" type="text"
-                                                placeholder="Ej: CAL-2025-0042"
-                                                style="max-width:280px;">
-                                        </div>
-                                        <div class="form-group">
-                                            <label>FRECUENCIA DE CALIBRACIÓN</label>
-                                            <select name="FRECUENCIA DE MTTO Preventivo" id="invFreqCalSelect"
-                                                onchange="calcProximaCalibracion()"
-                                                style="max-width:240px;">
-                                                <option value="">(Seleccionar)</option>
-                                                <option value="Semestral">Semestral (cada 6 meses)</option>
-                                                <option value="Anual">Anual (cada 12 meses)</option>
-                                                <option value="Bianual">Bianual (cada 2 años)</option>
-                                                <option value="Según fabricante">Según fabricante</option>
-                                            </select>
                                         </div>
                                     </div>
                                 </div>

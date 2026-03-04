@@ -830,53 +830,52 @@ function syncCalibrableSelects(origin) {
 
 window.toggleCalCertSection = toggleCalCertSection;
 
-// ── CÁLCULO AUTOMÁTICO FECHA PRÓXIMA CALIBRACIÓN ──────────────────────────
+// ── CÁLCULO AUTOMÁTICO FECHA PRÓXIMA CALIBRACIÓN (fijo: +12 meses) ─────────
 window.calcProximaCalibracion = function() {
-  var fechaInput  = document.getElementById('invFechaCalibracion');
-  var freqSelect  = document.getElementById('invFreqCalSelect');
-  var proximaInput= document.getElementById('invFechaProximaCal');
-  if (!fechaInput || !freqSelect || !proximaInput) return;
+  var fechaInput   = document.getElementById('invFechaCalibracion');
+  var proximaInput = document.getElementById('invFechaProximaCal');
+  var infoEl       = document.getElementById('invProximaCalInfo');
+  if (!fechaInput || !proximaInput) return;
 
-  var fechaVal = fechaInput.value;   // YYYY-MM-DD
-  var freq     = freqSelect.value;
-  if (!fechaVal || !freq) return;
+  var fechaVal = fechaInput.value; // YYYY-MM-DD
+  if (!fechaVal) {
+    proximaInput.value = '';
+    proximaInput.style.borderColor = '';
+    if (infoEl) infoEl.textContent = 'Se calcula automáticamente sumando 12 meses a la fecha de calibración.';
+    return;
+  }
 
   var d = new Date(fechaVal + 'T00:00:00');
   if (isNaN(d.getTime())) return;
 
-  var mesesMap = {
-    'Semestral': 6,
-    'Anual': 12,
-    'Bianual': 24,
-  };
-  var meses = mesesMap[freq];
-  if (!meses) return; // "Según fabricante" - no calcular
-
-  d.setMonth(d.getMonth() + meses);
+  // Siempre +12 meses
+  d.setMonth(d.getMonth() + 12);
   var yyyy = d.getFullYear();
   var mm   = String(d.getMonth() + 1).padStart(2, '0');
   var dd   = String(d.getDate()).padStart(2, '0');
   proximaInput.value = yyyy + '-' + mm + '-' + dd;
 
-  // Resaltar si ya está vencida o próxima a vencer
-  var hoy   = new Date();
-  var diff  = (d - hoy) / (1000 * 60 * 60 * 24); // días restantes
-  proximaInput.style.borderColor = diff < 0 ? '#c62828' : diff < 30 ? '#f57f17' : '#2e7d32';
-  proximaInput.title = diff < 0
-    ? '⚠️ Fecha de calibración VENCIDA'
-    : diff < 30
-      ? '⏰ Calibración próxima (' + Math.round(diff) + ' días)'
-      : '✅ Calibración vigente (' + Math.round(diff) + ' días restantes)';
-};
+  // Estado visual según días restantes
+  var hoy  = new Date(); hoy.setHours(0,0,0,0);
+  var diff = Math.round((d - hoy) / (1000 * 60 * 60 * 24));
 
-// Recalcular próxima calibración al cambiar la fecha
-(function() {
-  document.addEventListener('change', function(e) {
-    if (e.target && e.target.id === 'invFechaCalibracion') {
-      window.calcProximaCalibracion();
-    }
-  });
-})();
+  if (diff < 0) {
+    proximaInput.style.borderColor = '#c62828';
+    proximaInput.style.background  = '#fce4ec';
+    proximaInput.style.color       = '#c62828';
+    if (infoEl) infoEl.innerHTML = '<span style="color:#c62828;font-weight:700">⚠️ Calibración VENCIDA hace ' + Math.abs(diff) + ' días</span>';
+  } else if (diff <= 60) {
+    proximaInput.style.borderColor = '#f57f17';
+    proximaInput.style.background  = '#fff8e1';
+    proximaInput.style.color       = '#e65100';
+    if (infoEl) infoEl.innerHTML = '<span style="color:#f57f17;font-weight:700">⏰ Próxima calibración en ' + diff + ' días</span>';
+  } else {
+    proximaInput.style.borderColor = '#2e7d32';
+    proximaInput.style.background  = '#f3e5f5';
+    proximaInput.style.color       = '#4a148c';
+    if (infoEl) infoEl.innerHTML = '<span style="color:#2e7d32">✅ Vigente · próxima calibración en ' + diff + ' días</span>';
+  }
+};
 window.syncCalibrableSelects = syncCalibrableSelects;
 
 // ─────────────────────────────────────────────────────────────────────────────
