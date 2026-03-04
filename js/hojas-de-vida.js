@@ -93,7 +93,7 @@
       const rb = riesgoBadge[riesgo] || { bg:'#eceff1', c:'#546e7a', label: riesgo };
 
       return `<tr>
-        <td style="font-weight:700;color:#0052CC;font-family:'JetBrains Mono',monospace;">${esc(String(item))}</td>
+        <td style="font-weight:700;color:#1976d2;font-family:'JetBrains Mono',monospace;">${esc(String(item))}</td>
         <td style="font-weight:600;">${esc(equipo)}</td>
         <td>${esc(marca)}</td>
         <td style="font-family:'JetBrains Mono',monospace;font-size:12px;">${esc(serie)}</td>
@@ -524,15 +524,15 @@
       <title>Hoja de Vida - SLV-GAT-GAB-12-F02</title>
       <style>
         body { font-family: Arial, sans-serif; font-size: 11px; color: #000; margin: 0; padding: 15px; }
-        .hv-header { display:flex; justify-content:space-between; align-items:flex-start; border:2px solid #0d47a1; padding:10px; margin-bottom:4px; }
-        .hv-hospital-name { font-weight:700; font-size:12px; color:#0d47a1; }
+        .hv-header { display:flex; justify-content:space-between; align-items:flex-start; border:2px solid #1976d2; padding:10px; margin-bottom:4px; }
+        .hv-hospital-name { font-weight:700; font-size:12px; color:#1976d2; }
         .hv-dept { font-size:10px; }
         .hv-address { font-size:9px; color:#555; }
         .hv-header-center { text-align:center; }
-        .hv-doc-title { font-weight:700; font-size:14px; color:#0d47a1; letter-spacing:1px; }
+        .hv-doc-title { font-weight:700; font-size:14px; color:#1976d2; letter-spacing:1px; }
         .hv-code { font-weight:700; font-size:11px; }
         .hv-page { font-size:9px; color:#555; }
-        .hv-section-title { background:#0d47a1; color:white; font-weight:700; padding:4px 8px; font-size:11px; text-transform:uppercase; margin:6px 0 0; }
+        .hv-section-title { background:#1976d2; color:white; font-weight:700; padding:4px 8px; font-size:11px; text-transform:uppercase; margin:6px 0 0; }
         .hv-table { width:100%; border-collapse:collapse; font-size:10px; }
         .hv-table td, .hv-table th { border:1px solid #bbb; padding:3px 5px; }
         .hv-label { background:#eceff1; font-weight:600; font-size:9px; color:#37474f; }
