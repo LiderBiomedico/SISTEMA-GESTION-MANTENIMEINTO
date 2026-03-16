@@ -3,17 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Gestión de Mantenimiento Hospitalario</title>
+    <title>Nexa CMMS — Gestión Inteligente del Mantenimiento Hospitalario</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Montserrat:wght@700;800;900&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #0d47a1;
-            --secondary: #1565c0;
-            --accent: #ff6f00;
+            --primary: #1a56c4;
+            --secondary: #2271d6;
+            --accent: #4db848;
+            --accent2: #3aa03e;
             --success: #2e7d32;
             --warning: #f57f17;
             --danger: #c62828;
@@ -22,6 +23,8 @@
             --border: #90a4ae;
             --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
             --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.15);
+            --logo-blue: #1a56c4;
+            --logo-green: #4db848;
         }
 
         * {
@@ -46,32 +49,41 @@
         /* SIDEBAR */
         .sidebar {
             width: 260px;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            background: linear-gradient(160deg, #0d2f6e 0%, #1a56c4 55%, #2e8b35 100%);
             color: white;
-            padding: 25px 0;
+            padding: 25px 0 0;
             box-shadow: var(--shadow-lg);
             overflow-y: auto;
             position: fixed;
             height: 100vh;
             left: 0;
+            display: flex;
+            flex-direction: column;
         }
 
         .sidebar-header {
-            padding: 0 20px 30px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 0 20px 24px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
             margin-bottom: 20px;
         }
 
-        .logo-icon {
-            font-size: 32px;
-            margin-bottom: 10px;
+        .nexa-logo-wrap {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
         }
 
-        .hospital-name {
-            font-size: 14px;
-            font-weight: 600;
-            opacity: 0.95;
-            letter-spacing: 0.5px;
+        .nexa-logo-svg {
+            width: 180px;
+            height: auto;
+        }
+
+        .nexa-tagline {
+            font-size: 10px;
+            font-weight: 500;
+            color: rgba(255,255,255,0.55);
+            letter-spacing: 0.4px;
+            padding-left: 2px;
         }
 
         .nav-section {
@@ -104,8 +116,8 @@
         }
 
         .nav-item.active {
-            background: rgba(255, 255, 255, 0.25);
-            border-left: 4px solid var(--accent);
+            background: rgba(255, 255, 255, 0.18);
+            border-left: 4px solid #4db848;
             padding-left: 16px;
             font-weight: 600;
         }
@@ -113,6 +125,41 @@
         .nav-item-icon {
             font-size: 18px;
             min-width: 20px;
+        }
+
+        /* DEVELOPER CREDIT */
+        .sidebar-dev-credit {
+            padding: 20px 20px 24px;
+            margin-top: auto;
+        }
+
+        .dev-credit-line {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            margin-bottom: 16px;
+        }
+
+        .dev-credit-label {
+            font-size: 9px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: rgba(255,255,255,0.4);
+            margin-bottom: 6px;
+        }
+
+        .dev-credit-name {
+            font-size: 12px;
+            font-weight: 600;
+            color: rgba(255,255,255,0.85);
+            line-height: 1.5;
+            margin-bottom: 6px;
+        }
+
+        .dev-credit-year {
+            font-size: 10px;
+            color: rgba(255,255,255,0.35);
+            font-weight: 500;
         }
 
         /* MAIN CONTENT */
@@ -127,18 +174,20 @@
 
         .header {
             background: white;
-            padding: 20px 30px;
+            padding: 16px 30px;
             box-shadow: var(--shadow);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 2px solid #e0e0e0;
+            border-bottom: 3px solid transparent;
+            border-image: linear-gradient(90deg, #1a56c4 0%, #4db848 100%) 1;
         }
 
         .header-title {
             font-size: 24px;
             font-weight: 700;
-            color: var(--primary);
+            color: var(--logo-blue);
+            font-family: 'Outfit', sans-serif;
         }
 
         .header-actions {
@@ -179,7 +228,7 @@
             width: 32px;
             height: 32px;
             border-radius: 50%;
-            background: var(--primary);
+            background: linear-gradient(135deg, #1a56c4, #4db848);
             color: white;
             display: flex;
             align-items: center;
@@ -227,7 +276,7 @@
             padding: 25px;
             border-radius: 8px;
             box-shadow: var(--shadow);
-            border-left: 5px solid var(--primary);
+            border-left: 5px solid var(--logo-blue);
             transition: all 0.3s ease;
         }
 
@@ -260,7 +309,7 @@
         .kpi-value {
             font-size: 32px;
             font-weight: 700;
-            color: var(--primary);
+            color: var(--logo-blue);
             margin-bottom: 10px;
         }
 
@@ -379,12 +428,12 @@
         }
 
         .btn-primary {
-            background: var(--primary);
+            background: linear-gradient(135deg, #1a56c4, #2271d6);
             color: white;
         }
 
         .btn-primary:hover {
-            background: #0a3d91;
+            background: linear-gradient(135deg, #0d3fa8, #1a56c4);
             box-shadow: var(--shadow-lg);
         }
 
@@ -753,15 +802,424 @@
 .cal-cert-row input[type="file"] { padding: 10px; border: 2px dashed #CFD8DC; border-radius: 10px; background: #F5F7FA; }
 .cal-cert-row input[type="number"] { padding: 10px 12px; border: 2px solid #CFD8DC; border-radius: 10px; background: #F5F7FA; }
 
+        /* ===================== SPLASH SCREEN ===================== */
+        #splashScreen {
+            position: fixed;
+            inset: 0;
+            z-index: 99999;
+            background: linear-gradient(145deg, #060f22 0%, #0d2150 40%, #0a3a1a 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0;
+            overflow: hidden;
+            transition: opacity 0.7s ease, transform 0.7s ease;
+        }
+
+        #splashScreen.hide {
+            opacity: 0;
+            transform: scale(1.04);
+            pointer-events: none;
+        }
+
+        /* Grid background */
+        #splashScreen::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(77,184,72,0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(26,86,196,0.05) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: gridShift 8s linear infinite;
+        }
+
+        @keyframes gridShift {
+            from { background-position: 0 0; }
+            to { background-position: 50px 50px; }
+        }
+
+        /* Glow orbs */
+        .splash-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.25;
+            animation: orbFloat 6s ease-in-out infinite alternate;
+        }
+        .splash-orb-1 {
+            width: 400px; height: 400px;
+            background: #1a56c4;
+            top: -100px; left: -100px;
+        }
+        .splash-orb-2 {
+            width: 350px; height: 350px;
+            background: #4db848;
+            bottom: -80px; right: -80px;
+            animation-delay: -3s;
+        }
+        .splash-orb-3 {
+            width: 250px; height: 250px;
+            background: #2a9fd4;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            animation-delay: -1.5s;
+        }
+
+        @keyframes orbFloat {
+            from { transform: scale(1) translate(0, 0); }
+            to { transform: scale(1.2) translate(20px, -20px); }
+        }
+
+        .splash-content {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 32px;
+            animation: splashFadeIn 0.8s ease forwards;
+        }
+
+        @keyframes splashFadeIn {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .splash-logo-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .splash-icon {
+            animation: splashIconPop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s both;
+        }
+
+        @keyframes splashIconPop {
+            from { opacity: 0; transform: scale(0.5); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .splash-brand {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            animation: splashFadeIn 0.6s ease 0.5s both;
+        }
+
+        .splash-nexa {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: clamp(52px, 8vw, 80px);
+            color: white;
+            letter-spacing: -2px;
+            line-height: 1;
+        }
+
+        .splash-cmms {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+            font-size: clamp(36px, 5vw, 56px);
+            color: #4db848;
+            letter-spacing: 1px;
+            line-height: 1;
+        }
+
+        .splash-tagline {
+            font-family: 'Outfit', sans-serif;
+            font-size: clamp(14px, 2vw, 18px);
+            font-weight: 400;
+            color: rgba(255,255,255,0.55);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            text-align: center;
+            animation: splashFadeIn 0.6s ease 0.8s both;
+        }
+
+        .splash-divider {
+            width: 80px;
+            height: 2px;
+            background: linear-gradient(90deg, #1a56c4, #4db848);
+            border-radius: 2px;
+            animation: splashFadeIn 0.6s ease 0.9s both;
+        }
+
+        /* Progress bar */
+        .splash-progress-wrap {
+            width: min(400px, 80vw);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            animation: splashFadeIn 0.6s ease 1s both;
+        }
+
+        .splash-progress-track {
+            width: 100%;
+            height: 3px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .splash-progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #1a56c4, #4db848);
+            border-radius: 4px;
+            animation: splashProgress 4.6s cubic-bezier(0.4, 0, 0.2, 1) 0.4s forwards;
+            box-shadow: 0 0 12px rgba(77,184,72,0.5);
+        }
+
+        @keyframes splashProgress {
+            0% { width: 0%; }
+            100% { width: 100%; }
+        }
+
+        .splash-loading-text {
+            font-family: 'Outfit', sans-serif;
+            font-size: 12px;
+            font-weight: 500;
+            color: rgba(255,255,255,0.35);
+            letter-spacing: 1px;
+        }
+
+        /* Developer credit en splash */
+        .splash-dev {
+            position: absolute;
+            bottom: 32px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            z-index: 2;
+            animation: splashFadeIn 0.6s ease 1.2s both;
+        }
+
+        .splash-dev-label {
+            font-size: 13px;
+            color: rgba(255,255,255,0.4);
+            font-family: 'Outfit', sans-serif;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .splash-dev-name {
+            font-size: 20px;
+            font-weight: 700;
+            color: rgba(255,255,255,0.85);
+            font-family: 'Montserrat', sans-serif;
+            white-space: nowrap;
+            letter-spacing: -0.5px;
+            line-height: 1.2;
+        }
+
+        /* ECG line decorativa */
+        .splash-ecg {
+            position: absolute;
+            bottom: 115px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 2;
+            opacity: 0.7;
+            filter: drop-shadow(0 0 4px rgba(255,255,255,1)) drop-shadow(0 0 14px rgba(77,184,72,0.7));
+        }
+
+        .splash-ecg-line {
+            stroke-dasharray: 3000;
+            stroke-dashoffset: 3000;
+            animation: ecgDraw 4s ease 0.3s forwards;
+        }
+
+        @keyframes ecgDraw {
+            to { stroke-dashoffset: 0; }
+        }
+
     </style>
 </head>
 <body>
+
+    <!-- ===================== SPLASH SCREEN ===================== -->
+    <div id="splashScreen">
+        <!-- Orbs de fondo -->
+        <div class="splash-orb splash-orb-1"></div>
+        <div class="splash-orb splash-orb-2"></div>
+        <div class="splash-orb splash-orb-3"></div>
+
+        <!-- ECG decorativa de fondo -->
+        <svg class="splash-ecg" width="960" height="70" viewBox="0 0 960 70" fill="none">
+            <defs>
+                <linearGradient id="ecgFade" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stop-color="white" stop-opacity="0"/>
+                    <stop offset="6%" stop-color="white" stop-opacity="1"/>
+                    <stop offset="94%" stop-color="white" stop-opacity="1"/>
+                    <stop offset="100%" stop-color="white" stop-opacity="0"/>
+                </linearGradient>
+            </defs>
+            <!-- Capa glow verde -->
+            <polyline class="splash-ecg-line"
+                points="0,35 35,35 45,35 47,33 50,37 53,35 65,35
+                        75,35 77,31 80,39 83,35 95,35
+                        105,35 107,29 110,28 113,10 116,60 119,35 125,35
+                        140,35 143,32 146,38 149,35 162,35
+                        172,35 174,31 177,39 180,35 192,35
+                        202,35 204,29 207,28 210,10 213,60 216,35 222,35
+                        237,35 240,32 243,38 246,35 259,35
+                        269,35 271,31 274,39 277,35 289,35
+                        299,35 301,29 304,28 307,10 310,60 313,35 319,35
+                        334,35 337,32 340,38 343,35 356,35
+                        366,35 368,31 371,39 374,35 386,35
+                        396,35 398,29 401,28 404,10 407,60 410,35 416,35
+                        431,35 434,32 437,38 440,35 453,35
+                        463,35 465,31 468,39 471,35 483,35
+                        493,35 495,29 498,28 501,10 504,60 507,35 513,35
+                        528,35 531,32 534,38 537,35 550,35
+                        560,35 562,31 565,39 568,35 580,35
+                        590,35 592,29 595,28 598,10 601,60 604,35 610,35
+                        625,35 628,32 631,38 634,35 647,35
+                        657,35 659,31 662,39 665,35 677,35
+                        687,35 689,29 692,28 695,10 698,60 701,35 707,35
+                        722,35 725,32 728,38 731,35 744,35
+                        754,35 756,31 759,39 762,35 774,35
+                        784,35 786,29 789,28 792,10 795,60 798,35 804,35
+                        819,35 822,32 825,38 828,35 841,35
+                        851,35 853,31 856,39 859,35 871,35
+                        881,35 883,29 886,28 889,10 892,60 895,35 901,35
+                        916,35 919,32 922,38 925,35 938,35
+                        948,35 950,31 953,39 956,35 960,35"
+                fill="none" stroke="rgba(77,184,72,0.4)" stroke-width="7"
+                stroke-linecap="round" stroke-linejoin="round"/>
+            <!-- Línea blanca principal -->
+            <polyline class="splash-ecg-line"
+                points="0,35 35,35 45,35 47,33 50,37 53,35 65,35
+                        75,35 77,31 80,39 83,35 95,35
+                        105,35 107,29 110,28 113,10 116,60 119,35 125,35
+                        140,35 143,32 146,38 149,35 162,35
+                        172,35 174,31 177,39 180,35 192,35
+                        202,35 204,29 207,28 210,10 213,60 216,35 222,35
+                        237,35 240,32 243,38 246,35 259,35
+                        269,35 271,31 274,39 277,35 289,35
+                        299,35 301,29 304,28 307,10 310,60 313,35 319,35
+                        334,35 337,32 340,38 343,35 356,35
+                        366,35 368,31 371,39 374,35 386,35
+                        396,35 398,29 401,28 404,10 407,60 410,35 416,35
+                        431,35 434,32 437,38 440,35 453,35
+                        463,35 465,31 468,39 471,35 483,35
+                        493,35 495,29 498,28 501,10 504,60 507,35 513,35
+                        528,35 531,32 534,38 537,35 550,35
+                        560,35 562,31 565,39 568,35 580,35
+                        590,35 592,29 595,28 598,10 601,60 604,35 610,35
+                        625,35 628,32 631,38 634,35 647,35
+                        657,35 659,31 662,39 665,35 677,35
+                        687,35 689,29 692,28 695,10 698,60 701,35 707,35
+                        722,35 725,32 728,38 731,35 744,35
+                        754,35 756,31 759,39 762,35 774,35
+                        784,35 786,29 789,28 792,10 795,60 798,35 804,35
+                        819,35 822,32 825,38 828,35 841,35
+                        851,35 853,31 856,39 859,35 871,35
+                        881,35 883,29 886,28 889,10 892,60 895,35 901,35
+                        916,35 919,32 922,38 925,35 938,35
+                        948,35 950,31 953,39 956,35 960,35"
+                fill="none" stroke="url(#ecgFade)" stroke-width="2.5"
+                stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+
+        <!-- Contenido central -->
+        <div class="splash-content">
+            <div class="splash-logo-container">
+
+                <!-- Ícono SVG del logo -->
+                <div class="splash-icon">
+                    <svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="sg1" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%" stop-color="#4db848"/>
+                                <stop offset="50%" stop-color="#2a7fd4"/>
+                                <stop offset="100%" stop-color="#1a56c4"/>
+                            </linearGradient>
+                            <linearGradient id="sg2" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%" stop-color="#1a56c4"/>
+                                <stop offset="100%" stop-color="#2a7fd4"/>
+                            </linearGradient>
+                            <filter id="glow">
+                                <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                                <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                            </filter>
+                        </defs>
+                        <!-- Cruz - brazo horizontal -->
+                        <rect x="4" y="36" width="92" height="28" rx="8" fill="url(#sg1)"/>
+                        <!-- Cruz - brazo vertical -->
+                        <rect x="36" y="4" width="28" height="92" rx="8" fill="url(#sg2)"/>
+                        <!-- Pulso ECG -->
+                        <polyline filter="url(#glow)"
+                            points="10,50 22,50 28,32 36,68 44,38 52,58 60,50 90,50"
+                            fill="none" stroke="white" stroke-width="4"
+                            stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+
+                <!-- Nombre de la marca -->
+                <div class="splash-brand">
+                    <span class="splash-nexa">NEXA</span>
+                    <span class="splash-cmms">CMMS</span>
+                </div>
+
+                <div class="splash-divider"></div>
+
+                <div class="splash-tagline">Gestión inteligente del mantenimiento hospitalario</div>
+            </div>
+
+            <!-- Barra de progreso -->
+            <div class="splash-progress-wrap">
+                <div class="splash-progress-track">
+                    <div class="splash-progress-bar"></div>
+                </div>
+                <div class="splash-loading-text" id="splashLoadingText">Iniciando sistema...</div>
+            </div>
+        </div>
+
+        <!-- Crédito desarrollador -->
+        <div class="splash-dev">
+            <div class="splash-dev-label">Desarrollado por</div>
+            <div class="splash-dev-name">Ing. Paul Eduardo Muñoz Rodriguez</div>
+        </div>
+    </div>
+    <!-- FIN SPLASH SCREEN -->
+
     <div class="container-app">
         <!-- SIDEBAR -->
         <aside class="sidebar">
             <div class="sidebar-header">
-                <img src="data:image/png;base64,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" alt="Logo Hospital" style="width:60px;height:60px;object-fit:contain;border-radius:8px;">
-                <div class="hospital-name">Sistema de Gestión de la Tecnología</div>
+                <div class="nexa-logo-wrap">
+                    <!-- Nexa CMMS Logo SVG -->
+                    <svg class="nexa-logo-svg" viewBox="0 0 220 58" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="crossGrad" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%" stop-color="#4db848"/>
+                                <stop offset="50%" stop-color="#2a7fd4"/>
+                                <stop offset="100%" stop-color="#1a56c4"/>
+                            </linearGradient>
+                            <linearGradient id="crossGrad2" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%" stop-color="#1a56c4"/>
+                                <stop offset="100%" stop-color="#2a7fd4"/>
+                            </linearGradient>
+                        </defs>
+                        <!-- Cruz médica - brazo horizontal -->
+                        <rect x="2" y="17" width="46" height="14" rx="4" fill="url(#crossGrad)"/>
+                        <!-- Cruz médica - brazo vertical -->
+                        <rect x="15" y="4" width="20" height="40" rx="4" fill="url(#crossGrad2)"/>
+                        <!-- Pulso ECG sobre la cruz -->
+                        <polyline points="6,24 12,24 15,16 19,32 23,20 27,28 30,24 44,24"
+                            fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.95"/>
+                        <!-- Texto NEXA -->
+                        <text x="58" y="33" font-family="'Montserrat', sans-serif" font-weight="900" font-size="26" fill="white" letter-spacing="-0.5">NEXA</text>
+                        <!-- Texto CMMS en verde -->
+                        <text x="130" y="33" font-family="'Montserrat', sans-serif" font-weight="700" font-size="20" fill="#4db848" letter-spacing="0.5">CMMS</text>
+                    </svg>
+                    <span class="nexa-tagline">Gestión inteligente del mantenimiento hospitalario</span>
+                </div>
             </div>
 
             <div class="nav-section">
@@ -774,10 +1232,6 @@
                 <div class="nav-item" onclick="switchModule('inventario')">
                     <span class="nav-item-icon">📦</span>
                     <span>Inventario Maestro</span>
-                </div>
-                <div class="nav-item" onclick="switchModule('hojas-vida')">
-                    <span class="nav-item-icon">📋</span>
-                    <span>Hojas de Vida</span>
                 </div>
 </div>
 
@@ -795,13 +1249,9 @@
                     <span class="nav-item-icon">📋</span>
                     <span>Mantenimientos</span>
                 </div>
-                <div class="nav-item" onclick="switchModule('metrologia')">
-                    <span class="nav-item-icon">⚖️</span>
-                    <span>Cronograma Metrología</span>
-                </div>
                 <div class="nav-item" onclick="switchModule('planificacion')">
                     <span class="nav-item-icon">📅</span>
-                    <span>Cronograma Preventivo</span>
+                    <span>Planificación</span>
                 </div>
             </div>
 
@@ -831,6 +1281,14 @@
                     <span class="nav-item-icon">🔍</span>
                     <span>Auditoría</span>
                 </div>
+            </div>
+
+            <!-- DEVELOPER CREDIT -->
+            <div class="sidebar-dev-credit">
+                <div class="dev-credit-line"></div>
+                <div class="dev-credit-label">Desarrollado por</div>
+                <div class="dev-credit-name">Ing. Paul Eduardo<br>Muñoz Rodriguez</div>
+                <div class="dev-credit-year">© 2025 · Nexa CMMS</div>
             </div>
         </aside>
 
@@ -1050,286 +1508,53 @@
                 </div>
 
 
-                <!-- HOJAS DE VIDA MODULE -->
-                <div id="hojas-vida" class="module">
-
-                    <!-- Toolbar -->
-                    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px;">
-                        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-                            <button class="btn btn-primary" onclick="loadHojasVida(true)">🔄 Actualizar</button>
-                            <span class="badge" id="hvCount">0 equipos</span>
-                        </div>
-                        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-                            <input id="hvSearchInput" type="text" oninput="hvSearch()"
-                                placeholder="Buscar por equipo, placa, serie, servicio..."
-                                style="width:380px;max-width:100%;padding:10px 14px;border:1.5px solid #cfd8dc;border-radius:8px;font-size:14px;">
-                        </div>
+                <!-- MANTENIMIENTOS MODULE -->
+                <div id="mantenimientos" class="module">
+                    <div class="mb-3">
+                        <button class="btn btn-primary" onclick="openModal('newMantenimiento')">+ Registrar Intervención</button>
                     </div>
 
-                    <!-- Tabla de listado -->
                     <div class="table-container">
                         <div class="table-header">
-                            <div class="text-muted">
-                                Visualiza y genera las <strong>Hojas de Vida</strong> de cada equipo en formato oficial
-                                <span style="background:#e3f2fd;color:#0d47a1;font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;margin-left:6px;">SLV-GAT-GAB-12-F02</span>
-                            </div>
+                            <input type="text" placeholder="Buscar intervención..." style="width: 300px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
                         </div>
+
                         <table>
                             <thead>
                                 <tr>
-                                    <th>ITEM</th>
-                                    <th>EQUIPO</th>
-                                    <th>MARCA</th>
-                                    <th>SERIE</th>
-                                    <th>PLACA</th>
-                                    <th>SERVICIO</th>
-                                    <th>RIESGO</th>
-                                    <th>HOJA DE VIDA</th>
+                                    <th>ID</th>
+                                    <th>Equipo</th>
+                                    <th>Tipo</th>
+                                    <th>Fecha Ejecución</th>
+                                    <th>Técnico</th>
+                                    <th>Duración</th>
+                                    <th>Costo</th>
+                                    <th>Estado</th>
                                 </tr>
                             </thead>
-                            <tbody id="hvListBody">
+                            <tbody>
                                 <tr>
-                                    <td colspan="8" style="text-align:center;padding:20px;color:#607d8b;">
-                                        Selecciona <strong>Hojas de Vida</strong> en el menú para cargar los equipos.
-                                    </td>
+                                    <td>#INT-2025-001</td>
+                                    <td>Resonancia Magnética 3T</td>
+                                    <td>Preventivo</td>
+                                    <td>2025-01-05</td>
+                                    <td>Carlos López</td>
+                                    <td>2.5h</td>
+                                    <td>$450</td>
+                                    <td><span class="status-badge status-active">Completado</span></td>
                                 </tr>
                             </tbody>
                         </table>
-                        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 20px;border-top:1px solid #e0e0e0;flex-wrap:wrap;gap:10px;">
-                            <span class="text-muted">Paginación de 50 registros por página.</span>
-                            <div style="display:flex;gap:8px;">
-                                <button class="btn btn-small btn-secondary" id="hvPrevBtn" onclick="hvPrevPage()" disabled>◀ Anterior</button>
-                                <button class="btn btn-small btn-secondary" id="hvNextBtn" onclick="hvNextPage()" disabled>Siguiente ▶</button>
-                            </div>
-                        </div>
                     </div>
                 </div>
 
-
-                <!-- MANTENIMIENTOS MODULE -->
-                <div id="mantenimientos" class="module">
-
-                    <!-- KPI Cards -->
-                    <div class="mt-stats-row">
-                        <div class="mt-stat-card">
-                            <div class="mt-stat-icon">📋</div>
-                            <div><div class="mt-stat-value" id="mtStatTotal">—</div><div class="mt-stat-label">Total Reportes</div></div>
-                        </div>
-                        <div class="mt-stat-card mt-stat-prev">
-                            <div class="mt-stat-icon">🛡️</div>
-                            <div><div class="mt-stat-value" id="mtStatPrev">—</div><div class="mt-stat-label">Preventivos</div></div>
-                        </div>
-                        <div class="mt-stat-card mt-stat-corr">
-                            <div class="mt-stat-icon">🔧</div>
-                            <div><div class="mt-stat-value" id="mtStatCorr">—</div><div class="mt-stat-label">Correctivos</div></div>
-                        </div>
-                        <div class="mt-stat-card mt-stat-pend">
-                            <div class="mt-stat-icon">📦</div>
-                            <div><div class="mt-stat-value" id="mtStatEquipos">—</div><div class="mt-stat-label">Equipos con Reportes</div></div>
-                        </div>
-                        <div class="mt-stat-card mt-stat-ok">
-                            <div class="mt-stat-icon">🏥</div>
-                            <div><div class="mt-stat-value" id="mtStatInv">—</div><div class="mt-stat-label">Total Inventario</div></div>
-                        </div>
-                    </div>
-
-                    <!-- Toolbar -->
-                    <div class="mt-toolbar">
-                        <div class="mt-toolbar-left">
-                            <button class="mt-new-btn mt-new-prev" onclick="openMantForm('prev')">🛡️ + Preventivo</button>
-                            <button class="mt-new-btn mt-new-corr" onclick="openMantForm('corr')">🔧 + Correctivo</button>
-                            <div class="mt-filter-group">
-                                <button class="mt-filter-btn active" data-tipo="TODOS" onclick="mtFilterTipo('TODOS')">Todos</button>
-                                <button class="mt-filter-btn" data-tipo="Preventivo" onclick="mtFilterTipo('Preventivo')">🛡️ Preventivo</button>
-                                <button class="mt-filter-btn" data-tipo="Correctivo" onclick="mtFilterTipo('Correctivo')">🔧 Correctivo</button>
-                            </div>
-                        </div>
-                        <div class="mt-toolbar-right">
-                            <div class="mt-search-wrap">
-                                <input id="mtSearchInput" type="text" oninput="mtSearch()" placeholder="Buscar equipo, técnico..." class="mt-search-input">
-                                <span class="mt-search-icon">🔍</span>
-                            </div>
-                            <select class="mt-select-filter" onchange="mtFilterEstado(this.value)">
-                                <option value="TODOS">— Todos los estados —</option>
-                                <option value="Completado">✔ Completado</option>
-                                <option value="En Proceso">⚙ En Proceso</option>
-                                <option value="Pendiente">⏳ Pendiente</option>
-                            </select>
-                            <button class="mt-refresh-btn" onclick="loadMantenimientosModule(true)">🔄</button>
-                        </div>
-                    </div>
-
-                    <div style="padding:8px 4px;font-size:13px;color:#607d8b;font-weight:600" id="mtCount"></div>
-                    <div id="mantBody"><div class="mt-loading"><div class="mt-spinner"></div><p>Cargando mantenimientos...</p></div></div>
-                </div>
-
-
-                <!-- METROLOGÍA MODULE -->
-                <div id="metrologia" class="module">
-
-                    <!-- KPI Cards -->
-                    <div class="cr-stats-row">
-                        <div class="cr-stat-card" style="border-left-color:#4a148c">
-                            <div class="cr-stat-icon">⚖️</div>
-                            <div>
-                                <div class="cr-stat-value" id="meStatTotal">—</div>
-                                <div class="cr-stat-label">Equipos Calibrables</div>
-                            </div>
-                        </div>
-                        <div class="cr-stat-card cr-stat-success">
-                            <div class="cr-stat-icon">✅</div>
-                            <div>
-                                <div class="cr-stat-value" id="meStatVigente">—</div>
-                                <div class="cr-stat-label">Calibración Vigente</div>
-                            </div>
-                        </div>
-                        <div class="cr-stat-card cr-stat-warning">
-                            <div class="cr-stat-icon">⏰</div>
-                            <div>
-                                <div class="cr-stat-value" id="meStatProximo">—</div>
-                                <div class="cr-stat-label">Próximos a Calibrar</div>
-                            </div>
-                        </div>
-                        <div class="cr-stat-card" style="border-left-color:#c62828">
-                            <div class="cr-stat-icon">🚨</div>
-                            <div>
-                                <div class="cr-stat-value" id="meStatVencido">—</div>
-                                <div class="cr-stat-label">Calibración Vencida</div>
-                            </div>
-                        </div>
-                        <div class="cr-stat-card cr-stat-accent">
-                            <div class="cr-stat-icon">📅</div>
-                            <div>
-                                <div class="cr-stat-value" id="meStatMes">—</div>
-                                <div class="cr-stat-label">Calibraciones este mes</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Toolbar -->
-                    <div class="cr-toolbar">
-                        <div class="cr-toolbar-left">
-                            <div class="cr-year-badge" style="background:linear-gradient(135deg,#4a148c,#6a1b9a);color:white;padding:8px 16px;border-radius:8px;font-weight:700;font-size:14px">
-                                ⚖️ Metrología <strong id="meYearLabel"></strong>
-                            </div>
-                            <div class="cr-search-wrap">
-                                <input id="metroSearchInput" type="text" oninput="metroSearch()"
-                                    placeholder="Buscar equipo, placa, servicio..."
-                                    class="cr-search-input">
-                                <span class="cr-search-icon">🔍</span>
-                            </div>
-                        </div>
-                        <div class="cr-toolbar-right">
-                            <select class="mt-select-filter" onchange="metroFilterEstado(this.value)" style="border-radius:8px;padding:9px 12px;border:1.5px solid #cfd8dc;font-family:inherit">
-                                <option value="TODOS">— Todos los estados —</option>
-                                <option value="vigente">✅ Vigente</option>
-                                <option value="proximo">⏰ Próximo</option>
-                                <option value="vencido">🚨 Vencido</option>
-                                <option value="programado">📅 Programado</option>
-                            </select>
-                            <button class="cr-btn cr-btn-secondary" onclick="loadMetrologia(true)">🔄 Actualizar</button>
-                            <button class="cr-btn cr-btn-secondary" onclick="exportMetrologiaCSV()">💾 Exportar CSV</button>
-                            <button class="cr-btn cr-btn-primary" style="background:linear-gradient(135deg,#4a148c,#6a1b9a)" onclick="printMetrologia()">🖨️ Imprimir</button>
-                        </div>
-                    </div>
-
-                    <!-- Service Tabs -->
-                    <div class="cr-tabs-wrap">
-                        <div id="metroServiceTabs" class="cr-tabs">
-                            <button class="cr-tab active">TODOS</button>
-                        </div>
-                    </div>
-
-                    <!-- Grilla de Metrología -->
-                    <div id="metrologiaBody" class="cr-body">
-                        <div class="cr-loading">
-                            <div class="cr-spinner"></div>
-                            <p>Haz clic en "Cronograma Metrología" para cargar.</p>
-                        </div>
-                    </div>
-
-                    <!-- Estilo badge de estado metrología -->
-                    <style>
-                    .metro-estado-badge {
-                        display: inline-block;
-                        padding: 3px 8px;
-                        border-radius: 6px;
-                        border: 1.5px solid;
-                        font-size: 11px;
-                        font-weight: 700;
-                        font-family: 'Outfit', sans-serif;
-                    }
-                    </style>
-                </div>
-
-                <!-- CRONOGRAMA MODULE -->
+                <!-- PLANIFICACIÓN MODULE -->
                 <div id="planificacion" class="module">
-
-                    <!-- KPI Cards -->
-                    <div class="cr-stats-row">
-                        <div class="cr-stat-card">
-                            <div class="cr-stat-icon">📦</div>
-                            <div>
-                                <div class="cr-stat-value" id="crStatTotal">—</div>
-                                <div class="cr-stat-label">Total Equipos</div>
-                            </div>
-                        </div>
-                        <div class="cr-stat-card cr-stat-success">
-                            <div class="cr-stat-icon">✅</div>
-                            <div>
-                                <div class="cr-stat-value" id="crStatProg">—</div>
-                                <div class="cr-stat-label">Con Programación</div>
-                            </div>
-                        </div>
-                        <div class="cr-stat-card cr-stat-warning">
-                            <div class="cr-stat-icon">⚠️</div>
-                            <div>
-                                <div class="cr-stat-value" id="crStatNoProg">—</div>
-                                <div class="cr-stat-label">Sin Programación</div>
-                            </div>
-                        </div>
-                        <div class="cr-stat-card cr-stat-accent">
-                            <div class="cr-stat-icon">📅</div>
-                            <div>
-                                <div class="cr-stat-value" id="crStatMonth">—</div>
-                                <div class="cr-stat-label">Mantenimientos este mes</div>
-                            </div>
-                        </div>
+                    <div class="mb-3">
+                        <button class="btn btn-primary" onclick="openModal('newPlan')">+ Crear Plan Preventivo</button>
                     </div>
-
-                    <!-- Toolbar -->
-                    <div class="cr-toolbar">
-                        <div class="cr-toolbar-left">
-                            <div class="cr-year-badge">📅 Año <strong id="crYearLabel"></strong></div>
-                            <div class="cr-search-wrap">
-                                <input id="crSearchInput" type="text" oninput="crSearch()"
-                                    placeholder="Buscar equipo, placa, servicio..."
-                                    class="cr-search-input">
-                                <span class="cr-search-icon">🔍</span>
-                            </div>
-                        </div>
-                        <div class="cr-toolbar-right">
-                            <button class="cr-btn cr-btn-secondary" onclick="loadCronograma()">🔄 Actualizar</button>
-                            <button class="cr-btn cr-btn-secondary" onclick="exportCronogramaCSV()">💾 Exportar CSV</button>
-                            <button class="cr-btn cr-btn-primary" onclick="openPrintModal()">🖨️ Imprimir / Exportar</button>
-                        </div>
-                    </div>
-
-                    <!-- Service Tabs -->
-                    <div class="cr-tabs-wrap">
-                        <div id="crServiceTabs" class="cr-tabs">
-                            <button class="cr-tab active">TODOS</button>
-                        </div>
-                    </div>
-
-                    <!-- Cronograma Grid -->
-                    <div id="cronogramaContent">
-                        <div id="cronogramaBody" class="cr-body">
-                            <div class="cr-loading">
-                                <div class="cr-spinner"></div>
-                                <p>Haz clic en "Cronograma Preventivo" para cargar el cronograma.</p>
-                            </div>
-                        </div>
+                    <div style="background: white; padding: 20px; border-radius: 8px; text-align: center; color: var(--border);">
+                        Calendario de mantenimientos programados
                     </div>
                 </div>
 
@@ -1369,157 +1594,13 @@
                 </div>
 
                 <!-- DOCUMENTOS MODULE -->
-                <!-- DOCUMENTOS MODULE -->
                 <div id="documentos" class="module">
-
-                    <!-- Stats -->
-                    <div class="doc-stats-row">
-                        <div class="doc-stat-card">
-                            <div class="doc-stat-icon">🏥</div>
-                            <div><div class="doc-stat-value" id="docStatEquipos">—</div><div class="doc-stat-label">Equipos</div></div>
-                        </div>
-                        <div class="doc-stat-card" style="border-left-color:#1565c0">
-                            <div class="doc-stat-icon">📄</div>
-                            <div><div class="doc-stat-value" id="docStatTotal">—</div><div class="doc-stat-label">Documentos totales</div></div>
-                        </div>
-                        <div class="doc-stat-card" style="border-left-color:#2e7d32">
-                            <div class="doc-stat-icon">✅</div>
-                            <div><div class="doc-stat-value" id="docStatCon">—</div><div class="doc-stat-label">Con documentos</div></div>
-                        </div>
-                        <div class="doc-stat-card" style="border-left-color:#f57f17">
-                            <div class="doc-stat-icon">⚠️</div>
-                            <div><div class="doc-stat-value" id="docStatSin">—</div><div class="doc-stat-label">Sin documentos</div></div>
-                        </div>
+                    <div class="mb-3">
+                        <button class="btn btn-primary">+ Subir Documento</button>
                     </div>
-
-                    <!-- Toolbar -->
-                    <div class="doc-toolbar">
-                        <div class="doc-toolbar-left">
-                            <div class="doc-search-wrap">
-                                <input id="docSearchInput" type="text" oninput="docSearch()"
-                                    placeholder="Buscar equipo, placa, servicio, marca…"
-                                    class="doc-search-input">
-                                <span class="doc-search-icon">🔍</span>
-                            </div>
-                        </div>
-                        <div class="doc-toolbar-right">
-                            <button class="doc-filter-btn active" data-key="TODOS" onclick="docFilterField('TODOS')">Todos</button>
-                            <button class="doc-filter-btn" data-key="Manual" onclick="docFilterField('Manual')">📘 Manual</button>
-                            <button class="doc-filter-btn" data-key="Certificados de Calibracion" onclick="docFilterField('Certificados de Calibracion')">⚖️ Calibración</button>
-                            <button class="doc-filter-btn" data-key="Mantenimientos preventivo" onclick="docFilterField('Mantenimientos preventivo')">🛡️ Preventivo</button>
-                            <button class="doc-filter-btn" data-key="Mantenimientos correctivos" onclick="docFilterField('Mantenimientos correctivos')">🔧 Correctivo</button>
-                            <button class="doc-btn doc-btn-secondary" onclick="loadDocumentos(true)">🔄 Actualizar</button>
-                        </div>
+                    <div style="background: white; padding: 20px; border-radius: 8px; color: var(--border); text-align: center;">
+                        Repositorio centralizado de procedimientos, protocolos y manuales
                     </div>
-
-                    <!-- Layout dos paneles -->
-                    <div class="doc-layout">
-                        <!-- Panel izquierdo: lista de equipos -->
-                        <div class="doc-left-panel">
-                            <div class="doc-panel-header">
-                                <span style="font-weight:700;color:#0a1628;font-size:14px">📦 Equipos</span>
-                            </div>
-                            <div id="docListPanel" class="doc-list-panel">
-                                <div class="doc-loading">
-                                    <div class="doc-spinner"></div>
-                                    <p>Cargando equipos…</p>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- Panel derecho: documentos del equipo -->
-                        <div class="doc-right-panel">
-                            <div id="docDetailPanel" class="doc-detail-panel">
-                                <div class="doc-empty">
-                                    <div class="doc-empty-icon">📂</div>
-                                    <div class="doc-empty-title">Selecciona un equipo</div>
-                                    <div class="doc-empty-text">Elige un equipo de la lista para ver sus documentos adjuntos.</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- ESTILOS DEL MÓDULO -->
-                    <style>
-                    /* Stats */
-                    .doc-stats-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; margin-bottom:18px; }
-                    .doc-stat-card { background:white; border-radius:12px; padding:16px 18px; box-shadow:0 2px 8px rgba(0,0,0,0.07); border-left:5px solid #0d47a1; display:flex; align-items:center; gap:12px; }
-                    .doc-stat-icon { font-size:26px; }
-                    .doc-stat-value { font-size:26px; font-weight:800; color:#0d47a1; font-family:'JetBrains Mono',monospace; line-height:1; }
-                    .doc-stat-label { font-size:11px; color:#78909c; font-weight:600; text-transform:uppercase; margin-top:3px; }
-                    /* Toolbar */
-                    .doc-toolbar { background:white; border-radius:12px; padding:14px 18px; margin-bottom:14px; box-shadow:0 2px 8px rgba(0,0,0,0.07); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; }
-                    .doc-toolbar-left { display:flex; align-items:center; gap:10px; flex:1; min-width:240px; }
-                    .doc-toolbar-right { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-                    .doc-search-wrap { position:relative; flex:1; max-width:380px; }
-                    .doc-search-input { width:100%; padding:10px 38px 10px 14px; border:1.5px solid #cfd8dc; border-radius:10px; font-size:14px; font-family:'Outfit',sans-serif; background:#f5f7fa; transition:all .2s; }
-                    .doc-search-input:focus { outline:none; border-color:#1565c0; background:white; box-shadow:0 0 0 3px rgba(21,101,192,.1); }
-                    .doc-search-icon { position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:16px; pointer-events:none; }
-                    .doc-filter-btn { padding:7px 12px; border:1.5px solid #cfd8dc; border-radius:20px; background:white; color:#546e7a; font-size:12px; font-weight:600; cursor:pointer; font-family:'Outfit',sans-serif; transition:all .2s; white-space:nowrap; }
-                    .doc-filter-btn.active { background:#0d47a1; border-color:#0d47a1; color:white; }
-                    .doc-btn { padding:9px 16px; border:none; border-radius:9px; font-size:13px; font-weight:600; cursor:pointer; font-family:'Outfit',sans-serif; transition:all .2s; }
-                    .doc-btn-secondary { background:#eceff1; color:#37474f; }
-                    .doc-btn-secondary:hover { background:#cfd8dc; }
-                    .doc-btn-primary { background:linear-gradient(135deg,#1565c0,#1976d2); color:white; }
-                    /* Layout */
-                    .doc-layout { display:grid; grid-template-columns:320px 1fr; gap:16px; height:calc(100vh - 290px); min-height:500px; }
-                    .doc-left-panel { background:white; border-radius:14px; box-shadow:0 2px 8px rgba(0,0,0,0.08); display:flex; flex-direction:column; overflow:hidden; }
-                    .doc-panel-header { padding:14px 16px; border-bottom:2px solid #eceff1; background:#f8fafc; flex-shrink:0; }
-                    .doc-list-panel { flex:1; overflow-y:auto; padding:8px; }
-                    .doc-right-panel { background:white; border-radius:14px; box-shadow:0 2px 8px rgba(0,0,0,0.08); overflow:hidden; display:flex; flex-direction:column; }
-                    .doc-detail-panel { flex:1; overflow-y:auto; padding:24px; }
-                    /* Lista items */
-                    .doc-list-item { padding:12px 10px; border-radius:10px; cursor:pointer; transition:background .15s; border-bottom:1px solid #f0f4f8; margin-bottom:2px; }
-                    .doc-list-item:hover { background:#f0f7ff; }
-                    .doc-list-item.active { background:linear-gradient(135deg,rgba(21,101,192,.08),rgba(21,101,192,.04)); border-left:3px solid #1565c0; padding-left:9px; }
-                    .doc-list-name { font-weight:700; font-size:13px; color:#0a1628; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-                    .doc-list-sub { font-size:11px; color:#78909c; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-                    .doc-count-badge { font-size:11px; font-weight:700; padding:2px 8px; border-radius:10px; background:#eceff1; color:#546e7a; }
-                    .doc-count-badge.has-docs { background:#e3f2fd; color:#1565c0; }
-                    /* Detail header */
-                    .doc-detail-header { display:flex; align-items:flex-start; gap:16px; padding:20px; background:linear-gradient(135deg,#f8fafc,white); border-radius:12px; border:1.5px solid #eceff1; margin-bottom:20px; }
-                    .doc-detail-icon { width:52px; height:52px; background:linear-gradient(135deg,#1565c0,#1976d2); border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:28px; flex-shrink:0; }
-                    .doc-detail-info { flex:1; }
-                    .doc-detail-name { font-size:20px; font-weight:800; color:#0a1628; font-family:'Outfit',sans-serif; margin-bottom:6px; }
-                    .doc-detail-meta { display:flex; flex-wrap:wrap; gap:10px; font-size:12px; color:#546e7a; font-weight:500; }
-                    .doc-detail-meta span { display:flex; align-items:center; gap:4px; }
-                    .doc-cal-info { display:flex; flex-wrap:wrap; gap:10px; margin-top:8px; font-size:12px; color:#4a148c; }
-                    .doc-cal-badge { background:#f3e5f5; color:#4a148c; padding:2px 8px; border-radius:6px; font-weight:700; font-size:11px; }
-                    .doc-total-num { font-size:36px; font-weight:800; color:#1565c0; font-family:'JetBrains Mono',monospace; text-align:center; line-height:1; }
-                    .doc-total-label { font-size:11px; color:#78909c; text-align:center; font-weight:600; text-transform:uppercase; }
-                    /* Secciones */
-                    .doc-sections { display:flex; flex-direction:column; gap:18px; }
-                    .doc-section {}
-                    .doc-section-header { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
-                    .doc-section-icon { width:34px; height:34px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
-                    .doc-section-title { font-size:15px; font-weight:700; flex:1; }
-                    .doc-section-count { padding:3px 10px; border-radius:20px; font-size:12px; font-weight:700; }
-                    /* Cards de documentos */
-                    .doc-cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:10px; }
-                    .doc-card { display:flex; align-items:center; gap:10px; padding:12px; border:1.5px solid #eceff1; border-radius:10px; cursor:pointer; transition:all .15s; background:white; }
-                    .doc-card:hover { border-color:#90caf9; background:#f0f7ff; transform:translateY(-1px); box-shadow:0 4px 12px rgba(0,0,0,0.08); }
-                    .doc-card-thumb { width:44px; height:44px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0; overflow:hidden; }
-                    .doc-card-info { flex:1; min-width:0; }
-                    .doc-card-name { font-size:12px; font-weight:600; color:#263238; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-                    .doc-card-meta { display:flex; align-items:center; gap:6px; margin-top:4px; flex-wrap:wrap; }
-                    .doc-ext-badge { padding:1px 6px; border-radius:4px; font-size:10px; font-weight:700; }
-                    .doc-card-actions { flex-shrink:0; }
-                    .doc-action-btn { width:30px; height:30px; border-radius:8px; background:#f5f7fa; display:flex; align-items:center; justify-content:center; font-size:16px; text-decoration:none; transition:background .15s; }
-                    .doc-action-btn:hover { background:#e3f2fd; }
-                    /* Empty / loading */
-                    .doc-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:60px 20px; text-align:center; height:100%; }
-                    .doc-empty-icon { font-size:64px; opacity:.3; margin-bottom:16px; }
-                    .doc-empty-title { font-size:18px; font-weight:700; color:#546e7a; margin-bottom:8px; }
-                    .doc-empty-text { font-size:13px; color:#90a4ae; max-width:300px; }
-                    .doc-empty-list { text-align:center; padding:30px 10px; color:#90a4ae; font-size:13px; }
-                    .doc-no-docs { text-align:center; padding:40px 20px; }
-                    .doc-loading { text-align:center; padding:40px; color:#90a4ae; }
-                    .doc-spinner { width:36px; height:36px; border:4px solid #eceff1; border-top-color:#1565c0; border-radius:50%; animation:crSpin .9s linear infinite; margin:0 auto 14px; }
-                    @media (max-width:900px) {
-                        .doc-layout { grid-template-columns:1fr; height:auto; }
-                        .doc-left-panel { max-height:300px; }
-                        .doc-toolbar-right { display:none; }
-                    }
-                    </style>
                 </div>
 
                 <!-- KPIS MODULE -->
@@ -1781,7 +1862,7 @@
                                     <option value="NO">NO</option>
                                 </select>
                             </div>
-                            <div class="form-group" id="calCertSection" style="display:none; grid-column:1/-1;">
+                            <div class="form-group" id="calCertSection" style="display:none;">
                                 <label>CERTIFICADOS DE CALIBRACIÓN (PDF)</label>
                                 <div id="calCertList" class="cal-cert-list">
                                     <div class="cal-cert-row">
@@ -1794,37 +1875,6 @@
                                     <button type="button" class="btn btn-secondary btn-small" onclick="addCalCertRow()">➕ Agregar certificado</button>
                                 </div>
                                 <div class="text-muted" style="margin-top:6px;">Máximo 5&nbsp;MB por PDF. El año se guardará en el nombre del archivo.</div>
-
-                                <!-- Fechas de calibración: aparecen solo si el equipo es calibrable -->
-                                <div style="margin-top:18px; padding-top:16px; border-top:1px dashed #b0bec5;">
-                                    <div style="font-size:12px; font-weight:700; color:#4a148c; text-transform:uppercase; letter-spacing:.5px; margin-bottom:12px;">
-                                        📅 Fechas de calibración
-                                    </div>
-                                    <div class="form-grid" style="gap:12px;">
-                                        <div class="form-group">
-                                            <label>FECHA DE CALIBRACIÓN</label>
-                                            <input name="FECHA DE CALIBRACION" id="invFechaCalibracion" type="date"
-                                                style="max-width:240px;"
-                                                title="Fecha del último certificado de calibración"
-                                                oninput="calcProximaCalibracion()">
-                                            <div class="text-muted" style="margin-top:4px; font-size:0.82em;">
-                                                Fecha del último certificado emitido.
-                                            </div>
-                                        </div>
-                                        <div class="form-group">
-                                            <label>FECHA PRÓXIMA CALIBRACIÓN
-                                                <span style="font-size:10px; font-weight:400; color:#7b1fa2; margin-left:6px;">⚙️ Automático (+12 meses)</span>
-                                            </label>
-                                            <input name="FECHA PROXIMA CALIBRACION" id="invFechaProximaCal" type="date"
-                                                style="max-width:240px; background:#f3e5f5; color:#4a148c; font-weight:600; cursor:not-allowed;"
-                                                readonly
-                                                title="Se calcula automáticamente: fecha de calibración + 12 meses">
-                                            <div class="text-muted" id="invProximaCalInfo" style="margin-top:4px; font-size:0.82em;">
-                                                Se calcula automáticamente sumando 12 meses a la fecha de calibración.
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
                             </div>
                             <div class="form-group" style="grid-column:1/-1;">
                                 <label>FRECUENCIA DE MTTO PREVENTIVO</label>
@@ -2185,666 +2235,47 @@
         </div>
     </div>
 
-    <!-- MODAL: HOJA DE VIDA SLV-GAT-GAB-12-F02 -->
-    <div id="hvModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(10,22,40,0.8);backdrop-filter:blur(6px);z-index:10001;overflow-y:auto;padding:20px 16px;">
-        <div style="max-width:1100px;margin:0 auto;background:white;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.3);animation:hvSlideUp 0.3s ease;display:flex;flex-direction:column;">
+    <script src="js/inventario-module.js"></script>
 
-            <!-- Modal header -->
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:24px 32px;border-bottom:2px solid #eceff1;background:linear-gradient(135deg,#1976d2,#1e88e5);border-radius:20px 20px 0 0;">
-                <div style="display:flex;align-items:center;gap:14px;">
-                    <div style="width:56px;height:56px;background:white;border-radius:12px;display:flex;align-items:center;justify-content:center;padding:4px;"><img src="data:image/png;base64,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" alt="Logo" style="width:48px;height:48px;object-fit:contain;"></div>
-                    <div>
-                        <div style="font-size:22px;font-weight:800;color:white;font-family:'Outfit',sans-serif;">Hoja de Vida de Equipo</div>
-                        <div style="font-size:12px;color:rgba(255,255,255,0.75);margin-top:2px;">Formato SLV-GAT-GAB-12-F02 · Hospital Susana López de Valencia E.S.E</div>
-                    </div>
-                </div>
-                <div style="display:flex;gap:10px;align-items:center;">
-                    <button onclick="printHojaVida()" style="padding:10px 20px;background:rgba(255,255,255,0.2);color:white;border:1.5px solid rgba(255,255,255,0.4);border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;font-family:'Outfit',sans-serif;transition:all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.35)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">
-                        🖨️ Imprimir / PDF
-                    </button>
-                    <button onclick="closeHojaVidaModal()" style="width:40px;height:40px;background:rgba(255,255,255,0.15);border:none;border-radius:10px;cursor:pointer;font-size:22px;color:white;display:flex;align-items:center;justify-content:center;transition:all 0.2s;" onmouseover="this.style.background='rgba(230,57,70,0.6)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">×</button>
-                </div>
-            </div>
-
-            <!-- Modal body (hoja de vida content) -->
-            <div id="hvSheetContent" style="padding:32px;overflow-y:auto;max-height:calc(100vh - 160px);">
-                <div style="text-align:center;padding:40px;color:#607d8b;">Cargando hoja de vida...</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ESTILOS CRONOGRAMA -->
-    <style>
-    /* ── Stats row ─────────────────────────────────────────────────── */
-    .cr-stats-row {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 16px;
-        margin-bottom: 20px;
-    }
-    .cr-stat-card {
-        background: white;
-        border-radius: 12px;
-        padding: 18px 20px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        border-left: 5px solid #0d47a1;
-        display: flex;
-        align-items: center;
-        gap: 14px;
-        transition: transform 0.2s;
-    }
-    .cr-stat-card:hover { transform: translateY(-3px); }
-    .cr-stat-card.cr-stat-success { border-left-color: #2e7d32; }
-    .cr-stat-card.cr-stat-warning { border-left-color: #f57f17; }
-    .cr-stat-card.cr-stat-accent  { border-left-color: #6a1b9a; }
-    .cr-stat-icon { font-size: 28px; }
-    .cr-stat-value { font-size: 28px; font-weight: 800; color: #0d47a1; font-family: 'JetBrains Mono', monospace; line-height: 1; }
-    .cr-stat-label { font-size: 12px; color: #78909c; font-weight: 600; text-transform: uppercase; margin-top: 4px; }
-
-    /* ── Toolbar ────────────────────────────────────────────────────── */
-    .cr-toolbar {
-        background: white;
-        border-radius: 12px;
-        padding: 16px 20px;
-        margin-bottom: 16px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.07);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 12px;
-    }
-    .cr-toolbar-left { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-    .cr-toolbar-right { display: flex; gap: 10px; flex-wrap: wrap; }
-    .cr-year-badge {
-        background: linear-gradient(135deg,#0d47a1,#1565c0);
-        color: white;
-        padding: 8px 18px;
-        border-radius: 20px;
-        font-size: 14px;
-        white-space: nowrap;
-    }
-    .cr-search-wrap { position: relative; }
-    .cr-search-input {
-        padding: 10px 38px 10px 14px;
-        border: 1.5px solid #cfd8dc;
-        border-radius: 10px;
-        font-size: 14px;
-        width: 300px;
-        max-width: 100%;
-        transition: all 0.2s;
-        font-family: 'Outfit', sans-serif;
-    }
-    .cr-search-input:focus { outline: none; border-color: #0d47a1; box-shadow: 0 0 0 3px rgba(13,71,161,0.1); }
-    .cr-search-icon { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); pointer-events: none; font-size: 16px; }
-    .cr-btn {
-        padding: 9px 18px;
-        border: none;
-        border-radius: 8px;
-        font-size: 13px;
-        font-weight: 600;
-        cursor: pointer;
-        font-family: 'Outfit', sans-serif;
-        transition: all 0.2s;
-        white-space: nowrap;
-    }
-    .cr-btn-primary { background: linear-gradient(135deg,#0d47a1,#1565c0); color: white; }
-    .cr-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(13,71,161,0.3); }
-    .cr-btn-secondary { background: #eceff1; color: #37474f; }
-    .cr-btn-secondary:hover { background: #cfd8dc; transform: translateY(-2px); }
-
-    /* ── Service Tabs ──────────────────────────────────────────────── */
-    .cr-tabs-wrap {
-        background: white;
-        border-radius: 12px;
-        padding: 12px 16px;
-        margin-bottom: 16px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.07);
-        overflow-x: auto;
-    }
-    .cr-tabs { display: flex; gap: 8px; flex-wrap: nowrap; min-width: max-content; }
-    .cr-tab {
-        padding: 7px 16px;
-        border: 1.5px solid #cfd8dc;
-        border-radius: 20px;
-        background: white;
-        color: #546e7a;
-        font-size: 12px;
-        font-weight: 600;
-        cursor: pointer;
-        white-space: nowrap;
-        transition: all 0.2s;
-        font-family: 'Outfit', sans-serif;
-    }
-    .cr-tab:hover { border-color: #0d47a1; color: #0d47a1; }
-    .cr-tab.active { background: #0d47a1; border-color: #0d47a1; color: white; }
-
-    /* ── Body / loading ────────────────────────────────────────────── */
-    .cr-body { display: flex; flex-direction: column; gap: 20px; }
-    .cr-loading { text-align: center; padding: 60px 20px; color: #90a4ae; }
-    .cr-spinner {
-        width: 44px; height: 44px;
-        border: 4px solid #eceff1;
-        border-top-color: #0d47a1;
-        border-radius: 50%;
-        animation: crSpin 0.9s linear infinite;
-        margin: 0 auto 16px;
-    }
-    @keyframes crSpin { to { transform: rotate(360deg); } }
-
-    /* ── Service block ─────────────────────────────────────────────── */
-    .cr-service-block {
-        background: white;
-        border-radius: 14px;
-        overflow: hidden;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-    }
-    .cr-service-header {
-        background: linear-gradient(90deg,#0d47a1,#1565c0);
-        color: white;
-        padding: 12px 20px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-    .cr-service-icon { font-size: 18px; }
-    .cr-service-name { font-size: 15px; font-weight: 700; font-family: 'Outfit', sans-serif; flex: 1; }
-    .cr-service-badge {
-        background: rgba(255,255,255,0.2);
-        padding: 3px 12px;
-        border-radius: 20px;
-        font-size: 12px;
-        font-weight: 600;
-    }
-    .cr-table-wrap { overflow-x: auto; }
-
-    /* ── Table ─────────────────────────────────────────────────────── */
-    .cr-table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 1100px; }
-    .cr-table thead th {
-        background: #eceff1;
-        padding: 10px 6px;
-        font-size: 11px;
-        font-weight: 700;
-        text-transform: uppercase;
-        color: #37474f;
-        border-bottom: 2px solid #cfd8dc;
-        border-right: 1px solid #eceff1;
-        text-align: center;
-        white-space: nowrap;
-    }
-    .cr-th-equipo { text-align: left !important; min-width: 200px; padding-left: 16px !important; }
-    .cr-th-freq { min-width: 110px; }
-    .cr-th-mes { min-width: 72px; }
-    .cr-th-total { min-width: 50px; }
-    .cr-mes-current { background: #fff8e1 !important; color: #e65100 !important; }
-
-    .cr-row { border-bottom: 1px solid #f0f4f8; transition: background 0.15s; }
-    .cr-row:hover { background: #f5f7ff; }
-    .cr-row:last-child { border-bottom: none; }
-
-    .cr-td-equipo { padding: 10px 10px 10px 16px; min-width: 200px; }
-    .cr-equipo-name { font-weight: 700; color: #0a1628; font-size: 13px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .cr-equipo-sub  { font-size: 11px; color: #78909c; font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
-
-    .cr-td-freq { padding: 8px 6px; text-align: center; }
-    .cr-freq-badge {
-        display: inline-block;
-        padding: 3px 10px;
-        border-radius: 20px;
-        font-size: 11px;
-        font-weight: 700;
-        background: #e3f2fd;
-        color: #0d47a1;
-        white-space: nowrap;
-    }
-
-    .cr-cell-empty {
-        padding: 8px 4px;
-        border-right: 1px solid #f0f4f8;
-        min-width: 72px;
-    }
-    .cr-cell-active {
-        padding: 6px 4px;
-        border-right: 1px solid #f0f4f8;
-        min-width: 72px;
-        text-align: center;
-    }
-    .cr-cell-current-month { background: rgba(255,243,224,0.6) !important; }
-    .cr-cell-past { opacity: 0.7; }
-    .cr-cell-inner { display: flex; flex-direction: column; align-items: center; gap: 3px; }
-
-    .cr-week-badge {
-        display: inline-block;
-        padding: 2px 8px;
-        border-radius: 4px;
-        border: 1.5px solid;
-        font-size: 11px;
-        font-weight: 700;
-        font-family: 'JetBrains Mono', monospace;
-        white-space: nowrap;
-    }
-
-    .cr-td-total {
-        padding: 8px 10px;
-        text-align: center;
-        font-size: 14px;
-        color: #0d47a1;
-        border-left: 1px solid #eceff1;
-    }
-
-    /* ── Legend ────────────────────────────────────────────────────── */
-    .cr-legend {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        flex-wrap: wrap;
-        padding: 14px 20px;
-        background: white;
-        border-radius: 12px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-        font-size: 13px;
-    }
-    .cr-legend-title { font-weight: 700; color: #37474f; }
-    .cr-legend-item {
-        padding: 4px 14px;
-        border-radius: 6px;
-        font-size: 12px;
-        font-weight: 700;
-        font-family: 'JetBrains Mono', monospace;
-    }
-    .cr-legend-note { font-size: 12px; color: #90a4ae; }
-
-    @media (max-width: 768px) {
-        .cr-stats-row { grid-template-columns: 1fr 1fr; }
-        .cr-search-input { width: 100%; }
-        .cr-toolbar { flex-direction: column; align-items: stretch; }
-        .cr-toolbar-right { justify-content: flex-end; }
-    }
-    </style>
-
-
-    <!-- MODAL: Opciones de Impresión del Cronograma -->
-    <div id="crPrintModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(10,22,40,0.75);backdrop-filter:blur(6px);z-index:11000;align-items:center;justify-content:center;transition:opacity 0.25s;">
-      <div style="background:white;border-radius:20px;width:100%;max-width:720px;box-shadow:0 20px 60px rgba(0,0,0,0.3);animation:hvSlideUp 0.3s ease;overflow:hidden;">
-
-        <!-- Header -->
-        <div style="background:linear-gradient(135deg,#0d47a1,#1565c0);padding:22px 28px;display:flex;justify-content:space-between;align-items:center;">
-          <div style="display:flex;align-items:center;gap:12px;">
-            <span style="font-size:28px;">🖨️</span>
-            <div>
-              <div style="font-size:18px;font-weight:800;color:white;font-family:'Outfit',sans-serif;">Opciones de Impresión</div>
-              <div style="font-size:12px;color:rgba(255,255,255,0.7);margin-top:2px;">Cronograma de Mantenimiento Preventivo</div>
-            </div>
-          </div>
-          <button onclick="closePrintModal()" style="width:36px;height:36px;background:rgba(255,255,255,0.15);border:none;border-radius:8px;cursor:pointer;font-size:20px;color:white;display:flex;align-items:center;justify-content:center;transition:all 0.2s;" onmouseover="this.style.background='rgba(230,57,70,0.6)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">×</button>
-        </div>
-
-        <!-- Body -->
-        <div style="padding:28px;display:flex;flex-direction:column;gap:22px;max-height:70vh;overflow-y:auto;">
-
-          <!-- Modo de vista -->
-          <div class="cr-print-section">
-            <div class="cr-print-section-title">📄 Modo de impresión</div>
-            <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;">
-              <label class="cr-print-radio">
-                <input type="radio" name="crPrintMode" value="anual" checked>
-                <div class="cr-print-radio-card">
-                  <span style="font-size:24px;">📅</span>
-                  <strong>Vista Anual</strong>
-                  <span>Todos los meses seleccionados en una sola tabla por servicio</span>
-                </div>
-              </label>
-              <label class="cr-print-radio">
-                <input type="radio" name="crPrintMode" value="mensual">
-                <div class="cr-print-radio-card">
-                  <span style="font-size:24px;">🗓️</span>
-                  <strong>Vista Mensual</strong>
-                  <span>Una página separada por cada mes seleccionado</span>
-                </div>
-              </label>
-            </div>
-          </div>
-
-          <!-- Servicios -->
-          <div class="cr-print-section">
-            <div class="cr-print-section-title" style="display:flex;justify-content:space-between;align-items:center;">
-              <span>🏥 Servicios a incluir</span>
-              <div style="display:flex;gap:8px;">
-                <button class="cr-print-link" onclick="crSelectAllServices(true)">Seleccionar todos</button>
-                <span style="color:#ccc">|</span>
-                <button class="cr-print-link" onclick="crSelectAllServices(false)">Ninguno</button>
-              </div>
-            </div>
-            <div id="crPrintServices" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;">
-              <span style="color:#90a4ae;font-size:13px;">Cargando servicios...</span>
-            </div>
-          </div>
-
-          <!-- Meses -->
-          <div class="cr-print-section">
-            <div class="cr-print-section-title" style="display:flex;justify-content:space-between;align-items:center;">
-              <span>📆 Meses a incluir</span>
-              <div style="display:flex;gap:8px;">
-                <button class="cr-print-link" onclick="crSelectAllMonths(true)">Todos</button>
-                <span style="color:#ccc">|</span>
-                <button class="cr-print-link" onclick="crSelectAllMonths(false)">Ninguno</button>
-                <span style="color:#ccc">|</span>
-                <button class="cr-print-link" onclick="crSelectCurrentSemester()">Semestre actual</button>
-              </div>
-            </div>
-            <div id="crPrintMonths" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px;">
-              <label class="cr-print-check"><input type="checkbox" value="0" checked><span>Enero</span></label>
-              <label class="cr-print-check"><input type="checkbox" value="1" checked><span>Febrero</span></label>
-              <label class="cr-print-check"><input type="checkbox" value="2" checked><span>Marzo</span></label>
-              <label class="cr-print-check"><input type="checkbox" value="3" checked><span>Abril</span></label>
-              <label class="cr-print-check"><input type="checkbox" value="4" checked><span>Mayo</span></label>
-              <label class="cr-print-check"><input type="checkbox" value="5" checked><span>Junio</span></label>
-              <label class="cr-print-check"><input type="checkbox" value="6" checked><span>Julio</span></label>
-              <label class="cr-print-check"><input type="checkbox" value="7" checked><span>Agosto</span></label>
-              <label class="cr-print-check"><input type="checkbox" value="8" checked><span>Septiembre</span></label>
-              <label class="cr-print-check"><input type="checkbox" value="9" checked><span>Octubre</span></label>
-              <label class="cr-print-check"><input type="checkbox" value="10" checked><span>Noviembre</span></label>
-              <label class="cr-print-check"><input type="checkbox" value="11" checked><span>Diciembre</span></label>
-            </div>
-          </div>
-
-        </div>
-
-        <!-- Footer -->
-        <div style="padding:18px 28px;background:#f5f7fa;border-top:1px solid #eceff1;display:flex;justify-content:flex-end;gap:12px;border-radius:0 0 20px 20px;">
-          <button onclick="closePrintModal()" style="padding:10px 22px;background:#eceff1;color:#37474f;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;font-family:'Outfit',sans-serif;">Cancelar</button>
-          <button onclick="executePrint()" style="padding:10px 26px;background:linear-gradient(135deg,#0d47a1,#1565c0);color:white;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:700;font-family:'Outfit',sans-serif;box-shadow:0 4px 12px rgba(13,71,161,0.3);transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
-            🖨️ Generar Impresión
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ESTILOS MODAL IMPRESIÓN -->
-    <style>
-    .cr-print-section { background: #f8fafc; border-radius: 12px; padding: 16px 18px; border: 1px solid #eceff1; }
-    .cr-print-section-title { font-size: 14px; font-weight: 700; color: #0a1628; font-family: 'Outfit', sans-serif; }
-    .cr-print-link { background: none; border: none; color: #0d47a1; font-size: 12px; font-weight: 600; cursor: pointer; padding: 2px 4px; text-decoration: underline; font-family: 'Outfit', sans-serif; }
-    .cr-print-link:hover { color: #1565c0; }
-
-    .cr-print-check { display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 8px; border: 1.5px solid #eceff1; background: white; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.15s; }
-    .cr-print-check:hover { border-color: #0d47a1; background: #f0f5ff; }
-    .cr-print-check input { accent-color: #0d47a1; width: 16px; height: 16px; cursor: pointer; }
-
-    .cr-print-radio { cursor: pointer; flex: 1; min-width: 200px; }
-    .cr-print-radio input { display: none; }
-    .cr-print-radio-card {
-      display: flex; flex-direction: column; align-items: center; gap: 6px;
-      padding: 16px 14px; border-radius: 12px; border: 2px solid #eceff1;
-      background: white; text-align: center; transition: all 0.2s; cursor: pointer;
-    }
-    .cr-print-radio-card strong { font-size: 14px; color: #0a1628; font-family: 'Outfit', sans-serif; }
-    .cr-print-radio-card span { font-size: 11px; color: #78909c; line-height: 1.4; }
-    .cr-print-radio input:checked + .cr-print-radio-card {
-      border-color: #0d47a1; background: #f0f5ff;
-      box-shadow: 0 0 0 3px rgba(13,71,161,0.1);
-    }
-    .cr-print-radio input:checked + .cr-print-radio-card strong { color: #0d47a1; }
-
-    #crPrintModal.active { opacity: 1; }
-    #crPrintModal { opacity: 0; }
-    #crPrintModal.active { opacity: 1; }
-    </style>
-
+    <!-- SPLASH SCREEN CONTROLLER -->
     <script>
-    // Seleccionar semestre actual
-    window.crSelectCurrentSemester = function() {
-      const m = new Date().getMonth();
-      const sem1 = m < 6; // enero-junio = semestre 1
-      document.querySelectorAll('#crPrintMonths input[type="checkbox"]').forEach(cb => {
-        const v = parseInt(cb.value);
-        cb.checked = sem1 ? v < 6 : v >= 6;
-      });
-    };
+        (function() {
+            const splash = document.getElementById('splashScreen');
+            const loadingText = document.getElementById('splashLoadingText');
+
+            const messages = [
+                'Iniciando sistema...',
+                'Cargando módulos...',
+                'Cargando inventario...',
+                'Verificando conexión...',
+                'Preparando dashboard...',
+                '¡Bienvenido a Nexa CMMS!'
+            ];
+
+            let i = 0;
+            const interval = setInterval(() => {
+                i++;
+                if (i < messages.length) {
+                    loadingText.style.opacity = '0';
+                    setTimeout(() => {
+                        loadingText.textContent = messages[i];
+                        loadingText.style.transition = 'opacity 0.3s ease';
+                        loadingText.style.opacity = '1';
+                    }, 200);
+                }
+            }, 800);
+
+            // Ocultar splash después de 5 segundos
+            setTimeout(() => {
+                clearInterval(interval);
+                splash.classList.add('hide');
+                // Remover del DOM al terminar la transición
+                setTimeout(() => {
+                    splash.style.display = 'none';
+                }, 750);
+            }, 5000);
+        })();
     </script>
 
-
-    <!-- ═══════════════════════════════════════════════════════════ -->
-    <!-- MODAL: FORMULARIO MANTENIMIENTO                            -->
-    <!-- ═══════════════════════════════════════════════════════════ -->
-    <div id="mantFormModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(10,22,40,0.78);backdrop-filter:blur(6px);z-index:11500;align-items:flex-start;justify-content:center;padding:20px 16px;overflow-y:auto;opacity:0;transition:opacity 0.25s;pointer-events:none;">
-      <div style="background:white;border-radius:20px;width:100%;max-width:860px;box-shadow:0 20px 60px rgba(0,0,0,0.3);margin:auto;overflow:hidden;">
-        <div style="background:linear-gradient(135deg,#0d47a1,#1565c0);padding:20px 28px;display:flex;justify-content:space-between;align-items:center;">
-          <div style="display:flex;align-items:center;gap:12px;">
-            <span style="font-size:26px">🔧</span>
-            <div id="mantFormTitle" style="font-size:18px;font-weight:800;color:white;font-family:'Outfit',sans-serif;"></div>
-          </div>
-          <button onclick="closeMantForm()" style="width:36px;height:36px;background:rgba(255,255,255,0.15);border:none;border-radius:8px;cursor:pointer;font-size:20px;color:white;" onmouseover="this.style.background='rgba(230,57,70,0.6)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">×</button>
-        </div>
-        <input type="hidden" id="mantFormTipoHidden">
-        <input type="hidden" id="mantFormEditId">
-        <div id="mantFormBody" style="padding:24px 28px;max-height:72vh;overflow-y:auto;"></div>
-        <div style="padding:16px 28px;background:#f5f7fa;border-top:1px solid #eceff1;display:flex;justify-content:flex-end;gap:12px;border-radius:0 0 20px 20px;">
-          <button onclick="closeMantForm()" style="padding:10px 22px;background:#eceff1;color:#37474f;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;font-family:'Outfit',sans-serif;">Cancelar</button>
-          <button id="mantFormSaveBtn" onclick="saveMantForm()" style="padding:10px 26px;background:linear-gradient(135deg,#0d47a1,#1565c0);color:white;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:700;font-family:'Outfit',sans-serif;box-shadow:0 4px 12px rgba(13,71,161,0.3);">💾 Guardar en Airtable</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ═══════════════════════════════════════════════════════════ -->
-    <!-- MODAL: DETALLE MANTENIMIENTO                               -->
-    <!-- ═══════════════════════════════════════════════════════════ -->
-    <div id="mantDetailModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(10,22,40,0.78);backdrop-filter:blur(6px);z-index:11500;align-items:flex-start;justify-content:center;padding:20px 16px;overflow-y:auto;opacity:0;transition:opacity 0.25s;pointer-events:none;">
-      <div style="background:white;border-radius:20px;width:100%;max-width:780px;box-shadow:0 20px 60px rgba(0,0,0,0.3);margin:auto;overflow:hidden;">
-        <div style="background:linear-gradient(135deg,#263238,#37474f);padding:18px 28px;display:flex;justify-content:space-between;align-items:center;">
-          <div style="font-size:17px;font-weight:800;color:white;font-family:'Outfit',sans-serif;">📋 Detalle del Mantenimiento</div>
-          <button onclick="closeMantDetail()" style="width:36px;height:36px;background:rgba(255,255,255,0.15);border:none;border-radius:8px;cursor:pointer;font-size:20px;color:white;" onmouseover="this.style.background='rgba(230,57,70,0.6)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">×</button>
-        </div>
-        <div id="mantDetailBody" style="padding:24px 28px;max-height:75vh;overflow-y:auto;"></div>
-      </div>
-    </div>
-
-    <!-- ESTILOS MANTENIMIENTOS -->
-    <style>
-    /* ── Stats ── */
-    .mt-stats-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:14px; margin-bottom:18px; }
-    .mt-stat-card { background:white; border-radius:12px; padding:16px 18px; box-shadow:0 2px 8px rgba(0,0,0,0.07); border-left:5px solid #0d47a1; display:flex; align-items:center; gap:12px; transition:transform 0.2s; }
-    .mt-stat-card:hover { transform:translateY(-3px); }
-    .mt-stat-card.mt-stat-prev { border-left-color:#1565c0; }
-    .mt-stat-card.mt-stat-corr { border-left-color:#c62828; }
-    .mt-stat-card.mt-stat-pend { border-left-color:#f57f17; }
-    .mt-stat-card.mt-stat-ok  { border-left-color:#2e7d32; }
-    .mt-stat-icon { font-size:26px; }
-    .mt-stat-value { font-size:26px; font-weight:800; color:#0d47a1; font-family:'JetBrains Mono',monospace; line-height:1; }
-    .mt-stat-label { font-size:11px; color:#78909c; font-weight:600; text-transform:uppercase; margin-top:3px; }
-
-    /* ── Toolbar ── */
-    .mt-toolbar { background:white; border-radius:12px; padding:14px 18px; margin-bottom:14px; box-shadow:0 2px 8px rgba(0,0,0,0.07); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; }
-    .mt-toolbar-left { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
-    .mt-toolbar-right { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
-    .mt-new-btn { padding:10px 18px; border:none; border-radius:9px; font-size:13px; font-weight:700; cursor:pointer; font-family:'Outfit',sans-serif; transition:all 0.2s; }
-    .mt-new-prev { background:linear-gradient(135deg,#1565c0,#1976d2); color:white; }
-    .mt-new-prev:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(21,101,192,0.35); }
-    .mt-new-corr { background:linear-gradient(135deg,#b71c1c,#c62828); color:white; }
-    .mt-new-corr:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(183,28,28,0.35); }
-    .mt-filter-group { display:flex; gap:6px; }
-    .mt-filter-btn { padding:7px 14px; border:1.5px solid #cfd8dc; border-radius:20px; background:white; color:#546e7a; font-size:12px; font-weight:600; cursor:pointer; font-family:'Outfit',sans-serif; transition:all 0.2s; }
-    .mt-filter-btn.active { background:#0d47a1; border-color:#0d47a1; color:white; }
-    .mt-search-wrap { position:relative; }
-    .mt-search-input { padding:9px 36px 9px 12px; border:1.5px solid #cfd8dc; border-radius:9px; font-size:13px; width:240px; font-family:'Outfit',sans-serif; transition:all 0.2s; }
-    .mt-search-input:focus { outline:none; border-color:#1565c0; box-shadow:0 0 0 3px rgba(21,101,192,0.1); }
-    .mt-search-icon { position:absolute; right:10px; top:50%; transform:translateY(-50%); font-size:15px; pointer-events:none; }
-    .mt-select-filter { padding:9px 12px; border:1.5px solid #cfd8dc; border-radius:9px; font-size:13px; font-family:'Outfit',sans-serif; background:white; color:#37474f; cursor:pointer; }
-    .mt-refresh-btn { padding:9px 13px; background:#eceff1; border:none; border-radius:9px; cursor:pointer; font-size:16px; transition:all 0.2s; }
-    .mt-refresh-btn:hover { background:#cfd8dc; transform:rotate(20deg); }
-
-    /* ── Table ── */
-    .mt-table-wrap { background:white; border-radius:12px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.07); }
-    .mt-table { width:100%; border-collapse:collapse; font-size:13px; }
-    .mt-table thead th { background:#eceff1; padding:10px 12px; font-size:11px; font-weight:700; text-transform:uppercase; color:#37474f; border-bottom:2px solid #cfd8dc; text-align:left; white-space:nowrap; }
-    .mt-row { border-bottom:1px solid #f0f4f8; cursor:pointer; transition:background 0.15s; }
-    .mt-row:hover { background:#f5f7ff; }
-    .mt-row:last-child { border-bottom:none; }
-    .mt-td { padding:10px 12px; vertical-align:middle; }
-    .mt-id { font-family:'JetBrains Mono',monospace; font-size:11px; color:#607d8b; font-weight:700; }
-    .mt-eq-name { font-weight:700; color:#0a1628; font-size:13px; }
-    .mt-eq-sub { font-size:11px; color:#90a4ae; font-family:'JetBrains Mono',monospace; margin-top:2px; }
-    .mt-badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; background:#eceff1; color:#546e7a; }
-    .mt-badge-prev { background:#e3f2fd; color:#1565c0; }
-    .mt-badge-corr { background:#fce4ec; color:#c62828; }
-    .mt-badge-ok   { background:#e8f5e9; color:#2e7d32; }
-    .mt-badge-proc { background:#fff8e1; color:#f57f17; }
-    .mt-badge-pend { background:#fff3e0; color:#e65100; }
-    .mt-actions { display:flex; gap:6px; }
-    .mt-btn-icon { background:none; border:none; cursor:pointer; font-size:16px; padding:4px 6px; border-radius:6px; transition:background 0.15s; }
-    .mt-btn-icon:hover { background:#eceff1; }
-    .mt-pagination { display:flex; justify-content:space-between; align-items:center; padding:12px 16px; background:white; border-top:1px solid #eceff1; border-radius:0 0 12px 12px; }
-    .mt-pg-btn { padding:7px 16px; background:#eceff1; color:#37474f; border:none; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600; font-family:'Outfit',sans-serif; }
-    .mt-pg-btn:hover:not(:disabled) { background:#cfd8dc; }
-    .mt-pg-btn:disabled { opacity:0.4; cursor:not-allowed; }
-
-    /* ── Loading ── */
-    .mt-loading { text-align:center; padding:60px 20px; color:#90a4ae; }
-    .mt-spinner { width:40px; height:40px; border:4px solid #eceff1; border-top-color:#0d47a1; border-radius:50%; animation:crSpin 0.9s linear infinite; margin:0 auto 14px; }
-
-    /* ── Form ── */
-    .mf-section-title { color:white; font-weight:700; padding:6px 12px; font-size:12px; text-transform:uppercase; border-radius:5px; margin:14px 0 10px; letter-spacing:0.5px; }
-    .mf-row { display:flex; gap:14px; margin-bottom:12px; flex-wrap:wrap; }
-    .mf-group { flex:1; min-width:200px; display:flex; flex-direction:column; gap:5px; }
-    .mf-full { flex:100%; }
-    .mf-label { font-size:11px; font-weight:700; color:#37474f; text-transform:uppercase; letter-spacing:0.3px; }
-    .mf-input, .mf-select { padding:9px 12px; border:1.5px solid #cfd8dc; border-radius:8px; font-size:13px; font-family:'Outfit',sans-serif; transition:all 0.2s; background:white; }
-    .mf-input:focus, .mf-select:focus { outline:none; border-color:#1565c0; box-shadow:0 0 0 3px rgba(21,101,192,0.1); }
-    .mf-textarea { padding:9px 12px; border:1.5px solid #cfd8dc; border-radius:8px; font-size:13px; font-family:'Outfit',sans-serif; transition:all 0.2s; resize:vertical; }
-    .mf-textarea:focus { outline:none; border-color:#1565c0; box-shadow:0 0 0 3px rgba(21,101,192,0.1); }
-    .mf-inv-card { background:#f0f7ff; border:1.5px solid #90caf9; border-radius:10px; padding:14px 16px; margin:8px 0 14px; }
-    .mf-inv-title { font-size:12px; font-weight:700; color:#1565c0; margin-bottom:10px; }
-    .mf-inv-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:8px; }
-    .mf-inv-label { display:block; font-size:10px; font-weight:700; color:#78909c; text-transform:uppercase; margin-bottom:3px; }
-    .mf-inv-val { width:100%; padding:5px 8px; border:1px solid #b0bec5; border-radius:6px; font-size:12px; background:#e8f4fd; color:#263238; font-family:'Outfit',sans-serif; }
-
-    /* ── Modals active ── */
-    #mantFormModal.active, #mantDetailModal.active { opacity:1; pointer-events:auto; }
-
-    @media (max-width:768px) {
-      .mt-stats-row { grid-template-columns:1fr 1fr; }
-      .mt-toolbar { flex-direction:column; align-items:stretch; }
-      .mt-search-input { width:100%; }
-      .mf-row { flex-direction:column; }
-    }
-    </style>
-
-    <script src="js/documentos.js"></script>
-    <script src="js/mantenimientos.js"></script>
-    <script src="js/metrologia.js"></script>
-    <script src="js/cronograma.js"></script>
-</body>
-    @keyframes hvSlideUp { from { opacity:0; transform:translateY(30px); } to { opacity:1; transform:translateY(0); } }
-
-    /* Botón de ver HV en la tabla */
-    .hv-btn-view {
-        padding: 7px 14px;
-        background: linear-gradient(135deg,#0d47a1,#1565c0);
-        color: white;
-        border: none;
-        border-radius: 7px;
-        cursor: pointer;
-        font-size: 13px;
-        font-weight: 600;
-        font-family: 'Outfit', sans-serif;
-        transition: all 0.2s;
-        white-space: nowrap;
-    }
-    .hv-btn-view:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(13,71,161,0.35); }
-
-    /* Sheet content */
-    .hv-sheet { font-family: Arial, sans-serif; font-size: 12px; color: #212121; }
-
-    .hv-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        border: 2px solid #1976d2;
-        border-radius: 4px;
-        padding: 12px 16px;
-        margin-bottom: 6px;
-        background: #fafcff;
-        gap: 16px;
-    }
-    .hv-header-left { display:flex; align-items:center; gap:14px; }
-    .hv-logo { font-size:36px; }
-    .hv-hospital-name { font-weight:800; font-size:14px; color:#1976d2; }
-    .hv-dept { font-size:12px; font-weight:600; color:#263238; }
-    .hv-address { font-size:11px; color:#607d8b; margin-top:2px; }
-    .hv-header-center { text-align:center; flex:1; }
-    .hv-doc-title { font-weight:800; font-size:16px; color:#1976d2; letter-spacing:1px; text-transform:uppercase; }
-    .hv-code { font-weight:700; font-size:13px; color:#263238; }
-    .hv-page { font-size:11px; color:#607d8b; margin-top:4px; }
-
-    .hv-section-title {
-        background: linear-gradient(90deg,#1976d2,#1e88e5);
-        color: white;
-        font-weight: 700;
-        padding: 5px 10px;
-        font-size: 12px;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin: 8px 0 0;
-        border-radius: 3px;
-    }
-
-    .hv-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 11.5px;
-        margin-top: 1px;
-    }
-    .hv-table td, .hv-table th {
-        border: 1px solid #b0bec5;
-        padding: 5px 8px;
-        vertical-align: top;
-    }
-    .hv-label {
-        background: #eceff1;
-        font-weight: 700;
-        font-size: 10.5px;
-        color: #37474f;
-        text-transform: uppercase;
-        letter-spacing: 0.3px;
-        white-space: nowrap;
-    }
-    .hv-value {
-        min-height: 22px;
-        font-size: 11.5px;
-        color: #212121;
-    }
-    .hv-subheader {
-        background: #cfd8dc;
-        font-weight: 700;
-        text-align: center;
-        font-size: 11px;
-        text-transform: uppercase;
-        color: #263238;
-    }
-    .hv-check-cell {
-        text-align: center;
-        font-size: 15px;
-        color: #1976d2;
-        font-weight: 700;
-    }
-    .hv-footer {
-        margin-top: 16px;
-        font-size: 10px;
-        color: #9e9e9e;
-        border-top: 1px solid #e0e0e0;
-        padding-top: 6px;
-        display: flex;
-        justify-content: space-between;
-    }
-
-    @media print {
-        #hvModal { position:static !important; background:none !important; padding:0 !important; }
-        #hvSheetContent { padding:0 !important; max-height:none !important; overflow:visible !important; }
-        .hv-header-left, .hv-header-center, .hv-header-right { page-break-inside:avoid; }
-        .hv-section-title { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-    }
-    </style>
-
-    <script src="js/hojas-de-vida.js"></script>
 </body>
 </html>
