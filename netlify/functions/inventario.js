@@ -279,14 +279,41 @@ async function getFieldId(fieldName) {
     return field.id;
   } catch(e){return null;}
 }
+// Sube buffer a hosting temporal, devuelve URL publica
+async function uploadToTempHost(buffer, filename, contentType) {
+  const ctype = contentType || 'application/pdf';
+  const fname = filename || 'archivo.pdf';
+  // Intento 1: tmpfiles.org
+  try {
+    const form = new FormData();
+    form.append('file', new Blob([buffer], { type: ctype }), fname);
+    const r = await fetch('https://tmpfiles.org/api/v1/upload', { method:'POST', body:form });
+    if (r.ok) {
+      const d = await r.json();
+      const pageUrl = d && d.data && d.data.url;
+      if (pageUrl) { return pageUrl.replace('tmpfiles.org/', 'tmpfiles.org/dl/'); }
+    }
+  } catch(e) { console.warn('[UPLOAD] tmpfiles fallido:', e.message); }
+  // Intento 2: 0x0.st
+  try {
+    const form2 = new FormData();
+    form2.append('file', new Blob([buffer], { type: ctype }), fname);
+    const r2 = await fetch('https://0x0.st', { method:'POST', body:form2 });
+    if (r2.ok) { const u = (await r2.text()).trim(); if (u && u.startsWith('http')) return u; }
+  } catch(e) { console.warn('[UPLOAD] 0x0.st fallido:', e.message); }
+  return null;
+}
+
 async function uploadFileToField(recordId,fieldName,file){
-  // Usa REST API estandar (api.airtable.com) + data URL
-  // content.airtableapi.com esta bloqueado por Cloudflare desde IPs de AWS/Netlify (error 1034)
   let b64=String(file.base64||'');const c=b64.indexOf(',');if(c!==-1)b64=b64.slice(c+1);
   const fname=file.filename||file.name||'archivo.pdf';
   const ctype=file.contentType||file.type||'application/pdf';
+  const buffer=Buffer.from(b64,'base64');
+  console.log('[UPLOAD] subiendo',fname,'campo=',fieldName,'size=',buffer.length);
 
-  // Obtener adjuntos actuales para no sobreescribirlos
+  const publicUrl=await uploadToTempHost(buffer,fname,ctype);
+  if(!publicUrl) return {ok:false,error:'No se obtuvo URL publica (tmpfiles.org y 0x0.st fallaron)'};
+
   let existing=[];
   try{
     const gr=await fetch(AIRTABLE_API+'/'+AIRTABLE_BASE_ID+'/'+encodeURIComponent(TABLE_NAME)+'/'+recordId,
@@ -294,13 +321,12 @@ async function uploadFileToField(recordId,fieldName,file){
     if(gr.ok){const gd=await gr.json();const atts=((gd.fields||{})[fieldName]);if(Array.isArray(atts))existing=atts.map(a=>({id:a.id}));}
   }catch(e){console.warn('[UPLOAD] no se pudo leer existentes:',e.message);}
 
-  const dataUrl='data:'+ctype+';base64,'+b64;
-  const allAtts=[...existing,{url:dataUrl,filename:fname}];
+  const allAtts=[...existing,{url:publicUrl,filename:fname}];
   const patchUrl=AIRTABLE_API+'/'+AIRTABLE_BASE_ID+'/'+encodeURIComponent(TABLE_NAME)+'/'+recordId;
   const res=await fetch(patchUrl,{method:'PATCH',headers:{Authorization:'Bearer '+AIRTABLE_API_KEY,'Content-Type':'application/json'},
     body:JSON.stringify({fields:{[fieldName]:allAtts}})});
   const txt=await res.text();
-  console.log('[UPLOAD] '+fname+' field='+fieldName+' status='+res.status);
+  console.log('[UPLOAD] PATCH status='+res.status+' field='+fieldName);
   if(!res.ok){let e=txt;try{e=JSON.parse(txt).error||txt;}catch(_){}return {ok:false,status:res.status,error:e};}
   return {ok:true,filename:fname};
 }
