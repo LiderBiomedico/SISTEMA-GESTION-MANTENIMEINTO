@@ -1947,6 +1947,114 @@
                     </div>
                 </details>
 
+                <details class="section">
+                    <summary>6) Registro técnico de instalación <span class="summary-hint">alimentación, voltaje, corriente</span></summary>
+                    <div class="section-body">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>4.1 FUENTE DE ALIMENTACIÓN</label>
+                                <input name="FUENTE DE ALIMENTACION" type="text" placeholder="Ej: Red eléctrica 110V">
+                            </div>
+                            <div class="form-group">
+                                <label>4.2 TEC. PREDOMINANTE</label>
+                                <input name="TEC PREDOMINANTE" type="text" placeholder="Ej: Electrónica">
+                            </div>
+                            <div class="form-group">
+                                <label>4.3 VOLTAJE MÁX (V)</label>
+                                <input name="VOLTAJE MAX" type="number" step="any" placeholder="Ej: 127">
+                            </div>
+                            <div class="form-group">
+                                <label>4.4 VOLTAJE MÍN (V)</label>
+                                <input name="VOLTAJE MIN" type="number" step="any" placeholder="Ej: 100">
+                            </div>
+                            <div class="form-group">
+                                <label>4.5 CORRIENTE MÁX (A)</label>
+                                <input name="CORRIENTE MAX" type="number" step="any" placeholder="Ej: 10">
+                            </div>
+                            <div class="form-group">
+                                <label>4.6 CORRIENTE MÍN (A)</label>
+                                <input name="CORRIENTE MIN" type="number" step="any" placeholder="Ej: 0.5">
+                            </div>
+                            <div class="form-group">
+                                <label>4.7 POTENCIA (W)</label>
+                                <input name="POTENCIA" type="number" step="any" placeholder="Ej: 500">
+                            </div>
+                            <div class="form-group">
+                                <label>4.8 FRECUENCIA (Hz)</label>
+                                <input name="FRECUENCIA INSTALACION" type="number" step="any" placeholder="Ej: 60">
+                            </div>
+                            <div class="form-group">
+                                <label>4.9 PRESIÓN</label>
+                                <input name="PRESION INSTALACION" type="text" placeholder="Ej: 60 PSI">
+                            </div>
+                            <div class="form-group">
+                                <label>4.10 VELOCIDAD</label>
+                                <input name="VELOCIDAD INSTALACION" type="text" placeholder="Ej: 1800 RPM">
+                            </div>
+                            <div class="form-group">
+                                <label>4.11 PESO (kg)</label>
+                                <input name="PESO INSTALACION" type="number" step="any" placeholder="Ej: 25">
+                            </div>
+                            <div class="form-group">
+                                <label>4.12 TEMPERATURA</label>
+                                <input name="TEMPERATURA INSTALACION" type="text" placeholder="Ej: 15–30 °C">
+                            </div>
+                            <div class="form-group" style="grid-column: 1 / -1;">
+                                <label>4.13 OTROS</label>
+                                <input name="OTROS INSTALACION" type="text" placeholder="Otras especificaciones de instalación">
+                            </div>
+                        </div>
+                    </div>
+                </details>
+
+                <details class="section">
+                    <summary>7) Registro técnico de funcionamiento <span class="summary-hint">rangos, humedad, recomendaciones</span></summary>
+                    <div class="section-body">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>5.1 RANGO DE VOLTAJE</label>
+                                <input name="RANGO DE VOLTAJE" type="text" placeholder="Ej: 100–127 V">
+                            </div>
+                            <div class="form-group">
+                                <label>5.2 RANGO DE CORRIENTE</label>
+                                <input name="RANGO DE CORRIENTE" type="text" placeholder="Ej: 0.5–10 A">
+                            </div>
+                            <div class="form-group">
+                                <label>5.3 RANGO DE POTENCIA</label>
+                                <input name="RANGO DE POTENCIA" type="text" placeholder="Ej: 50–500 W">
+                            </div>
+                            <div class="form-group">
+                                <label>5.4 FRECUENCIA (Hz)</label>
+                                <input name="FRECUENCIA FUNCIONAMIENTO" type="number" step="any" placeholder="Ej: 60">
+                            </div>
+                            <div class="form-group">
+                                <label>5.5 RANGO DE PRESIÓN</label>
+                                <input name="RANGO DE PRESION" type="text" placeholder="Ej: 40–80 PSI">
+                            </div>
+                            <div class="form-group">
+                                <label>5.6 RANGO DE VELOCIDAD</label>
+                                <input name="RANGO DE VELOCIDAD" type="text" placeholder="Ej: 0–3000 RPM">
+                            </div>
+                            <div class="form-group">
+                                <label>5.7 RANGO DE TEMPERATURA</label>
+                                <input name="RANGO DE TEMPERATURA" type="text" placeholder="Ej: 15–30 °C">
+                            </div>
+                            <div class="form-group">
+                                <label>5.8 PESO (kg)</label>
+                                <input name="PESO FUNCIONAMIENTO" type="number" step="any" placeholder="Ej: 25">
+                            </div>
+                            <div class="form-group">
+                                <label>5.9 RANGO DE HUMEDAD</label>
+                                <input name="RANGO DE HUMEDAD" type="text" placeholder="Ej: 30–75% HR">
+                            </div>
+                            <div class="form-group" style="grid-column: 1 / -1;">
+                                <label>5.10 OTRAS RECOMENDACIONES DEL FABRICANTE</label>
+                                <textarea name="OTRAS RECOMENDACIONES DEL FABRICANTE" rows="2" style="resize:vertical;" placeholder="Otras recomendaciones del fabricante para el funcionamiento del equipo"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </details>
+
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('newInventario')">Cancelar</button>
                     <button type="submit" class="btn btn-primary">Guardar en Inventario</button>
