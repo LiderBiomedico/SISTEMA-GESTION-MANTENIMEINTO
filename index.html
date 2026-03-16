@@ -1907,6 +1907,14 @@
                                 </div>
                                 <div class="text-muted" style="margin-top:6px;">Máximo 5&nbsp;MB. Se adjuntará como PDF en Airtable.</div>
                             </div>
+                            <div class="form-group">
+                                <label>MANUAL DE SERVICIO (PDF)</label>
+                                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                                    <input id="manualServicioFileInput" name="MANUAL_SERVICIO_FILE" type="file" accept="application/pdf" style="flex:1; min-width:200px;">
+                                    <button type="button" class="btn btn-secondary btn-small" onclick="clearManualServicioFile()">✕ Quitar</button>
+                                </div>
+                                <div class="text-muted" style="margin-top:6px;">Máximo 5&nbsp;MB. Se adjuntará como PDF en Airtable.</div>
+                            </div>
                         </div>
                     </div>
                 </details>
@@ -2239,6 +2247,13 @@
 
     <!-- SPLASH SCREEN CONTROLLER -->
     <script>
+        function clearManualServicioFile() {
+            const input = document.getElementById('manualServicioFileInput');
+            if (input) {
+                input.value = '';
+            }
+        }
+
         (function() {
             const splash = document.getElementById('splashScreen');
             const loadingText = document.getElementById('splashLoadingText');
