@@ -326,6 +326,15 @@ async function submitInventarioForm(e) {
     manualFile = _mf;
   }
 
+  // PDF Manual de Servicio
+  let manualServicioFile = null;
+  const _manualServicioInput = form.querySelector('#manualServicioFileInput');
+  if (_manualServicioInput && _manualServicioInput.files && _manualServicioInput.files[0]) {
+    const _msf = _manualServicioInput.files[0];
+    if (_msf.size > 5 * 1024 * 1024) { alert('El PDF del Manual de Servicio supera 5MB.'); return; }
+    manualServicioFile = _msf;
+  }
+
   // PDF Registro INVIMA
   let invimaFile = null;
   const _invimaInput = form.querySelector('#invimaFileInput');
@@ -511,9 +520,10 @@ async function submitInventarioForm(e) {
         }
       }
 
-      await uploadPdf(manualFile,      'Manual',                  'Manual');
-      await uploadPdf(invimaFile,      'Registro Invima pdf',     'INVIMA');
-      await uploadPdf(importacionFile, 'Registro de importacion', 'Importacion');
+      await uploadPdf(manualFile,         'Manual',                  'Manual');
+      await uploadPdf(manualServicioFile,  'Manual de servicio',      'ManualServicio');
+      await uploadPdf(invimaFile,          'Registro Invima pdf',     'INVIMA');
+      await uploadPdf(importacionFile,     'Registro de importacion', 'Importacion');
 
 
 
@@ -549,6 +559,8 @@ async function submitInventarioForm(e) {
         if (_css) _css.style.display = 'none';
         var _mi = document.getElementById('manualFileInput');
         if (_mi) _mi.value = '';
+        var _msi = document.getElementById('manualServicioFileInput');
+        if (_msi) _msi.value = '';
         var _ii = document.getElementById('invimaFileInput');
         if (_ii) _ii.value = '';
         var _imp = document.getElementById('importacionFileInput');
