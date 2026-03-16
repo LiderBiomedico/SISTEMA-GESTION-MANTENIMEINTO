@@ -126,8 +126,6 @@ const FIELD_MAP = {
   'FECHA PROGRAMADA DE MANTENIMINETO': 'Fecha Programada de Mantenimiento',
   'FRECUENCIA DE MANTENIMIENTO': 'Frecuencia de Mantenimiento',
   'PROGRAMACION DE MANTENIMIENTO ANUAL': 'Programacion de Mantenimiento Anual',
-  'AÑOS DE CALIBRACION': 'Años de Calibracion',
-  'ANOS DE CALIBRACION': 'Años de Calibracion',
   'RESPONSABLE': 'Responsable',
   'NOMBRE': 'Nombre',
   'DIRECCION': 'Direccion',
@@ -546,56 +544,38 @@ exports.handler = async (event) => {
 
       let created = await createRecord(fields);
 
-      // Si falla 422 → intentar quitar campos opcionales/problemáticos y reintentar
+      // Si aún falla por select inválido (valor que no existe en Airtable ni fuzzy matchea)
       if (!created.ok && created.status === 422) {
-        console.error('[422] Error Airtable:', JSON.stringify(created.data));
-        console.error('[422] Campos enviados:', JSON.stringify(Object.keys(fields)));
-
-        const safeFields = { ...fields };
-        const removedSelects = [];
-
-        // Campos opcionales que pueden no existir en Airtable → quitar en retry
-        const OPTIONAL_FIELDS = new Set([
-          'Programacion de Mantenimiento Anual',
-          'Años de Calibracion',
-          'N. Certificado',
-          'Fecha de calibracion',
-          'Fecha Proxima Calibracion',
-          'Fuente de Alimentacion', 'Tec Predominante',
-          'Voltaje Max', 'Voltaje Min', 'Corriente Max', 'Corriente Min',
-          'Potencia', 'Frecuencia Instalacion', 'Presion Instalacion',
-          'Velocidad Instalacion', 'Peso Instalacion', 'Temperatura Instalacion',
-          'Otros Instalacion', 'Rango de Voltaje', 'Rango de Corriente',
-          'Rango de Potencia', 'Frecuencia Funcionamiento', 'Rango de Presion',
-          'Rango de Velocidad', 'Rango de Temperatura', 'Peso Funcionamiento',
-          'Rango de Humedad', 'Otras Recomendaciones del Fabricante',
-          'Manual de servicio',
-        ]);
-
-        // Quitar opcionales y singleSelects en el retry
-        Object.keys(safeFields).forEach((k) => {
-          if (OPTIONAL_FIELDS.has(k) || SINGLE_SELECT_FIELDS.has(k)) {
-            removedSelects.push(k);
-            delete safeFields[k];
+        const errType =
+          (created.data?.error?.type) ||
+          (created.data?.error?.error?.type) ||
+          '';
+        if (errType === 'INVALID_MULTIPLE_CHOICE_OPTIONS') {
+          // Remover todos los selects y reintentar para no bloquear el guardado
+          const safeFields = { ...fields };
+          const removedSelects = [];
+          Object.keys(safeFields).forEach((k) => {
+            if (SINGLE_SELECT_FIELDS.has(k)) { removedSelects.push(k); delete safeFields[k]; }
+          });
+          const retry = await createRecord(safeFields);
+          if (retry.ok) {
+            created = retry;
+            created.data.__removedSelects = removedSelects;
+          } else {
+            return json(created.status, {
+              ok: false,
+              error: created.data?.error || created.data,
+              details: created.data,
+              removedFields,
+              resolvedFields,
+              mappedSent: fields,
+            });
           }
-        });
-
-        console.log('[422] Reintentando sin campos:', removedSelects);
-        const retry = await createRecord(safeFields);
-        if (retry.ok) {
-          created = retry;
-          created.data.__removedSelects = removedSelects;
-          console.log('[422] Reintento exitoso. Campos omitidos:', removedSelects);
         } else {
-          // Extraer nombre del campo problemático del mensaje de Airtable
-          const errMsg = retry.data?.error?.message || retry.data?.error || JSON.stringify(retry.data);
-          const fieldMatch = errMsg.match(/Unknown field name: "([^"]+)"/);
-          const fieldHint = fieldMatch ? `El campo "${fieldMatch[1]}" no existe en Airtable. Créalo primero.` : errMsg;
-          console.error('[422] Reintento también falló:', JSON.stringify(retry.data));
           return json(created.status, {
             ok: false,
-            error: fieldHint,
-            details: retry.data,
+            error: created.data?.error || created.data,
+            details: created.data,
             removedFields,
             resolvedFields,
             mappedSent: fields,
@@ -644,37 +624,7 @@ exports.handler = async (event) => {
       const { fields, removedFields, resolvedFields } = await mapAndNormalizeFields(body.fields || {});
       delete fields['Item'];
 
-      let r = await updateRecord(id, fields);
-
-      // Si falla 422 por campo desconocido → reintento silencioso sin campos opcionales
-      if (!r.ok && r.status === 422) {
-        console.error('[PATCH 422]', JSON.stringify(r.data));
-        const safeFields = { ...fields };
-        const OPTIONAL_FIELDS = new Set([
-          'Programacion de Mantenimiento Anual',
-          'Años de Calibracion', 'N. Certificado',
-          'Fecha de calibracion', 'Fecha Proxima Calibracion',
-          'Fuente de Alimentacion', 'Tec Predominante',
-          'Voltaje Max', 'Voltaje Min', 'Corriente Max', 'Corriente Min',
-          'Potencia', 'Frecuencia Instalacion', 'Presion Instalacion',
-          'Velocidad Instalacion', 'Peso Instalacion', 'Temperatura Instalacion',
-          'Otros Instalacion', 'Rango de Voltaje', 'Rango de Corriente',
-          'Rango de Potencia', 'Frecuencia Funcionamiento', 'Rango de Presion',
-          'Rango de Velocidad', 'Rango de Temperatura', 'Peso Funcionamiento',
-          'Rango de Humedad', 'Otras Recomendaciones del Fabricante',
-          'Manual de servicio',
-        ]);
-        const removedPatch = [];
-        Object.keys(safeFields).forEach(k => {
-          if (OPTIONAL_FIELDS.has(k) || SINGLE_SELECT_FIELDS.has(k)) {
-            removedPatch.push(k);
-            delete safeFields[k];
-          }
-        });
-        console.log('[PATCH] Reintentando sin:', removedPatch);
-        r = await updateRecord(id, safeFields);
-      }
-
+      const r = await updateRecord(id, fields);
       if (!r.ok) return json(r.status, { ok: false, error: r.data?.error || r.data, details: r.data, removedFields, resolvedFields, mappedSent: fields });
 
       return json(200, { ok: true, record: r.data, data: r.data, removedFields, resolvedFields, mappedSent: fields });
