@@ -501,12 +501,13 @@ async function submitInventarioForm(e) {
       // Subir Manual, INVIMA e Importacion via upload-pdf (evitar límite 6MB de Netlify)
       const uploadUrl = `${API_BASE_URL}/upload-pdf`;
 
-      // Helper para subir un PDF via upload-pdf
+      // Helper para subir un PDF via upload-pdf — acumula errores para mostrarlos al usuario
+      const pdfUploadErrors = [];
       async function uploadPdf(file, fieldName, label) {
-        if (!file || !newRecordId) { console.log('⏭️ skip', label, '— file:', !!file, 'recordId:', newRecordId); return; }
+        if (!file || !newRecordId) { console.log('⏭️ skip', label, '-- file:', !!file, 'recordId:', newRecordId); return; }
         try {
           const b64 = await fileToBase64(file);
-          console.log('⬆️ subiendo', label, '→', fieldName, '| bytes b64:', b64.length);
+          console.log('⬆️ subiendo', label, '->', fieldName, '| bytes b64:', b64.length);
           const r = await axios.post(uploadUrl, {
             recordId: newRecordId,
             fieldName: fieldName,
@@ -514,16 +515,31 @@ async function submitInventarioForm(e) {
             contentType: file.type || 'application/pdf',
             base64: b64
           }, { headers: { ...getAuthHeader(), 'Content-Type': 'application/json' } });
-          console.log('✅', label, 'resultado:', r.data);
+          if (r.data && r.data.ok === false) {
+            const errMsg = r.data.error || 'Error desconocido';
+            console.error('❌', label, 'error:', errMsg);
+            pdfUploadErrors.push(label + ': ' + errMsg);
+          } else {
+            console.log('✅', label, 'subido correctamente');
+          }
         } catch(e) {
-          console.error('❌', label, 'error:', e.response ? JSON.stringify(e.response.data) : e.message);
+          const errMsg = e.response ? JSON.stringify(e.response.data) : e.message;
+          console.error('❌', label, 'error:', errMsg);
+          pdfUploadErrors.push(label + ': ' + errMsg);
         }
       }
 
-      await uploadPdf(manualFile,         'Manual',                  'Manual');
-      await uploadPdf(manualServicioFile,  'Manual de servicio',      'ManualServicio');
-      await uploadPdf(invimaFile,          'Registro Invima pdf',     'INVIMA');
-      await uploadPdf(importacionFile,     'Registro de importacion', 'Importacion');
+      await uploadPdf(manualFile,         'Manual',                  'Manual del Equipo');
+      await uploadPdf(manualServicioFile,  'Manual de servicio',      'Manual de Servicio');
+      await uploadPdf(invimaFile,          'Registro Invima pdf',     'Registro INVIMA');
+      await uploadPdf(importacionFile,     'Registro de importacion', 'Registro de Importacion');
+
+      // Avisar si algun PDF no se pudo subir
+      if (pdfUploadErrors.length > 0) {
+        alert('⚠️ El registro se guardo, pero los siguientes PDF NO se pudieron adjuntar:\n\n' +
+          pdfUploadErrors.join('\n') +
+          '\n\nVerifica que los nombres de los campos en Airtable coincidan exactamente.');
+      }
 
 
 
