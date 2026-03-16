@@ -74,10 +74,9 @@ const SINGLE_SELECT_FIELDS = new Set([
   'Clasificacion Biomedica',
   'Clasificacion de la Tecnologia',
   'Clasificacion del Riesgo',
-  'Tipo de Adquisicion',
   'Calibrable',
-  'Frecuencia de MTTO Preventivo',
   'Tipo de MTTO',
+  // Tipo de Adquisicion y Frecuencia de MTTO Preventivo son texto en Airtable
 ]);
 
 // Mapeo de nombres del formulario → nombres exactos de Airtable
@@ -546,21 +545,15 @@ exports.handler = async (event) => {
 
       let created = await createRecord(fields);
 
-      // Si falla 422 → intentar quitar campos opcionales/problemáticos y reintentar
+      // Si falla 422 → reintentos inteligentes: quitar campo por campo hasta que funcione
       if (!created.ok && created.status === 422) {
         console.error('[422] Error Airtable:', JSON.stringify(created.data));
-        console.error('[422] Campos enviados:', JSON.stringify(Object.keys(fields)));
 
-        const safeFields = { ...fields };
-        const removedSelects = [];
-
-        // Campos opcionales que pueden no existir en Airtable → quitar en retry
-        const OPTIONAL_FIELDS = new Set([
+        // Campos que pueden no existir todavía en Airtable (se omiten silenciosamente)
+        const SKIPPABLE_FIELDS = new Set([
           'Programacion de Mantenimiento Anual',
-          'Años de Calibracion',
-          'N. Certificado',
-          'Fecha de calibracion',
-          'Fecha Proxima Calibracion',
+          'Años de Calibracion', 'N. Certificado',
+          'Fecha de calibracion', 'Fecha Proxima Calibracion',
           'Fuente de Alimentacion', 'Tec Predominante',
           'Voltaje Max', 'Voltaje Min', 'Corriente Max', 'Corriente Min',
           'Potencia', 'Frecuencia Instalacion', 'Presion Instalacion',
@@ -570,36 +563,57 @@ exports.handler = async (event) => {
           'Rango de Velocidad', 'Rango de Temperatura', 'Peso Funcionamiento',
           'Rango de Humedad', 'Otras Recomendaciones del Fabricante',
           'Manual de servicio',
+          // Selects — si el valor no coincide con las opciones de Airtable, Airtable los rechaza
+          'Servicio', 'Clasificacion Biomedica', 'Clasificacion de la Tecnologia',
+          'Clasificacion del Riesgo', 'Calibrable', 'Tipo de MTTO',
         ]);
 
-        // Quitar opcionales y singleSelects en el retry
-        Object.keys(safeFields).forEach((k) => {
-          if (OPTIONAL_FIELDS.has(k) || SINGLE_SELECT_FIELDS.has(k)) {
-            removedSelects.push(k);
-            delete safeFields[k];
-          }
-        });
+        const safeFields = { ...fields };
+        const removedSelects = [];
 
-        console.log('[422] Reintentando sin campos:', removedSelects);
-        const retry = await createRecord(safeFields);
-        if (retry.ok) {
-          created = retry;
+        // Intentos: hasta 5 reintentos quitando el campo problemático identificado por Airtable
+        let retryCreated = created;
+        for (let attempt = 0; attempt < 6; attempt++) {
+          const errMsg = retryCreated.data?.error?.message
+            || (typeof retryCreated.data?.error === 'string' ? retryCreated.data.error : '')
+            || JSON.stringify(retryCreated.data);
+
+          // Identificar campo problemático en el mensaje de error
+          const unknownMatch = errMsg.match(/Unknown field name[:\s]+"?([^"\n,]+)"?/i);
+          const invalidMatch = errMsg.match(/Invalid select option[:\s]+"?([^"\n]+)"?\s+for field[:\s]+"?([^"\n,]+)"?/i);
+
+          let badField = null;
+          if (invalidMatch) badField = invalidMatch[2].trim();
+          else if (unknownMatch) badField = unknownMatch[1].trim();
+
+          if (!badField || !safeFields.hasOwnProperty(badField)) break;
+
+          console.log(`[422] Intento ${attempt+1}: quitando campo problemático "${badField}"`);
+          removedSelects.push(badField);
+          delete safeFields[badField];
+
+          retryCreated = await createRecord(safeFields);
+          if (retryCreated.ok) break;
+        }
+
+        if (retryCreated.ok) {
+          created = retryCreated;
           created.data.__removedSelects = removedSelects;
-          console.log('[422] Reintento exitoso. Campos omitidos:', removedSelects);
+          console.log('[422] Guardado exitoso. Campos omitidos:', removedSelects);
         } else {
-          // Extraer nombre del campo problemático del mensaje de Airtable
-          const errMsg = retry.data?.error?.message || retry.data?.error || JSON.stringify(retry.data);
-          const fieldMatch = errMsg.match(/Unknown field name: "([^"]+)"/);
-          const fieldHint = fieldMatch ? `El campo "${fieldMatch[1]}" no existe en Airtable. Créalo primero.` : errMsg;
-          console.error('[422] Reintento también falló:', JSON.stringify(retry.data));
-          return json(created.status, {
-            ok: false,
-            error: fieldHint,
-            details: retry.data,
-            removedFields,
-            resolvedFields,
-            mappedSent: fields,
+          // Último recurso: quitar todos los SKIPPABLE_FIELDS y reintentar
+          Object.keys(safeFields).forEach(k => {
+            if (SKIPPABLE_FIELDS.has(k)) { removedSelects.push(k); delete safeFields[k]; }
           });
+          const lastRetry = await createRecord(safeFields);
+          if (lastRetry.ok) {
+            created = lastRetry;
+            created.data.__removedSelects = removedSelects;
+            console.log('[422] Guardado en último recurso. Campos omitidos:', removedSelects);
+          } else {
+            const finalErr = lastRetry.data?.error?.message || lastRetry.data?.error || JSON.stringify(lastRetry.data);
+            return json(422, { ok: false, error: `Error guardando: ${finalErr}`, details: lastRetry.data, removedFields, resolvedFields });
+          }
         }
       } else if (!created.ok) {
         return json(created.status, {
@@ -646,11 +660,12 @@ exports.handler = async (event) => {
 
       let r = await updateRecord(id, fields);
 
-      // Si falla 422 por campo desconocido → reintento silencioso sin campos opcionales
+      // Si falla 422 → reintentos inteligentes campo por campo
       if (!r.ok && r.status === 422) {
         console.error('[PATCH 422]', JSON.stringify(r.data));
         const safeFields = { ...fields };
-        const OPTIONAL_FIELDS = new Set([
+        const removedPatch = [];
+        const SKIPPABLE_PATCH = new Set([
           'Programacion de Mantenimiento Anual',
           'Años de Calibracion', 'N. Certificado',
           'Fecha de calibracion', 'Fecha Proxima Calibracion',
@@ -663,16 +678,34 @@ exports.handler = async (event) => {
           'Rango de Velocidad', 'Rango de Temperatura', 'Peso Funcionamiento',
           'Rango de Humedad', 'Otras Recomendaciones del Fabricante',
           'Manual de servicio',
+          'Servicio', 'Clasificacion Biomedica', 'Clasificacion de la Tecnologia',
+          'Clasificacion del Riesgo', 'Calibrable', 'Tipo de MTTO',
         ]);
-        const removedPatch = [];
-        Object.keys(safeFields).forEach(k => {
-          if (OPTIONAL_FIELDS.has(k) || SINGLE_SELECT_FIELDS.has(k)) {
-            removedPatch.push(k);
-            delete safeFields[k];
-          }
-        });
-        console.log('[PATCH] Reintentando sin:', removedPatch);
-        r = await updateRecord(id, safeFields);
+        let retryR = r;
+        for (let attempt = 0; attempt < 6; attempt++) {
+          const errMsg = retryR.data?.error?.message
+            || (typeof retryR.data?.error === 'string' ? retryR.data.error : '')
+            || JSON.stringify(retryR.data);
+          const unknownMatch = errMsg.match(/Unknown field name[^"]*"?([^"\n,]+)"?/i);
+          const invalidMatch = errMsg.match(/Invalid select option[^"]*"?([^"\n]+)"?\s+for field[^"]*"?([^"\n,]+)"?/i);
+          let badField = null;
+          if (invalidMatch) badField = invalidMatch[2].trim();
+          else if (unknownMatch) badField = unknownMatch[1].trim();
+          if (!badField || !safeFields.hasOwnProperty(badField)) break;
+          removedPatch.push(badField);
+          delete safeFields[badField];
+          retryR = await updateRecord(id, safeFields);
+          if (retryR.ok) break;
+        }
+        if (!retryR.ok) {
+          // Último recurso: quitar todos los skippables
+          Object.keys(safeFields).forEach(k => {
+            if (SKIPPABLE_PATCH.has(k)) { removedPatch.push(k); delete safeFields[k]; }
+          });
+          retryR = await updateRecord(id, safeFields);
+        }
+        r = retryR;
+        if (r.ok) console.log('[PATCH] Guardado. Campos omitidos:', removedPatch);
       }
 
       if (!r.ok) return json(r.status, { ok: false, error: r.data?.error || r.data, details: r.data, removedFields, resolvedFields, mappedSent: fields });
