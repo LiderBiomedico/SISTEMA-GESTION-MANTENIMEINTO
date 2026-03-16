@@ -753,9 +753,227 @@
 .cal-cert-row input[type="file"] { padding: 10px; border: 2px dashed #CFD8DC; border-radius: 10px; background: #F5F7FA; }
 .cal-cert-row input[type="number"] { padding: 10px 12px; border: 2px solid #CFD8DC; border-radius: 10px; background: #F5F7FA; }
 
+
+        /* ============================================================
+           SPLASH SCREEN
+        ============================================================ */
+        #splashScreen {
+            position: fixed;
+            inset: 0;
+            z-index: 99999;
+            background: linear-gradient(145deg, #060f22 0%, #0d2150 40%, #0a3a1a 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0;
+            overflow: hidden;
+            transition: opacity 0.7s ease, transform 0.7s ease;
+        }
+        #splashScreen.hide {
+            opacity: 0;
+            transform: scale(1.04);
+            pointer-events: none;
+        }
+        #splashScreen::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(77,184,72,0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(26,86,196,0.05) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: gridShift 8s linear infinite;
+        }
+        @keyframes gridShift {
+            from { background-position: 0 0; }
+            to   { background-position: 50px 50px; }
+        }
+        .splash-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.25;
+            animation: orbFloat 6s ease-in-out infinite alternate;
+        }
+        .splash-orb-1 { width:400px;height:400px;background:#1a56c4;top:-100px;left:-100px; }
+        .splash-orb-2 { width:350px;height:350px;background:#4db848;bottom:-80px;right:-80px;animation-delay:-3s; }
+        .splash-orb-3 { width:250px;height:250px;background:#2a9fd4;top:50%;left:50%;transform:translate(-50%,-50%);animation-delay:-1.5s; }
+        @keyframes orbFloat {
+            from { transform: scale(1) translate(0, 0); }
+            to   { transform: scale(1.2) translate(20px, -20px); }
+        }
+        .splash-content {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 32px;
+            animation: splashFadeIn 0.8s ease forwards;
+        }
+        @keyframes splashFadeIn {
+            from { opacity: 0; transform: translateY(30px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .splash-logo-container { display:flex;flex-direction:column;align-items:center;gap:20px; }
+        .splash-icon { animation: splashIconPop 0.6s cubic-bezier(0.34,1.56,0.64,1) 0.2s both; }
+        @keyframes splashIconPop {
+            from { opacity:0;transform:scale(0.5); }
+            to   { opacity:1;transform:scale(1); }
+        }
+        .splash-brand { display:flex;align-items:baseline;gap:8px;animation:splashFadeIn 0.6s ease 0.5s both; }
+        .splash-nexa  { font-family:'Montserrat',sans-serif;font-weight:900;font-size:clamp(52px,8vw,80px);color:white;letter-spacing:-2px;line-height:1; }
+        .splash-cmms  { font-family:'Montserrat',sans-serif;font-weight:700;font-size:clamp(36px,5vw,56px);color:#4db848;letter-spacing:1px;line-height:1; }
+        .splash-tagline { font-family:'Outfit',sans-serif;font-size:clamp(14px,2vw,18px);font-weight:400;color:rgba(255,255,255,0.55);letter-spacing:2px;text-transform:uppercase;text-align:center;animation:splashFadeIn 0.6s ease 0.8s both; }
+        .splash-divider { width:80px;height:2px;background:linear-gradient(90deg,#1a56c4,#4db848);border-radius:2px;animation:splashFadeIn 0.6s ease 0.9s both; }
+        .splash-progress-wrap { width:min(400px,80vw);display:flex;flex-direction:column;align-items:center;gap:12px;animation:splashFadeIn 0.6s ease 1s both; }
+        .splash-progress-track { width:100%;height:3px;background:rgba(255,255,255,0.1);border-radius:4px;overflow:hidden; }
+        .splash-progress-bar   { height:100%;width:0%;background:linear-gradient(90deg,#1a56c4,#4db848);border-radius:4px;animation:splashProgress 4.6s cubic-bezier(0.4,0,0.2,1) 0.4s forwards;box-shadow:0 0 12px rgba(77,184,72,0.5); }
+        @keyframes splashProgress { 0%{width:0%} 100%{width:100%} }
+        .splash-loading-text { font-family:'Outfit',sans-serif;font-size:12px;font-weight:500;color:rgba(255,255,255,0.35);letter-spacing:1px; }
+        .splash-dev { position:absolute;bottom:32px;left:50%;transform:translateX(-50%);text-align:center;z-index:2;animation:splashFadeIn 0.6s ease 1.2s both; }
+        .splash-dev-label { font-size:13px;color:rgba(255,255,255,0.4);font-family:'Outfit',sans-serif;letter-spacing:1px;margin-bottom:8px; }
+        .splash-dev-name  { font-size:20px;font-weight:700;color:rgba(255,255,255,0.85);font-family:'Montserrat',sans-serif;white-space:nowrap;letter-spacing:-0.5px;line-height:1.2; }
+        .splash-ecg { position:absolute;bottom:115px;left:50%;transform:translateX(-50%);z-index:2;opacity:0.7;filter:drop-shadow(0 0 4px rgba(255,255,255,1)) drop-shadow(0 0 14px rgba(77,184,72,0.7)); }
+        .splash-ecg-line { stroke-dasharray:3000;stroke-dashoffset:3000;animation:ecgDraw 4s ease 0.3s forwards; }
+        @keyframes ecgDraw { to { stroke-dashoffset:0; } }
     </style>
 </head>
 <body>
+
+    <!-- ===================== SPLASH SCREEN ===================== -->
+    <div id="splashScreen">
+        <div class="splash-orb splash-orb-1"></div>
+        <div class="splash-orb splash-orb-2"></div>
+        <div class="splash-orb splash-orb-3"></div>
+
+        <!-- ECG decorativa -->
+        <svg class="splash-ecg" width="960" height="70" viewBox="0 0 960 70" fill="none">
+            <defs>
+                <linearGradient id="ecgFade" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%"   stop-color="white" stop-opacity="0"/>
+                    <stop offset="6%"   stop-color="white" stop-opacity="1"/>
+                    <stop offset="94%"  stop-color="white" stop-opacity="1"/>
+                    <stop offset="100%" stop-color="white" stop-opacity="0"/>
+                </linearGradient>
+            </defs>
+            <polyline class="splash-ecg-line"
+                points="0,35 35,35 45,35 47,33 50,37 53,35 65,35
+                        75,35 77,31 80,39 83,35 95,35
+                        105,35 107,29 110,28 113,10 116,60 119,35 125,35
+                        140,35 143,32 146,38 149,35 162,35
+                        172,35 174,31 177,39 180,35 192,35
+                        202,35 204,29 207,28 210,10 213,60 216,35 222,35
+                        237,35 240,32 243,38 246,35 259,35
+                        269,35 271,31 274,39 277,35 289,35
+                        299,35 301,29 304,28 307,10 310,60 313,35 319,35
+                        334,35 337,32 340,38 343,35 356,35
+                        366,35 368,31 371,39 374,35 386,35
+                        396,35 398,29 401,28 404,10 407,60 410,35 416,35
+                        431,35 434,32 437,38 440,35 453,35
+                        463,35 465,31 468,39 471,35 483,35
+                        493,35 495,29 498,28 501,10 504,60 507,35 513,35
+                        528,35 531,32 534,38 537,35 550,35
+                        560,35 562,31 565,39 568,35 580,35
+                        590,35 592,29 595,28 598,10 601,60 604,35 610,35
+                        625,35 628,32 631,38 634,35 647,35
+                        657,35 659,31 662,39 665,35 677,35
+                        687,35 689,29 692,28 695,10 698,60 701,35 707,35
+                        722,35 725,32 728,38 731,35 744,35
+                        754,35 756,31 759,39 762,35 774,35
+                        784,35 786,29 789,28 792,10 795,60 798,35 804,35
+                        819,35 822,32 825,38 828,35 841,35
+                        851,35 853,31 856,39 859,35 871,35
+                        881,35 883,29 886,28 889,10 892,60 895,35 901,35
+                        916,35 919,32 922,38 925,35 938,35
+                        948,35 950,31 953,39 956,35 960,35"
+                fill="none" stroke="rgba(77,184,72,0.4)" stroke-width="7"
+                stroke-linecap="round" stroke-linejoin="round"/>
+            <polyline class="splash-ecg-line"
+                points="0,35 35,35 45,35 47,33 50,37 53,35 65,35
+                        75,35 77,31 80,39 83,35 95,35
+                        105,35 107,29 110,28 113,10 116,60 119,35 125,35
+                        140,35 143,32 146,38 149,35 162,35
+                        172,35 174,31 177,39 180,35 192,35
+                        202,35 204,29 207,28 210,10 213,60 216,35 222,35
+                        237,35 240,32 243,38 246,35 259,35
+                        269,35 271,31 274,39 277,35 289,35
+                        299,35 301,29 304,28 307,10 310,60 313,35 319,35
+                        334,35 337,32 340,38 343,35 356,35
+                        366,35 368,31 371,39 374,35 386,35
+                        396,35 398,29 401,28 404,10 407,60 410,35 416,35
+                        431,35 434,32 437,38 440,35 453,35
+                        463,35 465,31 468,39 471,35 483,35
+                        493,35 495,29 498,28 501,10 504,60 507,35 513,35
+                        528,35 531,32 534,38 537,35 550,35
+                        560,35 562,31 565,39 568,35 580,35
+                        590,35 592,29 595,28 598,10 601,60 604,35 610,35
+                        625,35 628,32 631,38 634,35 647,35
+                        657,35 659,31 662,39 665,35 677,35
+                        687,35 689,29 692,28 695,10 698,60 701,35 707,35
+                        722,35 725,32 728,38 731,35 744,35
+                        754,35 756,31 759,39 762,35 774,35
+                        784,35 786,29 789,28 792,10 795,60 798,35 804,35
+                        819,35 822,32 825,38 828,35 841,35
+                        851,35 853,31 856,39 859,35 871,35
+                        881,35 883,29 886,28 889,10 892,60 895,35 901,35
+                        916,35 919,32 922,38 925,35 938,35
+                        948,35 950,31 953,39 956,35 960,35"
+                fill="none" stroke="url(#ecgFade)" stroke-width="2.5"
+                stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+
+        <!-- Contenido central -->
+        <div class="splash-content">
+            <div class="splash-logo-container">
+                <div class="splash-icon">
+                    <svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="sg1" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%"   stop-color="#4db848"/>
+                                <stop offset="50%"  stop-color="#2a7fd4"/>
+                                <stop offset="100%" stop-color="#1a56c4"/>
+                            </linearGradient>
+                            <linearGradient id="sg2" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%"   stop-color="#1a56c4"/>
+                                <stop offset="100%" stop-color="#2a7fd4"/>
+                            </linearGradient>
+                            <filter id="glow">
+                                <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                                <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                            </filter>
+                        </defs>
+                        <rect x="4"  y="36" width="92" height="28" rx="8" fill="url(#sg1)"/>
+                        <rect x="36" y="4"  width="28" height="92" rx="8" fill="url(#sg2)"/>
+                        <polyline filter="url(#glow)"
+                            points="10,50 22,50 28,32 36,68 44,38 52,58 60,50 90,50"
+                            fill="none" stroke="white" stroke-width="4"
+                            stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <div class="splash-brand">
+                    <span class="splash-nexa">NEXA</span>
+                    <span class="splash-cmms">CMMS</span>
+                </div>
+                <div class="splash-divider"></div>
+                <div class="splash-tagline">Gestión inteligente del mantenimiento hospitalario</div>
+            </div>
+            <div class="splash-progress-wrap">
+                <div class="splash-progress-track">
+                    <div class="splash-progress-bar"></div>
+                </div>
+                <div class="splash-loading-text" id="splashLoadingText">Iniciando sistema...</div>
+            </div>
+        </div>
+
+        <!-- Crédito desarrollador -->
+        <div class="splash-dev">
+            <div class="splash-dev-label">Desarrollado por</div>
+            <div class="splash-dev-name">Ing. Paul Eduardo Muñoz Rodriguez</div>
+        </div>
+    </div>
+    <!-- FIN SPLASH SCREEN -->
     <div class="container-app">
         <!-- SIDEBAR -->
         <aside class="sidebar">
@@ -2856,6 +3074,40 @@
     <script src="js/mantenimientos.js"></script>
     <script src="js/metrologia.js"></script>
     <script src="js/cronograma.js"></script>
+
+    <!-- SPLASH SCREEN CONTROLLER -->
+    <script>
+        (function() {
+            const splash = document.getElementById('splashScreen');
+            const loadingText = document.getElementById('splashLoadingText');
+            const messages = [
+                'Iniciando sistema...',
+                'Cargando módulos...',
+                'Cargando inventario...',
+                'Verificando conexión...',
+                'Preparando dashboard...',
+                '¡Bienvenido a Nexa CMMS!'
+            ];
+            let i = 0;
+            const interval = setInterval(() => {
+                i++;
+                if (i < messages.length) {
+                    loadingText.style.opacity = '0';
+                    setTimeout(() => {
+                        loadingText.textContent = messages[i];
+                        loadingText.style.transition = 'opacity 0.3s ease';
+                        loadingText.style.opacity = '1';
+                    }, 200);
+                }
+            }, 800);
+            setTimeout(() => {
+                clearInterval(interval);
+                splash.classList.add('hide');
+                setTimeout(() => { splash.style.display = 'none'; }, 750);
+            }, 5000);
+        })();
+    </script>
+
 </body>
     @keyframes hvSlideUp { from { opacity:0; transform:translateY(30px); } to { opacity:1; transform:translateY(0); } }
 
