@@ -40,6 +40,17 @@ const NUMBER_FIELDS = new Set([
   'Vida Util',
   'Valor en Pesos',
   'Costo de Mantenimiento',
+  // Seccion 6: instalacion
+  'Voltaje Max',
+  'Voltaje Min',
+  'Corriente Max',
+  'Corriente Min',
+  'Potencia',
+  'Frecuencia Instalacion',
+  'Peso Instalacion',
+  // Seccion 7: funcionamiento
+  'Frecuencia Funcionamiento',
+  'Peso Funcionamiento',
 ]);
 
 // Campos fecha (Airtable Date)
