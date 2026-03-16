@@ -553,7 +553,7 @@ exports.handler = async (event) => {
         const SKIPPABLE_FIELDS = new Set([
           'Programacion de Mantenimiento Anual',
           'Años de Calibracion', 'N. Certificado',
-          'Fecha de calibracion', 'Fecha Proxima Calibracion',
+          // Fecha de calibracion y Fecha Proxima Calibracion YA EXISTEN en Airtable - no omitir
           'Fuente de Alimentacion', 'Tec Predominante',
           'Voltaje Max', 'Voltaje Min', 'Corriente Max', 'Corriente Min',
           'Potencia', 'Frecuencia Instalacion', 'Presion Instalacion',
@@ -668,7 +668,7 @@ exports.handler = async (event) => {
         const SKIPPABLE_PATCH = new Set([
           'Programacion de Mantenimiento Anual',
           'Años de Calibracion', 'N. Certificado',
-          'Fecha de calibracion', 'Fecha Proxima Calibracion',
+          // Fecha de calibracion y Fecha Proxima Calibracion YA EXISTEN en Airtable - no omitir
           'Fuente de Alimentacion', 'Tec Predominante',
           'Voltaje Max', 'Voltaje Min', 'Corriente Max', 'Corriente Min',
           'Potencia', 'Frecuencia Instalacion', 'Presion Instalacion',

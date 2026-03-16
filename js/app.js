@@ -568,13 +568,33 @@ async function submitInventarioForm(e) {
 
 
 
-      // Si el backend tuvo que remover selects por valores no válidos, avisar exactamente cuáles
+      // Si el backend removió campos problemáticos, solo mostrar aviso si son campos CLAVE
       const removedSelects = (resp.data?.record && resp.data.record.__removedSelects) ||
                             (resp.data?.data && resp.data.data.__removedSelects) ||
                             resp.data?.__removedSelects;
       if (Array.isArray(removedSelects) && removedSelects.length) {
-        alert('⚠️ El registro se guardó, pero Airtable rechazó estas listas desplegables: ' + removedSelects.join(', ') +
-              '.\nRevisa que el texto enviado coincida EXACTO con las opciones del campo (incluyendo tildes y espacios).');
+        // Campos opcionales/técnicos que se omiten silenciosamente sin molestar al usuario
+        const SILENT_FIELDS = new Set([
+          'Fecha de calibracion', 'Fecha Proxima Calibracion',
+          'Programacion de Mantenimiento Anual', 'Años de Calibracion', 'N. Certificado',
+          'Fuente de Alimentacion', 'Tec Predominante',
+          'Voltaje Max', 'Voltaje Min', 'Corriente Max', 'Corriente Min',
+          'Potencia', 'Frecuencia Instalacion', 'Presion Instalacion',
+          'Velocidad Instalacion', 'Peso Instalacion', 'Temperatura Instalacion',
+          'Otros Instalacion', 'Rango de Voltaje', 'Rango de Corriente',
+          'Rango de Potencia', 'Frecuencia Funcionamiento', 'Rango de Presion',
+          'Rango de Velocidad', 'Rango de Temperatura', 'Peso Funcionamiento',
+          'Rango de Humedad', 'Otras Recomendaciones del Fabricante', 'Manual de servicio',
+        ]);
+        // Solo mostrar aviso para campos importantes que el usuario debería corregir
+        const importantRemoved = removedSelects.filter(f => !SILENT_FIELDS.has(f));
+        if (importantRemoved.length > 0) {
+          alert('⚠️ El registro se guardó, pero estos campos no coincidieron con las opciones de Airtable: ' +
+                importantRemoved.join(', ') +
+                '.\nVerifica que el valor enviado coincida exactamente con las opciones configuradas en Airtable.');
+        } else {
+          console.log('ℹ️ Campos opcionales omitidos silenciosamente:', removedSelects);
+        }
       }
 
       // Validación real: si Airtable devolvió un record pero sin fields, entonces sí es un problema.
