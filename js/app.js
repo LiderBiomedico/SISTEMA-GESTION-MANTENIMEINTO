@@ -451,6 +451,31 @@ async function submitInventarioForm(e) {
     'DIRECCION': 'Direccion',
     'TELEFONO': 'Telefono',
     'CIUDAD': 'Ciudad',
+    // Sección 6: Registro técnico de instalación
+    'FUENTE DE ALIMENTACION': 'Fuente de Alimentacion',
+    'TEC PREDOMINANTE': 'Tec Predominante',
+    'VOLTAJE MAX': 'Voltaje Max',
+    'VOLTAJE MIN': 'Voltaje Min',
+    'CORRIENTE MAX': 'Corriente Max',
+    'CORRIENTE MIN': 'Corriente Min',
+    'POTENCIA': 'Potencia',
+    'FRECUENCIA INSTALACION': 'Frecuencia Instalacion',
+    'PRESION INSTALACION': 'Presion Instalacion',
+    'VELOCIDAD INSTALACION': 'Velocidad Instalacion',
+    'PESO INSTALACION': 'Peso Instalacion',
+    'TEMPERATURA INSTALACION': 'Temperatura Instalacion',
+    'OTROS INSTALACION': 'Otros Instalacion',
+    // Sección 7: Registro técnico de funcionamiento
+    'RANGO DE VOLTAJE': 'Rango de Voltaje',
+    'RANGO DE CORRIENTE': 'Rango de Corriente',
+    'RANGO DE POTENCIA': 'Rango de Potencia',
+    'FRECUENCIA FUNCIONAMIENTO': 'Frecuencia Funcionamiento',
+    'RANGO DE PRESION': 'Rango de Presion',
+    'RANGO DE VELOCIDAD': 'Rango de Velocidad',
+    'RANGO DE TEMPERATURA': 'Rango de Temperatura',
+    'PESO FUNCIONAMIENTO': 'Peso Funcionamiento',
+    'RANGO DE HUMEDAD': 'Rango de Humedad',
+    'OTRAS RECOMENDACIONES DEL FABRICANTE': 'Otras Recomendaciones del Fabricante',
   };
 
   // Convertir campos del formulario a nombres de Airtable
