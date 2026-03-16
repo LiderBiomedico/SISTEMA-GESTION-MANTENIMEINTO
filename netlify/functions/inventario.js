@@ -19,7 +19,7 @@ const AIRTABLE_IMPORTACION_FIELD = process.env.AIRTABLE_IMPORTACION_FIELD || 'Re
 
 const AIRTABLE_API = 'https://api.airtable.com/v0';
 const AIRTABLE_META_API = 'https://api.airtable.com/v0/meta/bases';
-const AIRTABLE_CONTENT_API = 'https://content.airtable.com/v0';
+// AIRTABLE_CONTENT_API eliminada: bloqueada por Cloudflare desde IPs de Netlify/AWS
 
 function json(statusCode, body) {
   return {
@@ -280,16 +280,28 @@ async function getFieldId(fieldName) {
   } catch(e){return null;}
 }
 async function uploadFileToField(recordId,fieldName,file){
-  const fieldId=await getFieldId(fieldName);
-  if(!fieldId) return {ok:false,error:'fieldId no encontrado para "'+fieldName+'"'};
+  // Usa REST API estandar (api.airtable.com) + data URL
+  // content.airtableapi.com esta bloqueado por Cloudflare desde IPs de AWS/Netlify (error 1034)
   let b64=String(file.base64||'');const c=b64.indexOf(',');if(c!==-1)b64=b64.slice(c+1);
   const fname=file.filename||file.name||'archivo.pdf';
   const ctype=file.contentType||file.type||'application/pdf';
-  const url=AIRTABLE_CONTENT_API+'/'+AIRTABLE_BASE_ID+'/'+recordId+'/'+fieldId+'/uploadAttachment';
-  const res=await fetch(url,{method:'POST',headers:{Authorization:'Bearer '+AIRTABLE_API_KEY,'Content-Type':'application/json'},body:JSON.stringify({contentType:ctype,filename:fname,file:b64})});
+
+  // Obtener adjuntos actuales para no sobreescribirlos
+  let existing=[];
+  try{
+    const gr=await fetch(AIRTABLE_API+'/'+AIRTABLE_BASE_ID+'/'+encodeURIComponent(TABLE_NAME)+'/'+recordId,
+      {headers:{Authorization:'Bearer '+AIRTABLE_API_KEY}});
+    if(gr.ok){const gd=await gr.json();const atts=((gd.fields||{})[fieldName]);if(Array.isArray(atts))existing=atts.map(a=>({id:a.id}));}
+  }catch(e){console.warn('[UPLOAD] no se pudo leer existentes:',e.message);}
+
+  const dataUrl='data:'+ctype+';base64,'+b64;
+  const allAtts=[...existing,{url:dataUrl,filename:fname}];
+  const patchUrl=AIRTABLE_API+'/'+AIRTABLE_BASE_ID+'/'+encodeURIComponent(TABLE_NAME)+'/'+recordId;
+  const res=await fetch(patchUrl,{method:'PATCH',headers:{Authorization:'Bearer '+AIRTABLE_API_KEY,'Content-Type':'application/json'},
+    body:JSON.stringify({fields:{[fieldName]:allAtts}})});
   const txt=await res.text();
-  console.log('[UPLOAD] '+fname+' status='+res.status);
-  if(!res.ok) return {ok:false,status:res.status,error:txt};
+  console.log('[UPLOAD] '+fname+' field='+fieldName+' status='+res.status);
+  if(!res.ok){let e=txt;try{e=JSON.parse(txt).error||txt;}catch(_){}return {ok:false,status:res.status,error:e};}
   return {ok:true,filename:fname};
 }
 async function uploadCertificates(recordId,fieldName,files){
