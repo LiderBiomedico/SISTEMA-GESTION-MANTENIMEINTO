@@ -157,7 +157,7 @@ function renderTable() {
 
     tbody.innerHTML = state.allRecords.map(record => {
         const f = record.fields || {};
-        const item = f['Item'] || f['ITEM'] || '';
+        const item = f['Item'] || f['ITEM'] || f['item'] || f['Ítem'] || '';
         const equipo = f['Equipo'] || f['EQUIPO'] || '';
         const marca = f['Marca'] || f['MARCA'] || '';
         const modelo = f['Modelo'] || f['MODELO'] || '';

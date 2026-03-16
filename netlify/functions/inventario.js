@@ -518,7 +518,15 @@ exports.handler = async (event) => {
       const path = `?pageSize=${pageSize}${offset}${sort}${formula}`;
       const r = await airtableFetch(path, { method: 'GET' });
       if (!r.ok) return json(r.status, { ok: false, error: r.data?.error || r.data, details: r.data });
-      return json(200, { ok: true, ...r.data });
+
+      // Normalizar el campo Item: si Airtable lo devuelve como 'ITEM' u otro nombre, 
+      // asegurarse de que siempre llegue como 'Item' al frontend
+      const records = (r.data.records || []).map(rec => {
+        const f = rec.fields || {};
+        if (f['Item'] == null && f['ITEM'] != null) { f['Item'] = f['ITEM']; }
+        return { ...rec, fields: f };
+      });
+      return json(200, { ok: true, ...r.data, records });
     }
 
     // =========================================================================
