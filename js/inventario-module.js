@@ -241,41 +241,88 @@ function debouncedInventarioSearch() {
 // ============================================================================
 
 async function editEquipo(recordId) {
-    const record = state.allRecords.find(r => r.id === recordId);
-    if (!record) { alert('Equipo no encontrado'); return; }
-    // Abrir modal newInventario y llenar con datos
     openModal('newInventario');
     const form = document.getElementById('inventarioForm');
     if (!form) return;
 
-    const fields = record.fields || {};
-    // Mapeo inverso: nombre Airtable → nombre del formulario HTML
-    const REVERSE_MAP = {
-      'Sede': 'SEDE', 'Distintivo habilitacion': 'DISTINTIVO HABILITACION',
-      'Codigo de prestador': 'CODIGO DE PRESTADOR',
-      'Servicio': 'SERVICIO', 'Ubicacion': 'UBICACION',
-      'Equipo': 'EQUIPO', 'Marca': 'MARCA', 'Modelo': 'MODELO', 'Serie': 'SERIE',
-      'Numero de Placa': 'NUMERO DE PLACA', 'Codigo ECRI': 'CODIGO ECRI',
-      'Registro INVIMA': 'REGISTRO INVIMA', 'Vida Util': 'VIDA UTIL',
-    };
-    // Crear mapa con claves de formulario
-    const formFields = {};
-    for (const [atKey, val] of Object.entries(fields)) {
-      formFields[atKey] = val;
-      if (REVERSE_MAP[atKey]) formFields[REVERSE_MAP[atKey]] = val;
-    }
-    // Llenar campos del formulario
-    for (const input of form.querySelectorAll('input, select, textarea')) {
+    form.reset();
+    const submitBtn = form.querySelector('button[type="submit"]');
+    if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Cargando datos...'; }
+
+    try {
+      const response = await axios.get(`${API_BASE_URL}/inventario?id=${recordId}`, { headers: getHeaders() });
+      const data = response.data || {};
+      if (!data.ok || !data.record) {
+        alert('No se pudo cargar el registro para editar.');
+        return;
+      }
+      const fields = data.record.fields || {};
+      const REVERSE_MAP = {
+        'Item': 'ITEM', 'Equipo': 'EQUIPO', 'Marca': 'MARCA', 'Modelo': 'MODELO',
+        'Serie': 'SERIE', 'Numero de Placa': 'PLACA', 'Codigo ECRI': 'CODIGO ECRI',
+        'Registro INVIMA': 'REGISTRO INVIMA', 'Tipo de Adquisicion': 'TIPO DE ADQUISICION',
+        'No. de Contrato': 'NO. DE CONTRATO', 'Sede': 'SEDE',
+        'Distintivo habilitacion': 'DISTINTIVO HABILITACION',
+        'Codigo de prestador': 'CODIGO DE PRESTADOR',
+        'Servicio': 'SERVICIO', 'Ubicacion': 'UBICACION', 'Vida Util': 'VIDA UTIL',
+        'Fecha Fabrica': 'FECHA FABRICA', 'Fecha de Compra': 'FECHA DE COMPRA',
+        'Valor en Pesos': 'VALOR EN PESOS', 'Fecha de Recepcion': 'FECHA DE RECEPCIÓN',
+        'Fecha de Instalacion': 'FECHA DE INSTALACIÓN',
+        'Inicio de Garantia': 'INICIO DE GARANTIA', 'Termino de Garantia': 'TERMINO DE GARANTIA',
+        'Clasificacion Biomedica': 'CLASIFICACION BIOMEDICA',
+        'Clasificacion de la Tecnologia': 'CLASIFICACION DE LA TECNOLOGIA',
+        'Clasificacion del Riesgo': 'CLASIFICACION DEL RIESGO',
+        'Calibrable': 'CALIBRABLE', 'Tipo de MTTO': 'TIPO DE MTTO',
+        'Costo de Mantenimiento': 'COSTO DE MANTENIMIENTO',
+        'Frecuencia de MTTO Preventivo': 'FRECUENCIA DE MTTO PREVENTIVO',
+        'Fecha Programada de Mantenimiento': 'FECHA PROGRAMADA DE MANTENIMINETO',
+        'Frecuencia de Mantenimiento': 'FRECUENCIA DE MANTENIMIENTO',
+        'Responsable': 'RESPONSABLE', 'Nombre': 'NOMBRE',
+        'Direccion': 'DIRECCION', 'Telefono': 'TELEFONO', 'Ciudad': 'CIUDAD',
+        'Fuente de Alimentacion': 'FUENTE DE ALIMENTACION', 'Tec Predominante': 'TEC PREDOMINANTE',
+        'Voltaje Max': 'VOLTAJE MAX', 'Voltaje Min': 'VOLTAJE MIN',
+        'Corriente Max': 'CORRIENTE MAX', 'Corriente Min': 'CORRIENTE MIN',
+        'Potencia': 'POTENCIA', 'Frecuencia Instalacion': 'FRECUENCIA INSTALACION',
+        'Presion Instalacion': 'PRESION INSTALACION', 'Velocidad Instalacion': 'VELOCIDAD INSTALACION',
+        'Peso Instalacion': 'PESO INSTALACION', 'Temperatura Instalacion': 'TEMPERATURA INSTALACION',
+        'Otros Instalacion': 'OTROS INSTALACION',
+        'Rango de Voltaje': 'RANGO DE VOLTAJE', 'Rango de Corriente': 'RANGO DE CORRIENTE',
+        'Rango de Potencia': 'RANGO DE POTENCIA', 'Frecuencia Funcionamiento': 'FRECUENCIA FUNCIONAMIENTO',
+        'Rango de Presion': 'RANGO DE PRESION', 'Rango de Velocidad': 'RANGO DE VELOCIDAD',
+        'Rango de Temperatura': 'RANGO DE TEMPERATURA', 'Peso Funcionamiento': 'PESO FUNCIONAMIENTO',
+        'Rango de Humedad': 'RANGO DE HUMEDAD',
+        'Otras Recomendaciones del Fabricante': 'OTRAS RECOMENDACIONES DEL FABRICANTE',
+      };
+      const formValues = {};
+      for (const [atKey, val] of Object.entries(fields)) {
+        formValues[atKey] = val;
+        if (REVERSE_MAP[atKey]) formValues[REVERSE_MAP[atKey]] = val;
+      }
+      for (const input of form.querySelectorAll('input, select, textarea')) {
         const name = input.name;
-        if (!name) continue;
-        const val = formFields[name] || fields[name] || '';
+        if (!name || input.type === 'file') continue;
+        const val = formValues[name] || formValues[name.toUpperCase()] || '';
         if (input.type === 'checkbox') {
-            input.checked = val === true || val === 'true';
+          input.checked = val === true || val === 'true' || val === 'SI';
+        } else if (input.tagName === 'SELECT') {
+          const strVal = String(val || '');
+          for (const opt of input.options) {
+            if (opt.value === strVal || opt.value.toLowerCase() === strVal.toLowerCase()) {
+              input.value = opt.value; break;
+            }
+          }
         } else {
-            input.value = val || '';
+          input.value = val != null ? String(val) : '';
         }
+      }
+      state.currentEditId = recordId;
+      console.log('✅ Formulario cargado para edición:', recordId);
+    } catch (error) {
+      console.error('❌ Error cargando registro:', error);
+      alert('Error al cargar los datos: ' + (safeErr(error) || error.message));
+    } finally {
+      if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Guardar equipo'; }
     }
-    state.currentEditId = recordId;
 }
 
 // ============================================================================

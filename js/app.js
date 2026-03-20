@@ -803,19 +803,154 @@ function inventarioPrevPage() {
 
 // Editar y Eliminar — se exponen para los botones inline de la tabla
 async function editEquipo(recordId) {
-  const record = (_invState.allRecords || []).find(r => r.id === recordId);
-  if (!record) { alert('Equipo no encontrado'); return; }
+  // Mapeo inverso: nombre Airtable → nombre del input HTML (name attribute)
+  const REVERSE_MAP = {
+    'Item': 'ITEM',
+    'Equipo': 'EQUIPO',
+    'Marca': 'MARCA',
+    'Modelo': 'MODELO',
+    'Serie': 'SERIE',
+    'Numero de Placa': 'PLACA',
+    'Codigo ECRI': 'CODIGO ECRI',
+    'Registro INVIMA': 'REGISTRO INVIMA',
+    'Tipo de Adquisicion': 'TIPO DE ADQUISICION',
+    'No. de Contrato': 'NO. DE CONTRATO',
+    'Sede': 'SEDE',
+    'Distintivo habilitacion': 'DISTINTIVO HABILITACION',
+    'Codigo de prestador': 'CODIGO DE PRESTADOR',
+    'Servicio': 'SERVICIO',
+    'Ubicacion': 'UBICACION',
+    'Vida Util': 'VIDA UTIL',
+    'Fecha Fabrica': 'FECHA FABRICA',
+    'Fecha de Compra': 'FECHA DE COMPRA',
+    'Valor en Pesos': 'VALOR EN PESOS',
+    'Fecha de Recepcion': 'FECHA DE RECEPCIÓN',
+    'Fecha de Instalacion': 'FECHA DE INSTALACIÓN',
+    'Inicio de Garantia': 'INICIO DE GARANTIA',
+    'Termino de Garantia': 'TERMINO DE GARANTIA',
+    'Clasificacion Biomedica': 'CLASIFICACION BIOMEDICA',
+    'Clasificacion de la Tecnologia': 'CLASIFICACION DE LA TECNOLOGIA',
+    'Clasificacion del Riesgo': 'CLASIFICACION DEL RIESGO',
+    'Calibrable': 'CALIBRABLE',
+    'Tipo de MTTO': 'TIPO DE MTTO',
+    'Costo de Mantenimiento': 'COSTO DE MANTENIMIENTO',
+    'N. Certificado': 'N. CERTIFICADO',
+    'Fecha de calibracion': 'FECHA DE CALIBRACION',
+    'Fecha Proxima Calibracion': 'FECHA PROXIMA CALIBRACION',
+    'Frecuencia de MTTO Preventivo': 'FRECUENCIA DE MTTO PREVENTIVO',
+    'Fecha Programada de Mantenimiento': 'FECHA PROGRAMADA DE MANTENIMINETO',
+    'Frecuencia de Mantenimiento': 'FRECUENCIA DE MANTENIMIENTO',
+    'Programacion de Mantenimiento Anual': 'PROGRAMACION DE MANTENIMIENTO ANUAL',
+    'Responsable': 'RESPONSABLE',
+    'Nombre': 'NOMBRE',
+    'Direccion': 'DIRECCION',
+    'Telefono': 'TELEFONO',
+    'Ciudad': 'CIUDAD',
+    // Sección 6
+    'Fuente de Alimentacion': 'FUENTE DE ALIMENTACION',
+    'Tec Predominante': 'TEC PREDOMINANTE',
+    'Voltaje Max': 'VOLTAJE MAX',
+    'Voltaje Min': 'VOLTAJE MIN',
+    'Corriente Max': 'CORRIENTE MAX',
+    'Corriente Min': 'CORRIENTE MIN',
+    'Potencia': 'POTENCIA',
+    'Frecuencia Instalacion': 'FRECUENCIA INSTALACION',
+    'Presion Instalacion': 'PRESION INSTALACION',
+    'Velocidad Instalacion': 'VELOCIDAD INSTALACION',
+    'Peso Instalacion': 'PESO INSTALACION',
+    'Temperatura Instalacion': 'TEMPERATURA INSTALACION',
+    'Otros Instalacion': 'OTROS INSTALACION',
+    // Sección 7
+    'Rango de Voltaje': 'RANGO DE VOLTAJE',
+    'Rango de Corriente': 'RANGO DE CORRIENTE',
+    'Rango de Potencia': 'RANGO DE POTENCIA',
+    'Frecuencia Funcionamiento': 'FRECUENCIA FUNCIONAMIENTO',
+    'Rango de Presion': 'RANGO DE PRESION',
+    'Rango de Velocidad': 'RANGO DE VELOCIDAD',
+    'Rango de Temperatura': 'RANGO DE TEMPERATURA',
+    'Peso Funcionamiento': 'PESO FUNCIONAMIENTO',
+    'Rango de Humedad': 'RANGO DE HUMEDAD',
+    'Otras Recomendaciones del Fabricante': 'OTRAS RECOMENDACIONES DEL FABRICANTE',
+  };
+
   openModal('newInventario');
   const form = document.getElementById('inventarioForm');
   if (!form) return;
-  const fields = record.fields || {};
-  form.querySelectorAll('input,select,textarea').forEach(input => {
-    if (!input.name) return;
-    // Intentar con el nombre del campo tal cual y con el mapeado
-    const val = fields[input.name] || '';
-    input.value = val || '';
-  });
-  _invState.currentEditId = recordId;
+
+  // Resetear formulario primero
+  form.reset();
+
+  // Mostrar indicador de carga
+  const submitBtn = form.querySelector('button[type="submit"]');
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Cargando datos...'; }
+
+  try {
+    // Fetch del registro completo desde Airtable (con todos los campos)
+    const res = await fetch(`${API_BASE_URL}/inventario?id=${recordId}`, { headers: getAuthHeader() });
+    const data = await res.json();
+    if (!data.ok || !data.record) {
+      alert('No se pudo cargar el registro para editar.');
+      if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Guardar equipo'; }
+      return;
+    }
+
+    const fields = data.record.fields || {};
+    console.log('📋 Campos del registro para editar:', fields);
+
+    // Construir un mapa con TODAS las claves posibles: nombre Airtable Y nombre HTML
+    const formValues = {};
+    for (const [atKey, val] of Object.entries(fields)) {
+      // Guardar con nombre Airtable
+      formValues[atKey] = val;
+      // Guardar con nombre HTML (del REVERSE_MAP)
+      if (REVERSE_MAP[atKey]) {
+        formValues[REVERSE_MAP[atKey]] = val;
+      }
+    }
+
+    // Llenar cada input/select/textarea del formulario
+    form.querySelectorAll('input, select, textarea').forEach(input => {
+      if (!input.name) return;
+      if (input.type === 'file') return; // No se puede setear archivos
+      const val = formValues[input.name] ?? formValues[input.name.toUpperCase()] ?? '';
+      if (input.type === 'checkbox') {
+        input.checked = val === true || val === 'true' || val === 'SI' || val === 'Si';
+      } else if (input.tagName === 'SELECT') {
+        // Para selects, buscar la opción que coincida (fuzzy)
+        const strVal = String(val || '');
+        let matched = false;
+        for (const opt of input.options) {
+          if (opt.value === strVal || opt.value.toLowerCase() === strVal.toLowerCase()
+              || opt.textContent.trim().toLowerCase() === strVal.toLowerCase()) {
+            input.value = opt.value;
+            matched = true;
+            break;
+          }
+        }
+        if (!matched && strVal) {
+          console.warn(`⚠️ Select "${input.name}": valor "${strVal}" no encontrado entre opciones`);
+        }
+      } else {
+        input.value = val != null ? String(val) : '';
+      }
+    });
+
+    // Manejar el campo Calibrable (tiene UI especial con dos selects)
+    const calibrableVal = fields['Calibrable'] || '';
+    const calIdent = document.getElementById('calibrableIdentSelect');
+    const calMain = document.getElementById('calibrableMainSelect');
+    if (calIdent && calibrableVal) calIdent.value = calibrableVal;
+    if (calMain && calibrableVal) calMain.value = calibrableVal;
+
+    _invState.currentEditId = recordId;
+    console.log('✅ Formulario cargado para edición del registro:', recordId);
+
+  } catch (err) {
+    console.error('❌ Error cargando registro para editar:', err);
+    alert('Error al cargar los datos del equipo: ' + err.message);
+  } finally {
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Guardar equipo'; }
+  }
 }
 
 async function deleteEquipo(recordId, equipoName) {

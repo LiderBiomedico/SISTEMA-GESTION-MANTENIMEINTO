@@ -512,6 +512,15 @@ exports.handler = async (event) => {
       }
 
       // -----------------------------------------------------------------------
+      // GET ?id=XXXX → obtener un registro individual con todos sus campos
+      // -----------------------------------------------------------------------
+      if (params.id) {
+        const r = await airtableFetch(`/${params.id}`, { method: 'GET' });
+        if (!r.ok) return json(r.status, { ok: false, error: r.data?.error || r.data });
+        return json(200, { ok: true, record: r.data });
+      }
+
+      // -----------------------------------------------------------------------
       // GET → listar registros
       // -----------------------------------------------------------------------
       const pageSize = Math.min(Number(params.pageSize || 50) || 50, 100);
