@@ -80,11 +80,6 @@ const SINGLE_SELECT_FIELDS = new Set([
   // Tipo de Adquisicion y Frecuencia de MTTO Preventivo son texto en Airtable
 ]);
 
-// Campos multi-select - se envían como array a Airtable
-const MULTI_SELECT_FIELDS = new Set([
-  'Fuentes de Alimentacion',
-]);
-
 // Mapeo de nombres del formulario → nombres exactos de Airtable
 const FIELD_MAP = {
   'ITEM': 'Item',
@@ -168,7 +163,6 @@ const FIELD_MAP = {
   'PESO FUNCIONAMIENTO': 'Peso Funcionamiento',
   'RANGO DE HUMEDAD': 'Rango de Humedad',
   'OTRAS RECOMENDACIONES DEL FABRICANTE': 'Otras Recomendaciones del Fabricante',
-  'FUENTES DE ALIMENTACION': 'Fuentes de Alimentacion',
 };
 
 // ============================================================================
@@ -247,10 +241,10 @@ async function getTableSchema() {
     const table = tables.find(t => t.name === TABLE_NAME) || tables[0];
     if (!table) return null;
 
-    // Construir mapa: fieldName → array de opciones (para singleSelect y multipleSelects)
+    // Construir mapa: fieldName → array de opciones (para singleSelect)
     const selectOptions = {};
     for (const field of (table.fields || [])) {
-      if ((field.type === 'singleSelect' || field.type === 'multipleSelects') && field.options && Array.isArray(field.options.choices)) {
+      if (field.type === 'singleSelect' && field.options && Array.isArray(field.options.choices)) {
         selectOptions[field.name] = field.options.choices.map(c => c.name);
       }
     }
@@ -437,38 +431,6 @@ async function mapAndNormalizeFields(inputFields) {
       continue;
     }
 
-    if (MULTI_SELECT_FIELDS.has(mappedKey)) {
-      // Multi-select: el frontend envía un array, Airtable espera un array de strings
-      let arr = [];
-      if (Array.isArray(v)) {
-        arr = v;
-      } else if (typeof v === 'string' && v.trim()) {
-        arr = v.split(',').map(s => s.trim()).filter(Boolean);
-      }
-      if (arr.length > 0) {
-        // Fuzzy match cada valor contra las opciones reales de Airtable
-        const schema = await getTableSchema();
-        const choices = (schema && schema[mappedKey]) ? schema[mappedKey] : null;
-        if (choices) {
-          const resolvedArr = [];
-          for (const item of arr) {
-            const normItem = normalizeForFuzzy(item);
-            const exact = choices.find(c => c === item);
-            if (exact) { resolvedArr.push(exact); continue; }
-            const fuzzy = choices.find(c => normalizeForFuzzy(c) === normItem);
-            if (fuzzy) { resolvedArr.push(fuzzy); continue; }
-            const partial = choices.find(c => normalizeForFuzzy(c).includes(normItem.slice(0,6)) || normItem.includes(normalizeForFuzzy(c).slice(0,6)));
-            if (partial) { resolvedArr.push(partial); continue; }
-            resolvedArr.push(item); // enviar tal cual si no hay match
-          }
-          out[mappedKey] = resolvedArr;
-        } else {
-          out[mappedKey] = arr;
-        }
-      }
-      continue;
-    }
-
     if (typeof v === 'string') {
       out[mappedKey] = v.trim();
     } else {
@@ -596,12 +558,6 @@ exports.handler = async (event) => {
       // Item es Autonumber → nunca enviarlo
       delete fields['Item'];
 
-      // Debug: log de campos que se enviarán a Airtable
-      console.log('[POST] Campos a enviar:', JSON.stringify(fields).slice(0, 500));
-      if (fields['Fuentes de Alimentacion']) {
-        console.log('[POST] Fuentes de Alimentacion:', JSON.stringify(fields['Fuentes de Alimentacion']));
-      }
-
       let created = await createRecord(fields);
 
       // Si falla 422 → reintentos inteligentes: quitar campo por campo hasta que funcione
@@ -625,7 +581,6 @@ exports.handler = async (event) => {
           // Selects — si el valor no coincide con las opciones de Airtable, Airtable los rechaza
           'Sede', 'Servicio', 'Clasificacion Biomedica', 'Clasificacion de la Tecnologia',
           'Clasificacion del Riesgo', 'Calibrable', 'Tipo de MTTO',
-          'Fuentes de Alimentacion',
         ]);
 
         const safeFields = { ...fields };
@@ -740,7 +695,6 @@ exports.handler = async (event) => {
           'Manual de servicio',
           'Sede', 'Servicio', 'Clasificacion Biomedica', 'Clasificacion de la Tecnologia',
           'Clasificacion del Riesgo', 'Calibrable', 'Tipo de MTTO',
-          'Fuentes de Alimentacion',
         ]);
         let retryR = r;
         for (let attempt = 0; attempt < 6; attempt++) {

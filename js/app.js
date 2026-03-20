@@ -408,17 +408,6 @@ async function submitInventarioForm(e) {
     return;
   }
 
-  // Recolectar checkboxes de Fuentes de Alimentación → array para multi-select de Airtable
-  const fuentesSeleccionadas = [];
-  form.querySelectorAll('input[type="checkbox"][name^="FUENTE_"]').forEach(cb => {
-    if (cb.checked) fuentesSeleccionadas.push(cb.value);
-  });
-  // Eliminar las claves FUENTE_* individuales de rawFields (FormData las incluye como "on")
-  Object.keys(rawFields).forEach(k => { if (k.startsWith('FUENTE_')) delete rawFields[k]; });
-  if (fuentesSeleccionadas.length > 0) {
-    rawFields['FUENTES DE ALIMENTACION'] = fuentesSeleccionadas;
-  }
-
   // Mapeo UPPERCASE → nombres exactos de columnas Airtable
   const FIELD_MAP = {
     'ITEM': 'Item',
@@ -492,7 +481,6 @@ async function submitInventarioForm(e) {
     'PESO FUNCIONAMIENTO': 'Peso Funcionamiento',
     'RANGO DE HUMEDAD': 'Rango de Humedad',
     'OTRAS RECOMENDACIONES DEL FABRICANTE': 'Otras Recomendaciones del Fabricante',
-    'FUENTES DE ALIMENTACION': 'Fuentes de Alimentacion',
   };
 
   // Convertir campos del formulario a nombres de Airtable
@@ -953,14 +941,6 @@ async function editEquipo(recordId) {
     const calMain = document.getElementById('calibrableMainSelect');
     if (calIdent && calibrableVal) calIdent.value = calibrableVal;
     if (calMain && calibrableVal) calMain.value = calibrableVal;
-
-    // Manejar Fuentes de Alimentación (multi-select → checkboxes)
-    const fuentesArr = fields['Fuentes de Alimentacion'] || [];
-    if (Array.isArray(fuentesArr)) {
-      form.querySelectorAll('input[type="checkbox"][name^="FUENTE_"]').forEach(cb => {
-        cb.checked = fuentesArr.includes(cb.value);
-      });
-    }
 
     _invState.currentEditId = recordId;
     console.log('✅ Formulario cargado para edición del registro:', recordId);

@@ -315,14 +315,6 @@ async function editEquipo(recordId) {
           input.value = val != null ? String(val) : '';
         }
       }
-      // Manejar Fuentes de Alimentación (multi-select → checkboxes)
-      const fuentesArr = fields['Fuentes de Alimentacion'] || [];
-      if (Array.isArray(fuentesArr)) {
-        form.querySelectorAll('input[type="checkbox"][name^="FUENTE_"]').forEach(cb => {
-          cb.checked = fuentesArr.includes(cb.value);
-        });
-      }
-
       state.currentEditId = recordId;
       console.log('✅ Formulario cargado para edición:', recordId);
     } catch (error) {
