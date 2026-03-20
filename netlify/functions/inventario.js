@@ -70,6 +70,7 @@ const BOOL_FIELDS = new Set([]);
 
 // Campos single select - se intentará fuzzy match contra Airtable
 const SINGLE_SELECT_FIELDS = new Set([
+  'Sede',
   'Servicio',
   'Clasificacion Biomedica',
   'Clasificacion de la Tecnologia',
@@ -91,6 +92,7 @@ const FIELD_MAP = {
   'NUMERO DE PLACA': 'Numero de Placa',
   'CODIGO ECRI': 'Codigo ECRI',
   'REGISTRO INVIMA': 'Registro INVIMA',
+  'SEDE': 'Sede',
   'SERVICIO': 'Servicio',
   'UBICACIÓN': 'Ubicacion',
   'UBICACION': 'Ubicacion',
@@ -513,7 +515,7 @@ exports.handler = async (event) => {
       const sort = '&sort%5B0%5D%5Bfield%5D=Item&sort%5B0%5D%5Bdirection%5D=asc';
       const q = (params.q || '').trim();
       const formula = q
-        ? `&filterByFormula=${encodeURIComponent(`FIND(LOWER("${q}"), LOWER({Equipo}&" "&{Marca}&" "&{Modelo}&" "&{Serie}&" "&{Numero de Placa}&" "&{Servicio}))`)}`
+        ? `&filterByFormula=${encodeURIComponent(`FIND(LOWER("${q}"), LOWER({Equipo}&" "&{Marca}&" "&{Modelo}&" "&{Serie}&" "&{Numero de Placa}&" "&{Servicio}&" "&{Sede}))`)}`
         : '';
 
       const path = `?pageSize=${pageSize}${offset}${sort}${formula}`;
@@ -564,7 +566,7 @@ exports.handler = async (event) => {
           'Rango de Humedad', 'Otras Recomendaciones del Fabricante',
           'Manual de servicio',
           // Selects — si el valor no coincide con las opciones de Airtable, Airtable los rechaza
-          'Servicio', 'Clasificacion Biomedica', 'Clasificacion de la Tecnologia',
+          'Sede', 'Servicio', 'Clasificacion Biomedica', 'Clasificacion de la Tecnologia',
           'Clasificacion del Riesgo', 'Calibrable', 'Tipo de MTTO',
         ]);
 
@@ -678,7 +680,7 @@ exports.handler = async (event) => {
           'Rango de Velocidad', 'Rango de Temperatura', 'Peso Funcionamiento',
           'Rango de Humedad', 'Otras Recomendaciones del Fabricante',
           'Manual de servicio',
-          'Servicio', 'Clasificacion Biomedica', 'Clasificacion de la Tecnologia',
+          'Sede', 'Servicio', 'Clasificacion Biomedica', 'Clasificacion de la Tecnologia',
           'Clasificacion del Riesgo', 'Calibrable', 'Tipo de MTTO',
         ]);
         let retryR = r;
