@@ -249,11 +249,24 @@ async function editEquipo(recordId) {
     if (!form) return;
 
     const fields = record.fields || {};
+    // Mapeo inverso: nombre Airtable → nombre del formulario HTML
+    const REVERSE_MAP = {
+      'Sede': 'SEDE', 'Servicio': 'SERVICIO', 'Ubicacion': 'UBICACION',
+      'Equipo': 'EQUIPO', 'Marca': 'MARCA', 'Modelo': 'MODELO', 'Serie': 'SERIE',
+      'Numero de Placa': 'NUMERO DE PLACA', 'Codigo ECRI': 'CODIGO ECRI',
+      'Registro INVIMA': 'REGISTRO INVIMA', 'Vida Util': 'VIDA UTIL',
+    };
+    // Crear mapa con claves de formulario
+    const formFields = {};
+    for (const [atKey, val] of Object.entries(fields)) {
+      formFields[atKey] = val;
+      if (REVERSE_MAP[atKey]) formFields[REVERSE_MAP[atKey]] = val;
+    }
     // Llenar campos del formulario
     for (const input of form.querySelectorAll('input, select, textarea')) {
         const name = input.name;
         if (!name) continue;
-        const val = fields[name] || '';
+        const val = formFields[name] || fields[name] || '';
         if (input.type === 'checkbox') {
             input.checked = val === true || val === 'true';
         } else {

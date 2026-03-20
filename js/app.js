@@ -421,6 +421,7 @@ async function submitInventarioForm(e) {
     'REGISTRO INVIMA': 'Registro INVIMA',
     'TIPO DE ADQUISICION': 'Tipo de Adquisicion',
     'NO. DE CONTRATO': 'No. de Contrato',
+    'SEDE': 'Sede',
     'SERVICIO': 'Servicio',
     'UBICACIÓN': 'Ubicacion',
     'UBICACION': 'Ubicacion',
