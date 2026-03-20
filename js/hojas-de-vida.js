@@ -144,14 +144,29 @@
 
   // ── OPEN HOJA DE VIDA ────────────────────────────────────────────────────
 
-  function openHojaVida(recordId) {
-    const record = hvState.records.find(r => r.id === recordId);
-    if (!record) { alert('Registro no encontrado'); return; }
-    hvState.currentRecord = record;
-    renderHojaVida(record);
+  async function openHojaVida(recordId) {
     const modal = document.getElementById('hvModal');
     if (modal) { modal.style.display = 'flex'; modal.classList.add('active'); }
     document.body.style.overflow = 'hidden';
+
+    // Mostrar indicador de carga
+    const container = document.getElementById('hvSheetContent');
+    if (container) container.innerHTML = '<div style="text-align:center;padding:60px;color:#607d8b;font-size:16px;">⏳ Cargando hoja de vida...</div>';
+
+    try {
+      const base = typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : '/.netlify/functions';
+      const response = await axios.get(`${base}/inventario?id=${recordId}`, { headers: getHeaders() });
+      const data = response.data || {};
+      if (!data.ok || !data.record) {
+        if (container) container.innerHTML = '<div style="text-align:center;padding:60px;color:#c62828;">⚠️ No se pudo cargar el registro.</div>';
+        return;
+      }
+      hvState.currentRecord = data.record;
+      renderHojaVida(data.record);
+    } catch (err) {
+      console.error('❌ Error cargando hoja de vida:', err);
+      if (container) container.innerHTML = `<div style="text-align:center;padding:60px;color:#c62828;">⚠️ Error: ${safeErr(err)}</div>`;
+    }
   }
 
   function closeHojaVidaModal() {
@@ -267,12 +282,14 @@
         <tr>
           <td class="hv-label">Distintivo de Habilitación</td>
           <td class="hv-label">ECRI</td>
-          <td class="hv-label" colspan="3">Clasificación Biomédica</td>
+          <td class="hv-label">Registro INVIMA</td>
+          <td class="hv-label" colspan="2">Clasificación Biomédica</td>
         </tr>
         <tr>
-          <td class="hv-value">${esc(get('Registro INVIMA','REGISTRO INVIMA'))}</td>
+          <td class="hv-value">${esc(get('Distintivo habilitacion','DISTINTIVO HABILITACION'))}</td>
           <td class="hv-value">${esc(get('Codigo ECRI','CODIGO ECRI'))}</td>
-          <td class="hv-value" colspan="3">${esc(get('Clasificacion Biomedica','CLASIFICACION BIOMEDICA'))}</td>
+          <td class="hv-value">${esc(get('Registro INVIMA','REGISTRO INVIMA'))}</td>
+          <td class="hv-value" colspan="2">${esc(get('Clasificacion Biomedica','CLASIFICACION BIOMEDICA'))}</td>
         </tr>
         <tr>
           <td class="hv-label">Frecuencia Mantenimiento</td>
@@ -282,7 +299,7 @@
         </tr>
         <tr>
           <td class="hv-value">${esc(get('Frecuencia de Mantenimiento','Frecuencia de MTTO Preventivo','FRECUENCIA DE MTTO PREVENTIVO'))}</td>
-          <td class="hv-value">${esc(get('Codigo Prestador','CODIGO PRESTADOR'))}</td>
+          <td class="hv-value">${esc(get('Codigo de prestador','Codigo Prestador','CODIGO DE PRESTADOR'))}</td>
           <td class="hv-value">${esc(get('Clasificacion del Riesgo','CLASIFICACION DEL RIESGO'))}</td>
           <td class="hv-value" colspan="2">${esc(get('Sede','SEDE'))}</td>
         </tr>
@@ -371,7 +388,7 @@
           <td class="hv-value">${esc(get('Corriente Max','CORRIENTE MAX'))}</td>
           <td class="hv-value">${esc(get('Corriente Min','CORRIENTE MIN'))}</td>
           <td class="hv-value">${esc(get('Potencia','POTENCIA'))}</td>
-          <td class="hv-value">${esc(get('Frecuencia','FRECUENCIA'))}</td>
+          <td class="hv-value">${esc(get('Frecuencia Instalacion','Frecuencia','FRECUENCIA INSTALACION','FRECUENCIA'))}</td>
         </tr>
         <tr>
           <td class="hv-label">Presión</td>
@@ -382,10 +399,10 @@
           <td class="hv-label">Valor Fus IN</td>
         </tr>
         <tr>
-          <td class="hv-value">${esc(get('Presion','PRESION'))}</td>
-          <td class="hv-value">${esc(get('Velocidad','VELOCIDAD'))}</td>
-          <td class="hv-value">${esc(get('Temperatura','TEMPERATURA'))}</td>
-          <td class="hv-value">${esc(get('Peso','PESO'))}</td>
+          <td class="hv-value">${esc(get('Presion Instalacion','Presion','PRESION INSTALACION','PRESION'))}</td>
+          <td class="hv-value">${esc(get('Velocidad Instalacion','Velocidad','VELOCIDAD INSTALACION','VELOCIDAD'))}</td>
+          <td class="hv-value">${esc(get('Temperatura Instalacion','Temperatura','TEMPERATURA INSTALACION','TEMPERATURA'))}</td>
+          <td class="hv-value">${esc(get('Peso Instalacion','Peso','PESO INSTALACION','PESO'))}</td>
           <td class="hv-value">${esc(get('Capacidad','CAPACIDAD'))}</td>
           <td class="hv-value">${esc(get('Valor Fus','VALOR FUS'))}</td>
         </tr>
