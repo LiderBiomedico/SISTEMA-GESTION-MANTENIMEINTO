@@ -251,7 +251,9 @@ async function editEquipo(recordId) {
     const fields = record.fields || {};
     // Mapeo inverso: nombre Airtable → nombre del formulario HTML
     const REVERSE_MAP = {
-      'Sede': 'SEDE', 'Servicio': 'SERVICIO', 'Ubicacion': 'UBICACION',
+      'Sede': 'SEDE', 'Distintivo habilitacion': 'DISTINTIVO HABILITACION',
+      'Codigo de prestador': 'CODIGO DE PRESTADOR',
+      'Servicio': 'SERVICIO', 'Ubicacion': 'UBICACION',
       'Equipo': 'EQUIPO', 'Marca': 'MARCA', 'Modelo': 'MODELO', 'Serie': 'SERIE',
       'Numero de Placa': 'NUMERO DE PLACA', 'Codigo ECRI': 'CODIGO ECRI',
       'Registro INVIMA': 'REGISTRO INVIMA', 'Vida Util': 'VIDA UTIL',
