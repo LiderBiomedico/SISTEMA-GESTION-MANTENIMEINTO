@@ -80,6 +80,11 @@ const SINGLE_SELECT_FIELDS = new Set([
   // Tipo de Adquisicion y Frecuencia de MTTO Preventivo son texto en Airtable
 ]);
 
+// Campos multi-select - se envían como array a Airtable
+const MULTI_SELECT_FIELDS = new Set([
+  'Fuentes de Alimentacion',
+]);
+
 // Mapeo de nombres del formulario → nombres exactos de Airtable
 const FIELD_MAP = {
   'ITEM': 'Item',
@@ -163,6 +168,7 @@ const FIELD_MAP = {
   'PESO FUNCIONAMIENTO': 'Peso Funcionamiento',
   'RANGO DE HUMEDAD': 'Rango de Humedad',
   'OTRAS RECOMENDACIONES DEL FABRICANTE': 'Otras Recomendaciones del Fabricante',
+  'FUENTES DE ALIMENTACION': 'Fuentes de Alimentacion',
 };
 
 // ============================================================================
@@ -431,6 +437,17 @@ async function mapAndNormalizeFields(inputFields) {
       continue;
     }
 
+    if (MULTI_SELECT_FIELDS.has(mappedKey)) {
+      // Multi-select: el frontend envía un array, Airtable espera un array de strings
+      if (Array.isArray(v)) {
+        out[mappedKey] = v;
+      } else if (typeof v === 'string' && v.trim()) {
+        // Si llega como string separado por comas, convertir a array
+        out[mappedKey] = v.split(',').map(s => s.trim()).filter(Boolean);
+      }
+      continue;
+    }
+
     if (typeof v === 'string') {
       out[mappedKey] = v.trim();
     } else {
@@ -581,6 +598,7 @@ exports.handler = async (event) => {
           // Selects — si el valor no coincide con las opciones de Airtable, Airtable los rechaza
           'Sede', 'Servicio', 'Clasificacion Biomedica', 'Clasificacion de la Tecnologia',
           'Clasificacion del Riesgo', 'Calibrable', 'Tipo de MTTO',
+          'Fuentes de Alimentacion',
         ]);
 
         const safeFields = { ...fields };
@@ -695,6 +713,7 @@ exports.handler = async (event) => {
           'Manual de servicio',
           'Sede', 'Servicio', 'Clasificacion Biomedica', 'Clasificacion de la Tecnologia',
           'Clasificacion del Riesgo', 'Calibrable', 'Tipo de MTTO',
+          'Fuentes de Alimentacion',
         ]);
         let retryR = r;
         for (let attempt = 0; attempt < 6; attempt++) {

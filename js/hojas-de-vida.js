@@ -182,11 +182,24 @@
     const get = (...keys) => { for (const k of keys) { if (f[k] !== undefined && f[k] !== null && f[k] !== '') return String(f[k]); } return ''; };
     const getOrDash = (...keys) => get(...keys) || '—';
 
-    // Fuentes de alimentación — check si el campo contiene texto relevante
-    const fuenteRaw = get('Fuentes de Alimentacion', 'FUENTES DE ALIMENTACION') || '';
-    const fuentes = ['Electricidad Regulada', 'Electricidad Normal', 'Electricidad Emergencia', 'Vapor', 'Gas', 'Agua', 'Aire', 'Energía Solar', 'Derivado Petróleo', 'Otros'];
-    const fuentesHtml = fuentes.map(f2 => {
-      const active = fuenteRaw.toLowerCase().includes(f2.toLowerCase().slice(0,6));
+    // Fuentes de alimentación — Airtable devuelve un array para multi-select
+    const fuenteField = f['Fuentes de Alimentacion'] || f['FUENTES DE ALIMENTACION'] || [];
+    const fuenteArr = Array.isArray(fuenteField) ? fuenteField : (typeof fuenteField === 'string' ? fuenteField.split(',') : []);
+    const fuenteNorm = fuenteArr.map(s => String(s).trim().toLowerCase());
+    const fuentes = [
+      { label: 'Electricidad Regulada', key: 'electricidad regulada' },
+      { label: 'Electricidad Normal', key: 'electricidad normal' },
+      { label: 'Electricidad Emergencia', key: 'electricidad emergencia' },
+      { label: 'Vapor', key: 'vapor' },
+      { label: 'Gas', key: 'gas' },
+      { label: 'Agua', key: 'agua' },
+      { label: 'Aire', key: 'aire' },
+      { label: 'Energía Solar', key: 'energia solar' },
+      { label: 'Derivado Petróleo', key: 'derivado petroleo' },
+      { label: 'Otros', key: 'otros fuente' },
+    ];
+    const fuentesHtml = fuentes.map(ft => {
+      const active = fuenteNorm.some(s => s === ft.key || s.includes(ft.key.slice(0,6)));
       return `<td class="hv-check-cell">${active ? '✔' : ''}</td>`;
     }).join('');
 

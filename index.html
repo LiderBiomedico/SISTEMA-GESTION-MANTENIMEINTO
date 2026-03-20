@@ -2259,6 +2259,55 @@
                     </div>
                 </details>
 
+                <details class="section">
+                    <summary>8) Fuentes de alimentación <span class="summary-hint">electricidad, vapor, gas, agua, aire</span></summary>
+                    <div class="section-body">
+                        <p style="margin:0 0 12px;color:#607d8b;font-size:13px;">Selecciona las fuentes de alimentación que aplican al equipo:</p>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px 20px;">
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:6px 0;">
+                                <input type="checkbox" name="FUENTE_ELECTRICIDAD_REGULADA" value="Electricidad Regulada" style="width:18px;height:18px;">
+                                <span>Electricidad Regulada</span>
+                            </label>
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:6px 0;">
+                                <input type="checkbox" name="FUENTE_ELECTRICIDAD_NORMAL" value="Electricidad Normal" style="width:18px;height:18px;">
+                                <span>Electricidad Normal</span>
+                            </label>
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:6px 0;">
+                                <input type="checkbox" name="FUENTE_ELECTRICIDAD_EMERGENCIA" value="Electricidad Emergencia" style="width:18px;height:18px;">
+                                <span>Electricidad Emergencia</span>
+                            </label>
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:6px 0;">
+                                <input type="checkbox" name="FUENTE_VAPOR" value="Vapor" style="width:18px;height:18px;">
+                                <span>Vapor</span>
+                            </label>
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:6px 0;">
+                                <input type="checkbox" name="FUENTE_GAS" value="Gas" style="width:18px;height:18px;">
+                                <span>Gas</span>
+                            </label>
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:6px 0;">
+                                <input type="checkbox" name="FUENTE_AGUA" value="Agua" style="width:18px;height:18px;">
+                                <span>Agua</span>
+                            </label>
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:6px 0;">
+                                <input type="checkbox" name="FUENTE_AIRE" value="Aire" style="width:18px;height:18px;">
+                                <span>Aire</span>
+                            </label>
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:6px 0;">
+                                <input type="checkbox" name="FUENTE_ENERGIA_SOLAR" value="Energia Solar" style="width:18px;height:18px;">
+                                <span>Energía Solar</span>
+                            </label>
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:6px 0;">
+                                <input type="checkbox" name="FUENTE_DERIVADO_PETROLEO" value="Derivado Petroleo" style="width:18px;height:18px;">
+                                <span>Derivado Petróleo</span>
+                            </label>
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:6px 0;">
+                                <input type="checkbox" name="FUENTE_OTROS" value="Otros Fuente" style="width:18px;height:18px;">
+                                <span>Otros</span>
+                            </label>
+                        </div>
+                    </div>
+                </details>
+
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('newInventario')">Cancelar</button>
                     <button type="submit" class="btn btn-primary">Guardar en Inventario</button>
