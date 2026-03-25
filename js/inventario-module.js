@@ -321,7 +321,7 @@ async function editEquipo(recordId) {
       console.error('❌ Error cargando registro:', error);
       alert('Error al cargar los datos: ' + (safeErr(error) || error.message));
     } finally {
-      if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Guardar equipo'; }
+      if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = state.currentEditId ? 'Actualizar equipo' : 'Guardar equipo'; }
     }
 }
 

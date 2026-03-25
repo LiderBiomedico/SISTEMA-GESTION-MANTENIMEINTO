@@ -116,6 +116,16 @@ function openModal(modalId) {
 
   // Inventario: cargar el próximo ITEM (Airtable Autonumber) solo para visualizar
   if (modalId === 'newInventario') {
+    // Reset edit state — ensures clicking "Nuevo Registro" always creates, not updates
+    if (typeof _invState !== 'undefined' && _invState) _invState.currentEditId = null;
+    if (window.__HSLV_INVENTARIO_STATE) window.__HSLV_INVENTARIO_STATE.currentEditId = null;
+    // Reset form fields for a clean slate
+    var _invForm = document.getElementById('inventarioForm');
+    if (_invForm) {
+      _invForm.reset();
+      var _submitBtn = _invForm.querySelector('button[type="submit"]');
+      if (_submitBtn) _submitBtn.textContent = 'Guardar equipo';
+    }
     loadNextInventarioItem().catch(() => {});
   }
 }
@@ -517,14 +527,28 @@ async function submitInventarioForm(e) {
       const b64 = await fileToBase64(c.file);
       certPayload.push({ year: c.year, filename: c.file.name, contentType: c.file.type || 'application/pdf', base64: b64 });
     }
-    const resp = await axios.post(url, { fields, certificates: certPayload }, {
-      headers: { ...getAuthHeader(), 'Content-Type': 'application/json' }
-    });
+
+    // Determinar si es edición (PUT) o creación (POST)
+    const isEdit = !!(_invState && _invState.currentEditId);
+    let resp;
+    if (isEdit) {
+      // ACTUALIZAR registro existente via PUT
+      console.log('📝 Actualizando registro existente:', _invState.currentEditId);
+      resp = await axios.put(url, { id: _invState.currentEditId, fields, certificates: certPayload }, {
+        headers: { ...getAuthHeader(), 'Content-Type': 'application/json' }
+      });
+    } else {
+      // CREAR nuevo registro via POST
+      console.log('🆕 Creando nuevo registro');
+      resp = await axios.post(url, { fields, certificates: certPayload }, {
+        headers: { ...getAuthHeader(), 'Content-Type': 'application/json' }
+      });
+    }
 
     if (resp.data && (resp.data.ok || resp.data.record || resp.data.data)) {
       // Compatibilidad: el backend puede devolver {record} o {data}
       const record = resp.data.record || resp.data.data || null;
-      const newRecordId = resp.data.recordId || (record && (record.id || (record.records && record.records[0] && record.records[0].id)));
+      const newRecordId = resp.data.recordId || (record && (record.id || (record.records && record.records[0] && record.records[0].id))) || (isEdit ? _invState.currentEditId : null);
       console.log('🔍 resp.data completo:', JSON.stringify(resp.data).slice(0,300));
       console.log('📋 newRecordId:', newRecordId, '| manualFile:', !!manualFile, '| invimaFile:', !!invimaFile, '| importacionFile:', !!importacionFile);
 
@@ -612,6 +636,9 @@ async function submitInventarioForm(e) {
       }
       closeModal('newInventario');
       form.reset();
+      // Reset edit state so next open creates a new record
+      if (_invState) _invState.currentEditId = null;
+      if (window.__HSLV_INVENTARIO_STATE) window.__HSLV_INVENTARIO_STATE.currentEditId = null;
 
       // Reset certificados y estado calibrable
       try {
@@ -634,7 +661,7 @@ async function submitInventarioForm(e) {
       } catch (e) {}
 
       if (typeof loadInventario === 'function') loadInventario();
-      alert('✅ Registro guardado correctamente');
+      alert(isEdit ? '✅ Registro actualizado correctamente' : '✅ Registro guardado correctamente');
     } else {
       throw new Error('Respuesta inesperada del servidor');
     }
@@ -949,7 +976,7 @@ async function editEquipo(recordId) {
     console.error('❌ Error cargando registro para editar:', err);
     alert('Error al cargar los datos del equipo: ' + err.message);
   } finally {
-    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Guardar equipo'; }
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = _invState.currentEditId ? 'Actualizar equipo' : 'Guardar equipo'; }
   }
 }
 
