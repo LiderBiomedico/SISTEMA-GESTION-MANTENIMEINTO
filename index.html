@@ -974,6 +974,205 @@
         </div>
     </div>
     <!-- FIN SPLASH SCREEN -->
+
+    <!-- ===================== LOGIN SCREEN ===================== -->
+    <div id="loginScreen" style="display:none;">
+        <div class="login-orb login-orb-1"></div>
+        <div class="login-orb login-orb-2"></div>
+        <div class="login-content">
+            <div class="login-card">
+                <div class="login-logo">
+                    <svg width="60" height="60" viewBox="0 0 100 100" fill="none">
+                        <defs>
+                            <linearGradient id="lg1" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#1a56c4"/>
+                                <stop offset="100%" stop-color="#4db848"/>
+                            </linearGradient>
+                        </defs>
+                        <rect x="4" y="36" width="92" height="28" rx="8" fill="url(#lg1)"/>
+                        <rect x="36" y="4" width="28" height="92" rx="8" fill="url(#lg1)"/>
+                        <polyline points="10,50 22,50 28,32 36,68 44,38 52,58 60,50 90,50"
+                            fill="none" stroke="white" stroke-width="4"
+                            stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <div class="login-brand">
+                    <span class="login-nexa">NEXA</span>
+                    <span class="login-cmms">CMMS</span>
+                </div>
+                <p class="login-subtitle">Ingrese la clave de acceso</p>
+                <div class="login-input-wrap">
+                    <input type="password" id="loginPassword" placeholder="Contraseña" autocomplete="off" />
+                    <button id="loginTogglePass" type="button" title="Mostrar/ocultar">👁</button>
+                </div>
+                <div id="loginError" class="login-error"></div>
+                <button id="loginBtn" onclick="handleLogin()">
+                    <span id="loginBtnText">Ingresar</span>
+                    <span id="loginSpinner" class="login-spinner" style="display:none;"></span>
+                </button>
+            </div>
+            <p class="login-footer">Hospital Susana López de Valencia E.S.E.</p>
+        </div>
+    </div>
+
+    <style>
+        #loginScreen {
+            position:fixed;inset:0;z-index:99998;
+            background:linear-gradient(135deg,#0a1628 0%,#0d2847 40%,#0a1628 100%);
+            overflow:hidden;
+        }
+        .login-orb {
+            position:absolute;border-radius:50%;filter:blur(100px);opacity:0.3;
+            animation:loginOrbFloat 8s ease-in-out infinite alternate;
+        }
+        .login-orb-1 { width:400px;height:400px;background:#1a56c4;top:-100px;right:-100px; }
+        .login-orb-2 { width:350px;height:350px;background:#4db848;bottom:-80px;left:-80px;animation-delay:-4s; }
+        @keyframes loginOrbFloat { 0%{transform:translate(0,0)} 100%{transform:translate(30px,-30px)} }
+
+        .login-content {
+            position:relative;z-index:2;display:flex;flex-direction:column;
+            align-items:center;justify-content:center;height:100%;padding:20px;
+        }
+        .login-card {
+            background:rgba(255,255,255,0.06);backdrop-filter:blur(20px);
+            border:1px solid rgba(255,255,255,0.1);border-radius:20px;
+            padding:40px 36px;width:min(400px,90vw);text-align:center;
+            animation:loginCardIn 0.5s ease forwards;
+        }
+        @keyframes loginCardIn { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+
+        .login-logo { margin-bottom:16px; }
+        .login-brand { display:flex;align-items:baseline;justify-content:center;gap:6px;margin-bottom:8px; }
+        .login-nexa { font-family:'Montserrat',sans-serif;font-weight:900;font-size:36px;color:white;letter-spacing:-1px; }
+        .login-cmms { font-family:'Montserrat',sans-serif;font-weight:700;font-size:24px;color:#4db848; }
+        .login-subtitle { color:rgba(255,255,255,0.5);font-size:14px;margin-bottom:28px;font-family:'Outfit',sans-serif; }
+
+        .login-input-wrap {
+            position:relative;margin-bottom:12px;
+        }
+        .login-input-wrap input {
+            width:100%;padding:14px 48px 14px 16px;border-radius:12px;border:1px solid rgba(255,255,255,0.15);
+            background:rgba(255,255,255,0.08);color:white;font-size:15px;font-family:'Outfit',sans-serif;
+            outline:none;transition:border 0.2s;
+        }
+        .login-input-wrap input:focus { border-color:#4db848; }
+        .login-input-wrap input::placeholder { color:rgba(255,255,255,0.35); }
+        .login-input-wrap button {
+            position:absolute;right:8px;top:50%;transform:translateY(-50%);
+            background:none;border:none;cursor:pointer;font-size:18px;padding:4px 8px;
+            opacity:0.5;transition:opacity 0.2s;
+        }
+        .login-input-wrap button:hover { opacity:1; }
+
+        .login-error {
+            color:#ff6b6b;font-size:13px;min-height:20px;margin-bottom:8px;
+            font-family:'Outfit',sans-serif;
+        }
+
+        #loginBtn {
+            width:100%;padding:14px;border-radius:12px;border:none;
+            background:linear-gradient(135deg,#1a56c4,#4db848);color:white;
+            font-size:15px;font-weight:600;font-family:'Outfit',sans-serif;
+            cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;
+            display:flex;align-items:center;justify-content:center;gap:8px;
+        }
+        #loginBtn:hover { transform:translateY(-1px);box-shadow:0 6px 20px rgba(77,184,72,0.3); }
+        #loginBtn:active { transform:translateY(0); }
+        #loginBtn:disabled { opacity:0.6;cursor:not-allowed;transform:none; }
+
+        .login-spinner {
+            width:18px;height:18px;border:2px solid rgba(255,255,255,0.3);
+            border-top-color:white;border-radius:50%;animation:loginSpin 0.6s linear infinite;
+        }
+        @keyframes loginSpin { to{transform:rotate(360deg)} }
+
+        .login-footer {
+            color:rgba(255,255,255,0.3);font-size:12px;margin-top:24px;
+            font-family:'Outfit',sans-serif;
+        }
+    </style>
+
+    <script>
+    // --- LOGIN LOGIC ---
+    (function() {
+        // Check if already authenticated this session
+        if (sessionStorage.getItem('NEXA_AUTH') === 'ok') return;
+
+        // Show login after splash finishes
+        var checkSplash = setInterval(function() {
+            var splash = document.getElementById('splashScreen');
+            if (splash && (splash.style.display === 'none' || splash.classList.contains('hide'))) {
+                clearInterval(checkSplash);
+                document.getElementById('loginScreen').style.display = 'block';
+                document.querySelector('.container-app').style.display = 'none';
+                setTimeout(function() {
+                    document.getElementById('loginPassword').focus();
+                }, 400);
+            }
+        }, 200);
+
+        // Enter key handler
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && document.getElementById('loginScreen').style.display === 'block') {
+                handleLogin();
+            }
+        });
+
+        // Toggle password visibility
+        document.addEventListener('DOMContentLoaded', function() {
+            var toggle = document.getElementById('loginTogglePass');
+            if (toggle) {
+                toggle.addEventListener('click', function() {
+                    var inp = document.getElementById('loginPassword');
+                    inp.type = inp.type === 'password' ? 'text' : 'password';
+                });
+            }
+        });
+    })();
+
+    function handleLogin() {
+        var pwd = document.getElementById('loginPassword').value.trim();
+        var errEl = document.getElementById('loginError');
+        var btn = document.getElementById('loginBtn');
+        var btnText = document.getElementById('loginBtnText');
+        var spinner = document.getElementById('loginSpinner');
+
+        if (!pwd) { errEl.textContent = 'Ingrese la contraseña'; return; }
+
+        errEl.textContent = '';
+        btn.disabled = true;
+        btnText.textContent = 'Verificando...';
+        spinner.style.display = 'inline-block';
+
+        fetch('/.netlify/functions/auth', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password: pwd })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                sessionStorage.setItem('NEXA_AUTH', 'ok');
+                document.getElementById('loginScreen').style.display = 'none';
+                document.querySelector('.container-app').style.display = 'flex';
+            } else {
+                errEl.textContent = data.error || 'Contraseña incorrecta';
+                btn.disabled = false;
+                btnText.textContent = 'Ingresar';
+                spinner.style.display = 'none';
+                document.getElementById('loginPassword').select();
+            }
+        })
+        .catch(function() {
+            errEl.textContent = 'Error de conexión. Intente nuevamente.';
+            btn.disabled = false;
+            btnText.textContent = 'Ingresar';
+            spinner.style.display = 'none';
+        });
+    }
+    </script>
+    <!-- FIN LOGIN SCREEN -->
+
     <div class="container-app">
         <!-- SIDEBAR -->
         <aside class="sidebar">
