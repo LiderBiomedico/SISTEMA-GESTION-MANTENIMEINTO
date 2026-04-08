@@ -4,8 +4,10 @@
 // firma digital, generación PDF y carga a Airtable
 // ============================================================================
 (function () {
-  if (window.__HSLV_MANT_LOADED) return;
+  console.log('[MANT] mantenimientos.js v3 cargando...');
+  if (window.__HSLV_MANT_LOADED) { console.log('[MANT] Ya cargado, saltando'); return; }
   window.__HSLV_MANT_LOADED = true;
+  console.log('[MANT] Módulo inicializado');
 
   const BASE = typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : '/.netlify/functions';
 
@@ -169,29 +171,38 @@
   // ABRIR FORMULARIO
   // ══════════════════════════════════════════════════════════════════════
   window.openMantForm = function(tipo) {
-    var modal = document.getElementById('mantFormModal');
-    if (!modal) return;
-    var isPrev = tipo==='prev';
-    stopTimer();
-    mtState.timerElapsed = 0;
-    mtState.timerStart = null;
+    console.log('[MANT] openMantForm llamado con tipo:', tipo);
+    try {
+      var modal = document.getElementById('mantFormModal');
+      if (!modal) { console.error('[MANT] Modal mantFormModal no encontrado'); return; }
+      var isPrev = tipo==='prev';
+      stopTimer();
+      mtState.timerElapsed = 0;
+      mtState.timerStart = null;
 
-    document.getElementById('mantFormTitle').textContent = isPrev ? '🛡️ Registrar Mantenimiento Preventivo' : '🔧 Registrar Mantenimiento Correctivo';
-    document.getElementById('mantFormTipoHidden').value = isPrev ? 'Preventivo' : 'Correctivo';
+      var titleEl = document.getElementById('mantFormTitle');
+      var tipoEl = document.getElementById('mantFormTipoHidden');
+      var bodyEl = document.getElementById('mantFormBody');
 
-    if (isPrev) {
-      document.getElementById('mantFormBody').innerHTML = buildProtocolSelectorHTML();
-    } else {
-      document.getElementById('mantFormBody').innerHTML = buildFormHTML(false);
-    }
+      if (titleEl) titleEl.textContent = isPrev ? '🛡️ Registrar Mantenimiento Preventivo' : '🔧 Registrar Mantenimiento Correctivo';
+      if (tipoEl) tipoEl.value = isPrev ? 'Preventivo' : 'Correctivo';
 
-    modal.style.display = 'flex';
-    modal.style.pointerEvents = 'auto';
-    requestAnimationFrame(function() { modal.classList.add('active'); });
+      if (isPrev) {
+        console.log('[MANT] Construyendo selector de protocolo...');
+        if (bodyEl) bodyEl.innerHTML = buildProtocolSelectorHTML();
+        console.log('[MANT] Selector de protocolo renderizado');
+      } else {
+        if (bodyEl) bodyEl.innerHTML = buildFormHTML(false);
+        loadInvSelect();
+        if (!mtState.invLoaded || mtState.inventario.length === 0) loadInventarioForForm();
+      }
 
-    if (!isPrev) {
-      loadInvSelect();
-      if (!mtState.invLoaded || mtState.inventario.length === 0) loadInventarioForForm();
+      modal.style.display = 'flex';
+      modal.style.pointerEvents = 'auto';
+      requestAnimationFrame(function() { modal.classList.add('active'); });
+      console.log('[MANT] Modal abierto correctamente');
+    } catch(e) {
+      console.error('[MANT] Error en openMantForm:', e);
     }
   };
 
