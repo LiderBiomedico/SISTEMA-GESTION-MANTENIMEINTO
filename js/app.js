@@ -52,6 +52,7 @@ function switchModule(moduleName, evt) {
     planificacion: `📅 Cronograma de Mantenimiento Preventivo ${new Date().getFullYear()}`,
     repuestos: '📦 Gestión de Repuestos',
     documentos: '📄 Gestión Documental',
+    'hv-personal': '👤 Hojas de Vida · Personal de Mantenimiento',
     kpis: '📈 Indicadores de Desempeño',
     reportes: '📝 Reportes e Informes',
     auditoria: '🔍 Auditoría y Trazabilidad',
@@ -99,6 +100,9 @@ function loadModuleData(moduleName) {
       break;
     case 'hojas-vida':
       if (typeof loadHojasVida === 'function') loadHojasVida(true);
+      break;
+    case 'hv-personal':
+      if (typeof loadHVPersonal === 'function') loadHVPersonal(true);
       break;
   }
 }
