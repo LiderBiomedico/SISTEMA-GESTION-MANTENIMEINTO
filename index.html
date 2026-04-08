@@ -3398,11 +3398,77 @@
     /* ── Modals active ── */
     #mantFormModal.active, #mantDetailModal.active { opacity:1; pointer-events:auto; }
 
+    /* ── Protocol Selector ── */
+    .mf-protocol-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:14px; }
+    .mf-protocol-card { background:white; border:2px solid #e0e0e0; border-radius:14px; padding:18px 20px; transition:all 0.2s; }
+    .mf-protocol-card:hover { border-color:#1565c0; box-shadow:0 6px 20px rgba(21,101,192,0.15); transform:translateY(-2px); }
+
+    /* ── Protocol Header ── */
+    .mf-proto-header { background:linear-gradient(135deg,#e3f2fd,#bbdefb); border-radius:12px; padding:16px 20px; margin-bottom:10px; border:1.5px solid #90caf9; }
+
+    /* ── Timer ── */
+    .mf-timer-container { background:linear-gradient(135deg,#0a1628,#1a2940); border-radius:14px; padding:20px; text-align:center; margin:12px 0; }
+    .mf-timer-display { font-family:'JetBrains Mono',monospace; font-size:42px; font-weight:800; color:#4fc3f7; letter-spacing:4px; text-shadow:0 0 20px rgba(79,195,247,0.3); margin-bottom:12px; }
+    .mf-timer-buttons { display:flex; gap:10px; justify-content:center; }
+    .mf-timer-btn { padding:10px 22px; border:none; border-radius:10px; font-size:13px; font-weight:700; cursor:pointer; font-family:'Outfit',sans-serif; transition:all 0.2s; }
+    .mf-timer-start { background:linear-gradient(135deg,#2e7d32,#43a047); color:white; }
+    .mf-timer-start:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(46,125,50,0.4); }
+    .mf-timer-pause { background:linear-gradient(135deg,#f57f17,#ff8f00); color:white; }
+    .mf-timer-pause:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(245,127,23,0.4); }
+    .mf-timer-reset { background:rgba(255,255,255,0.1); color:#b0bec5; border:1px solid rgba(255,255,255,0.2); }
+    .mf-timer-reset:hover { background:rgba(255,255,255,0.15); color:white; }
+
+    /* ── Conditions Box ── */
+    .mf-conditions-box { background:#fff8e1; border:1.5px solid #ffe082; border-radius:10px; padding:14px 18px; margin:8px 0; }
+
+    /* ── Protocol Table ── */
+    .mf-table-container { overflow-x:auto; margin:8px 0; border-radius:10px; border:1px solid #e0e0e0; }
+    .mf-protocol-table { width:100%; border-collapse:collapse; font-size:12px; }
+    .mf-protocol-table thead th { background:#eceff1; padding:8px 10px; font-size:10px; font-weight:700; text-transform:uppercase; color:#37474f; border:1px solid #cfd8dc; text-align:left; white-space:nowrap; }
+    .mf-protocol-table tbody td { border:1px solid #e0e0e0; padding:6px 8px; vertical-align:middle; }
+    .mf-protocol-table tbody tr:nth-child(even) { background:#fafafa; }
+    .mf-protocol-table tbody tr:hover { background:#f0f7ff; }
+
+    /* ── Radio/Checkbox Cards ── */
+    .mf-check-label { display:inline-flex; align-items:center; gap:4px; cursor:pointer; font-size:11px; font-weight:600; }
+    .mf-radio-input { display:none; }
+    .mf-check-si, .mf-check-no { padding:3px 10px; border-radius:12px; font-size:11px; font-weight:700; transition:all 0.15s; border:1.5px solid #e0e0e0; }
+    .mf-check-si { color:#78909c; background:white; }
+    .mf-check-no { color:#78909c; background:white; }
+    .mf-radio-input:checked + .mf-check-si { background:#e8f5e9; color:#2e7d32; border-color:#81c784; }
+    .mf-radio-input:checked + .mf-check-no { background:#ffebee; color:#c62828; border-color:#ef9a9a; }
+
+    .mf-radio-group { display:flex; gap:10px; flex-wrap:wrap; }
+    .mf-radio-card { display:flex; align-items:center; gap:8px; cursor:pointer; padding:10px 16px; border:1.5px solid #e0e0e0; border-radius:10px; transition:all 0.15s; background:white; }
+    .mf-radio-card:hover { border-color:#90caf9; background:#f0f7ff; }
+    .mf-radio-card input:checked ~ .mf-radio-card-label { font-weight:700; }
+    .mf-radio-card:has(input:checked) { border-color:#1565c0; background:#e3f2fd; }
+    .mf-radio-card-label { font-size:12px; color:#37474f; }
+
+    .mf-checkbox-group { display:flex; gap:10px; flex-wrap:wrap; }
+    .mf-checkbox-card { display:flex; align-items:center; gap:8px; cursor:pointer; padding:8px 14px; border:1.5px solid #e0e0e0; border-radius:10px; transition:all 0.15s; background:white; }
+    .mf-checkbox-card:hover { border-color:#90caf9; background:#f0f7ff; }
+    .mf-checkbox-card:has(input:checked) { border-color:#1565c0; background:#e3f2fd; }
+    .mf-checkbox-card-label { font-size:12px; color:#37474f; }
+
+    /* ── Signature ── */
+    .mf-firma-container { display:flex; gap:20px; flex-wrap:wrap; margin:12px 0; }
+    .mf-firma-box { flex:1; min-width:280px; text-align:center; }
+    .mf-firma-title { font-size:12px; font-weight:700; color:#37474f; text-transform:uppercase; margin-bottom:8px; }
+    .mf-signature-canvas { width:100%; height:120px; border:2px dashed #b0bec5; border-radius:10px; cursor:crosshair; background:#fafafa; touch-action:none; }
+    .mf-firma-clear { margin-top:6px; padding:4px 14px; background:#eceff1; border:none; border-radius:6px; font-size:11px; cursor:pointer; color:#607d8b; font-weight:600; transition:all 0.15s; }
+    .mf-firma-clear:hover { background:#cfd8dc; }
+
+    .mf-obs-input { background:#fafafa !important; }
+
     @media (max-width:768px) {
       .mt-stats-row { grid-template-columns:1fr 1fr; }
       .mt-toolbar { flex-direction:column; align-items:stretch; }
       .mt-search-input { width:100%; }
       .mf-row { flex-direction:column; }
+      .mf-protocol-grid { grid-template-columns:1fr; }
+      .mf-firma-container { flex-direction:column; }
+      .mf-timer-display { font-size:32px; }
     }
     </style>
 
