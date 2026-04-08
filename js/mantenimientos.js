@@ -408,7 +408,16 @@
     var pixels = pad.ctx.getImageData(0, 0, pad.canvas.width, pad.canvas.height).data;
     var hasContent = false;
     for (var i = 3; i < pixels.length; i += 4) { if (pixels[i] > 0) { hasContent = true; break; } }
-    return hasContent ? pad.canvas.toDataURL('image/png') : '';
+    if (!hasContent) return '';
+    // Crear un canvas más pequeño para reducir el tamaño del base64
+    var small = document.createElement('canvas');
+    small.width = 320;
+    small.height = 120;
+    var sctx = small.getContext('2d');
+    sctx.fillStyle = '#ffffff';
+    sctx.fillRect(0, 0, 320, 120);
+    sctx.drawImage(pad.canvas, 0, 0, 320, 120);
+    return small.toDataURL('image/jpeg', 0.6);
   }
 
   // ══════════════════════════════════════════════════════════════════════
