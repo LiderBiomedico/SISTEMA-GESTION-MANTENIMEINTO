@@ -22,6 +22,14 @@ function json(statusCode, body) {
   };
 }
 
+// Extrae un string legible del error de Airtable (puede ser string u objeto)
+function extractError(err) {
+  if (!err) return 'Error desconocido de Airtable';
+  if (typeof err === 'string') return err;
+  if (typeof err === 'object') return err.message || err.type || JSON.stringify(err);
+  return String(err);
+}
+
 // ── GET: listar registros o traer uno por id ──
 async function handleGet(params) {
   // GET ?id=recXXX → un solo registro
@@ -29,38 +37,36 @@ async function handleGet(params) {
     const url = `${AIRTABLE_API}/${AIRTABLE_BASE_ID}/${encodeURIComponent(TABLE_NAME)}/${params.id}`;
     const res = await fetch(url, { headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` } });
     const data = await res.json();
-    if (!res.ok) return json(res.status, { ok: false, error: data.error || 'Error Airtable' });
+    if (!res.ok) return json(res.status, { ok: false, error: extractError(data.error) });
     return json(200, { ok: true, record: data });
   }
 
-  // GET → listar con paginación y búsqueda
+  // GET → listar con paginación
   const pageSize = Math.min(parseInt(params.pageSize) || 50, 100);
   const qs = new URLSearchParams({ pageSize: String(pageSize) });
   if (params.offset) qs.set('offset', params.offset);
 
-  // Búsqueda
+  // Construir fórmula de filtro
+  let formulas = [];
+
+  // Búsqueda de texto
   const q = (params.q || '').trim();
   if (q) {
     const safe = q.replace(/"/g, '\\"');
-    const formula = `OR(
-      SEARCH(LOWER("${safe}"), LOWER(ARRAYJOIN({Name},""))) > 0,
-      SEARCH(LOWER("${safe}"), LOWER({Nombre}&"")) > 0,
-      SEARCH(LOWER("${safe}"), LOWER({Numero de cedula}&"")) > 0,
-      SEARCH(LOWER("${safe}"), LOWER({Servicio}&"")) > 0
-    )`.replace(/\n\s*/g, '');
-    qs.set('filterByFormula', formula);
+    formulas.push(`OR(SEARCH(LOWER("${safe}"),LOWER({Nombre}&"")),SEARCH(LOWER("${safe}"),LOWER({Servicio}&"")),SEARCH("${safe}",{Numero de cedula}&""))`);
   }
 
   // Filtro por servicio
   if (params.servicio) {
     const srv = params.servicio.replace(/"/g, '\\"');
-    const srvFormula = `{Servicio} = "${srv}"`;
-    if (q) {
-      // Combinar con búsqueda
-      qs.set('filterByFormula', `AND(${qs.get('filterByFormula')}, ${srvFormula})`);
-    } else {
-      qs.set('filterByFormula', srvFormula);
-    }
+    formulas.push(`{Servicio}="${srv}"`);
+  }
+
+  // Combinar fórmulas
+  if (formulas.length === 1) {
+    qs.set('filterByFormula', formulas[0]);
+  } else if (formulas.length > 1) {
+    qs.set('filterByFormula', `AND(${formulas.join(',')})`);
   }
 
   // Ordenar por Nombre
@@ -68,9 +74,13 @@ async function handleGet(params) {
   qs.set('sort[0][direction]', 'asc');
 
   const url = `${AIRTABLE_API}/${AIRTABLE_BASE_ID}/${encodeURIComponent(TABLE_NAME)}?${qs}`;
+  console.log('[hv-personal] GET url:', url);
   const res = await fetch(url, { headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` } });
   const data = await res.json();
-  if (!res.ok) return json(res.status, { ok: false, error: data.error || 'Error Airtable' });
+  if (!res.ok) {
+    console.error('[hv-personal] Airtable GET error:', JSON.stringify(data));
+    return json(res.status, { ok: false, error: extractError(data.error) });
+  }
 
   return json(200, {
     ok: true,
@@ -88,10 +98,20 @@ async function handlePost(body) {
   // Validar que Servicio sea uno de los permitidos
   const VALID_SERVICIO = ['BIOMEDICA', 'INFRAESTRUCTURA', 'MECANICOS'];
   if (fields.Servicio && !VALID_SERVICIO.includes(fields.Servicio)) {
-    return json(400, { ok: false, error: `Servicio inválido. Opciones: ${VALID_SERVICIO.join(', ')}` });
+    return json(400, { ok: false, error: 'Servicio invalido. Opciones: ' + VALID_SERVICIO.join(', ') });
+  }
+
+  // Numero de cedula: si viene como string numerico, convertir a number
+  // (Airtable lo tiene como campo # Number)
+  if (fields['Numero de cedula']) {
+    const numVal = Number(fields['Numero de cedula']);
+    if (!isNaN(numVal)) {
+      fields['Numero de cedula'] = numVal;
+    }
   }
 
   const url = `${AIRTABLE_API}/${AIRTABLE_BASE_ID}/${encodeURIComponent(TABLE_NAME)}`;
+  console.log('[hv-personal] POST fields:', JSON.stringify(fields));
   const res = await fetch(url, {
     method: 'POST',
     headers: {
@@ -101,8 +121,14 @@ async function handlePost(body) {
     body: JSON.stringify({ fields }),
   });
 
-  const data = await res.json();
-  if (!res.ok) return json(res.status, { ok: false, error: data.error || 'Error al crear registro' });
+  const text = await res.text();
+  let data;
+  try { data = JSON.parse(text); } catch (e) { data = { raw: text }; }
+
+  if (!res.ok) {
+    console.error('[hv-personal] POST error:', res.status, text.slice(0, 500));
+    return json(res.status, { ok: false, error: extractError(data.error) });
+  }
 
   return json(200, { ok: true, record: data, recordId: data.id });
 }
@@ -112,6 +138,14 @@ async function handlePut(body) {
   const id = body.id;
   const fields = body.fields || {};
   if (!id) return json(400, { ok: false, error: 'Falta id del registro.' });
+
+  // Numero de cedula: convertir a numero si aplica
+  if (fields['Numero de cedula']) {
+    const numVal = Number(fields['Numero de cedula']);
+    if (!isNaN(numVal)) {
+      fields['Numero de cedula'] = numVal;
+    }
+  }
 
   const url = `${AIRTABLE_API}/${AIRTABLE_BASE_ID}/${encodeURIComponent(TABLE_NAME)}/${id}`;
   const res = await fetch(url, {
@@ -123,8 +157,14 @@ async function handlePut(body) {
     body: JSON.stringify({ fields }),
   });
 
-  const data = await res.json();
-  if (!res.ok) return json(res.status, { ok: false, error: data.error || 'Error al actualizar' });
+  const text = await res.text();
+  let data;
+  try { data = JSON.parse(text); } catch (e) { data = { raw: text }; }
+
+  if (!res.ok) {
+    console.error('[hv-personal] PUT error:', res.status, text.slice(0, 500));
+    return json(res.status, { ok: false, error: extractError(data.error) });
+  }
 
   return json(200, { ok: true, record: data });
 }
@@ -142,7 +182,7 @@ async function handleDelete(params) {
 
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
-    return json(res.status, { ok: false, error: data.error || 'Error al eliminar' });
+    return json(res.status, { ok: false, error: extractError(data.error) });
   }
 
   return json(200, { ok: true, deleted: id });
@@ -182,7 +222,7 @@ exports.handler = async (event) => {
         return await handleDelete(params);
 
       default:
-        return json(405, { ok: false, error: 'Método no permitido' });
+        return json(405, { ok: false, error: 'Metodo no permitido' });
     }
   } catch (e) {
     console.error('[hv-personal] Error:', e.message, e.stack);

@@ -48,12 +48,12 @@
       }
 
       var res = await fetch(API + '?' + params, { headers: getAuthHeader() });
-      if (!res.ok) {
-        var errData = await res.json().catch(function () { return {}; });
-        throw new Error(errData.error || 'HTTP ' + res.status);
-      }
-
       var data = await res.json();
+      if (!res.ok || !data.ok) {
+        var errMsg = data.error || 'HTTP ' + res.status;
+        if (typeof errMsg === 'object') errMsg = errMsg.message || errMsg.type || JSON.stringify(errMsg);
+        throw new Error(errMsg);
+      }
       _state.records = data.records || [];
       _state.currentOffset = data.offset || null;
 
@@ -220,9 +220,14 @@
 
     var fields = {
       Nombre: nombre,
-      'Numero de cedula': cedula,
       Servicio: servicio,
     };
+
+    // Solo enviar cedula si tiene valor (es campo numérico en Airtable)
+    if (cedula) {
+      var numCedula = Number(cedula);
+      fields['Numero de cedula'] = isNaN(numCedula) ? cedula : numCedula;
+    }
 
     var btn = document.getElementById('hvpSubmitBtn');
     var originalText = btn ? btn.textContent : '';
@@ -241,7 +246,11 @@
       });
 
       var data = await res.json();
-      if (!data.ok) throw new Error(data.error || 'Error al guardar');
+      if (!data.ok) {
+        var errMsg = data.error || 'Error al guardar';
+        if (typeof errMsg === 'object') errMsg = errMsg.message || errMsg.type || JSON.stringify(errMsg);
+        throw new Error(errMsg);
+      }
 
       var newRecordId = data.recordId || (data.record && data.record.id) || (_state.editId);
 
