@@ -199,7 +199,10 @@
 
       modal.style.display = 'flex';
       modal.style.pointerEvents = 'auto';
-      requestAnimationFrame(function() { modal.classList.add('active'); });
+      requestAnimationFrame(function() { 
+        modal.classList.add('active'); 
+        modal.style.opacity = '1';
+      });
       console.log('[MANT] Modal abierto correctamente');
     } catch(e) {
       console.error('[MANT] Error en openMantForm:', e);
@@ -436,7 +439,12 @@
   window.closeMantForm = function() {
     stopTimer();
     var m = document.getElementById('mantFormModal');
-    if (m) { m.classList.remove('active'); m.style.pointerEvents = 'none'; setTimeout(function() { m.style.display = 'none'; }, 260); }
+    if (m) { 
+      m.classList.remove('active'); 
+      m.style.opacity = '0';
+      m.style.pointerEvents = 'none'; 
+      setTimeout(function() { m.style.display = 'none'; }, 260); 
+    }
   };
 
   function loadInvSelect() {
