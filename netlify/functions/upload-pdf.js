@@ -9,11 +9,6 @@ const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID || '';
 const AIRTABLE_TABLE   = process.env.AIRTABLE_INVENTARIO_TABLE || 'Inventario';
 const AIRTABLE_API     = 'https://api.airtable.com/v0';
 
-// Determina la tabla a usar: si el body incluye 'tableName', usa esa; sino, la de inventario
-function resolveTable(body) {
-  return body.tableName || AIRTABLE_TABLE;
-}
-
 function json(status, body) {
   return {
     statusCode: status,
@@ -77,9 +72,9 @@ async function uploadToTempHost(buffer, filename, contentType) {
 }
 
 // Obtiene los adjuntos actuales del campo para no sobreescribirlos
-async function getCurrentAttachments(recordId, fieldName, tableName) {
+async function getCurrentAttachments(recordId, fieldName) {
   try {
-    const url = `${AIRTABLE_API}/${AIRTABLE_BASE_ID}/${encodeURIComponent(tableName)}/${recordId}`;
+    const url = `${AIRTABLE_API}/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE)}/${recordId}`;
     const res = await fetch(url, {
       headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` }
     });
@@ -95,11 +90,11 @@ async function getCurrentAttachments(recordId, fieldName, tableName) {
 }
 
 // PATCH el campo de Airtable con la URL publica del archivo
-async function patchAirtableAttachment(recordId, fieldName, fileUrl, filename, tableName) {
-  const existing = await getCurrentAttachments(recordId, fieldName, tableName);
+async function patchAirtableAttachment(recordId, fieldName, fileUrl, filename) {
+  const existing = await getCurrentAttachments(recordId, fieldName);
   const allAtts = [...existing, { url: fileUrl, filename: filename || 'archivo.pdf' }];
 
-  const patchUrl = `${AIRTABLE_API}/${AIRTABLE_BASE_ID}/${encodeURIComponent(tableName)}/${recordId}`;
+  const patchUrl = `${AIRTABLE_API}/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE)}/${recordId}`;
   const res = await fetch(patchUrl, {
     method: 'PATCH',
     headers: {
@@ -115,10 +110,7 @@ async function patchAirtableAttachment(recordId, fieldName, fileUrl, filename, t
 
   if (!res.ok) {
     console.error('[upload-pdf] PATCH Airtable error:', res.status, text.slice(0, 400));
-    const errMsg = data.error
-      ? (typeof data.error === 'object' ? (data.error.message || data.error.type || JSON.stringify(data.error)) : data.error)
-      : text.slice(0, 300);
-    return { ok: false, status: res.status, error: errMsg };
+    return { ok: false, status: res.status, error: data.error || text.slice(0, 300) };
   }
 
   console.log('[upload-pdf] PATCH Airtable OK:', filename, '->', fieldName);
@@ -135,11 +127,8 @@ exports.handler = async (event) => {
     const body = rawBody ? JSON.parse(rawBody) : {};
     const { recordId, fieldName, filename, contentType, base64 } = body;
 
-    // Determinar tabla destino
-    const tableName = resolveTable(body);
-
     console.log('[upload-pdf] recordId:', recordId, '| fieldName:', fieldName,
-      '| table:', tableName, '| b64len:', base64 ? base64.length : 0);
+      '| b64len:', base64 ? base64.length : 0);
 
     if (!recordId || !fieldName || !base64) {
       return json(400, { ok: false, error: 'Faltan parametros: recordId=' + recordId + ' fieldName=' + fieldName + ' base64=' + !!base64 });
@@ -164,7 +153,7 @@ exports.handler = async (event) => {
     }
 
     // Parchear Airtable con la URL publica
-    const result = await patchAirtableAttachment(recordId, fieldName, publicUrl, filename, tableName);
+    const result = await patchAirtableAttachment(recordId, fieldName, publicUrl, filename);
     return json(200, result);
 
   } catch (e) {
