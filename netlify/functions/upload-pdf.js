@@ -115,7 +115,10 @@ async function patchAirtableAttachment(recordId, fieldName, fileUrl, filename, t
 
   if (!res.ok) {
     console.error('[upload-pdf] PATCH Airtable error:', res.status, text.slice(0, 400));
-    return { ok: false, status: res.status, error: data.error || text.slice(0, 300) };
+    const errMsg = data.error
+      ? (typeof data.error === 'object' ? (data.error.message || data.error.type || JSON.stringify(data.error)) : data.error)
+      : text.slice(0, 300);
+    return { ok: false, status: res.status, error: errMsg };
   }
 
   console.log('[upload-pdf] PATCH Airtable OK:', filename, '->', fieldName);

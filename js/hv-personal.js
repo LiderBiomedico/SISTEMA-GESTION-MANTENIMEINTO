@@ -273,9 +273,16 @@
                 base64: b64,
               }),
             });
-            var uploadData = await uploadRes.json();
+            var uploadText = await uploadRes.text();
+            var uploadData;
+            try { uploadData = JSON.parse(uploadText); } catch (_e) { uploadData = { ok: false, error: uploadText.slice(0, 200) }; }
             if (!uploadData.ok) {
-              alert('⚠️ Registro guardado, pero el PDF no se pudo adjuntar: ' + (uploadData.error || 'Error desconocido'));
+              var upErrMsg = uploadData.error || 'Error desconocido';
+              if (typeof upErrMsg === 'object') upErrMsg = upErrMsg.message || upErrMsg.type || JSON.stringify(upErrMsg);
+              console.error('❌ Upload PDF error:', upErrMsg);
+              alert('⚠️ Registro guardado, pero el PDF no se pudo adjuntar: ' + upErrMsg);
+            } else {
+              console.log('✅ PDF adjuntado correctamente');
             }
           } catch (upErr) {
             alert('⚠️ Registro guardado, pero error al subir PDF: ' + upErr.message);
