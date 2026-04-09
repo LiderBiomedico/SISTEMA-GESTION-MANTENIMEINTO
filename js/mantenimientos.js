@@ -631,14 +631,53 @@
         htmlReport = buildCorrectiveReportHTML(data);
       }
 
-      var b64 = btoa(unescape(encodeURIComponent(htmlReport)));
+      // ── Generar PDF real con html2pdf.js ──
+      if (saveBtn) saveBtn.innerHTML = '<span style="display:inline-flex;align-items:center;gap:8px"><span class="mt-spinner" style="width:18px;height:18px;border-width:3px"></span>Generando PDF...</span>';
+
+      // Crear contenedor temporal oculto para renderizar el HTML
+      var tempDiv = document.createElement('div');
+      tempDiv.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;background:white;z-index:-1';
+      tempDiv.innerHTML = htmlReport;
+      // Quitar botón imprimir y scripts del contenedor temporal
+      var btnPrint = tempDiv.querySelector('#btnPrint');
+      if (btnPrint) btnPrint.remove();
+      var scripts = tempDiv.querySelectorAll('script');
+      scripts.forEach(function(s) { s.remove(); });
+      document.body.appendChild(tempDiv);
+
       var safeName = (opt.dataset.equipo||'equipo').replace(/[^a-zA-Z0-9]/g,'_').slice(0,30);
-      var filename = (isPrev?'PREV':'CORR')+'_'+safeName+'_'+fecha+'_Completado.html';
+      var filename = (isPrev?'PREV':'CORR')+'_'+safeName+'_'+fecha+'_Completado.pdf';
       var fieldName = isPrev ? FIELD_PREV : FIELD_CORR;
+
+      // Generar PDF como blob
+      var pdfBlob = await html2pdf().set({
+        margin: [5, 5, 5, 5],
+        filename: filename,
+        image: { type: 'jpeg', quality: 0.85 },
+        html2canvas: { scale: 2, useCORS: true, logging: false },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+      }).from(tempDiv).outputPdf('blob');
+
+      // Limpiar contenedor temporal
+      document.body.removeChild(tempDiv);
+
+      // Convertir blob a base64 para enviar al backend
+      var pdfBase64 = await new Promise(function(resolve, reject) {
+        var reader = new FileReader();
+        reader.onload = function() {
+          var b64 = reader.result.split(',')[1];
+          resolve(b64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(pdfBlob);
+      });
+
+      if (saveBtn) saveBtn.innerHTML = '<span style="display:inline-flex;align-items:center;gap:8px"><span class="mt-spinner" style="width:18px;height:18px;border-width:3px"></span>Subiendo a Airtable...</span>';
 
       var uploadRes = await axios.post(BASE+'/upload-pdf', {
         recordId: opt.value, fieldName: fieldName, filename: filename,
-        contentType: 'text/html', base64: b64,
+        contentType: 'application/pdf', base64: pdfBase64,
       }, { headers: hdr() });
 
       if (!uploadRes.data.ok) throw new Error(uploadRes.data.error||'Error al subir');
@@ -652,7 +691,7 @@
       closeMantForm();
       updateStats();
       renderList();
-      showMtToast('✅ Reporte guardado en Airtable · '+fieldName,'ok');
+      showMtToast('✅ PDF guardado en Airtable · '+fieldName,'ok');
     } catch(err) {
       console.error('saveMantForm error:', err);
       showMtToast('❌ Error: '+(err&&err.message||JSON.stringify(err)),'err');
