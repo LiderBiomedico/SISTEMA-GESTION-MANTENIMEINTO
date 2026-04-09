@@ -179,6 +179,7 @@
       stopTimer();
       mtState.timerElapsed = 0;
       mtState.timerStart = null;
+      mtState.photos = {};
 
       var titleEl = document.getElementById('mantFormTitle');
       var tipoEl = document.getElementById('mantFormTipoHidden');
@@ -271,9 +272,10 @@
     + '<div class="mf-timer-container"><div class="mf-timer-display" id="mfTimerDisplay">00:00:00</div><div class="mf-timer-buttons"><button type="button" class="mf-timer-btn mf-timer-start" id="mfTimerStartBtn" onclick="toggleTimer()">▶ Iniciar Protocolo</button><button type="button" class="mf-timer-btn mf-timer-reset" onclick="resetTimer()">↺ Reiniciar</button></div><div style="font-size:11px;color:#78909c;margin-top:6px;text-align:center">El cronómetro registra la duración total del mantenimiento</div></div>'
 
     + '<div class="mf-section-title" style="background:#37474f">⚠️ CONDICIONES PREVIAS Y SEGURIDAD</div>'
-    + '<div class="mf-conditions-box"><ul style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px">'+condList+'</ul><div style="margin-top:10px"><label class="mf-checkbox-card" style="background:#fff8e1;border-color:#ffd54f"><input type="checkbox" id="mfCondicionesOk" required><span class="mf-checkbox-card-label" style="font-weight:700;color:#795548">He leído y verifico que se cumplen todas las condiciones previas</span></label></div></div>'
+    + '<div class="mf-conditions-box"><ul style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px">'+condList+'</ul><div style="margin-top:10px"><label class="mf-checkbox-card" style="background:#fff8e1;border-color:#ffd54f"><input type="checkbox" id="mfCondicionesOk" required onchange="onCondicionesPreviasChange(this)"><span class="mf-checkbox-card-label" style="font-weight:700;color:#795548">He leído y verifico que se cumplen todas las condiciones previas</span></label></div></div>'
 
     + '<div class="mf-section-title" style="background:'+color+'">🔍 INSPECCIÓN VISUAL Y LIMPIEZA</div>'
+    + buildPhotoCaptureSectionHTML('inicio', '📸 Foto inicial del equipo (antes de iniciar)', '1️⃣')
     + '<div class="mf-table-container"><table class="mf-protocol-table"><thead><tr><th style="width:40px">No.</th><th>Ítem a verificar</th><th style="width:100px">Cumple</th><th style="width:180px">Observaciones</th></tr></thead><tbody>'+inspeccionRows+'</tbody></table></div>'
 
     + '<div class="mf-section-title" style="background:'+color+'">📐 EQUIPO DE VERIFICACIÓN</div>'
@@ -281,6 +283,7 @@
     + '<div class="mf-row"><div class="mf-group"><label class="mf-label">No. Serie del patrón</label><input type="text" id="mfSeriePatron" class="mf-input" placeholder="Número de serie"></div><div class="mf-group"><label class="mf-label">Certificado vigente hasta</label><input type="date" id="mfCertificadoVigente" class="mf-input"></div><div class="mf-group"><label class="mf-label">Tolerancia definida (mmHg/kPa)</label><input type="text" id="mfTolerancia" class="mf-input" placeholder="± ____ mmHg / kPa"></div></div>'
 
     + '<div class="mf-section-title" style="background:'+color+'">⚡ PRUEBA FUNCIONAL DEL REGULADOR</div>'
+    + buildPhotoCaptureSectionHTML('mitad', '📸 Foto durante el procedimiento (verificación)', '2️⃣')
     + '<div class="mf-table-container"><table class="mf-protocol-table"><thead><tr><th style="width:40px">No.</th><th>Prueba</th><th style="width:140px">Valor esperado</th><th style="width:120px">Valor medido</th><th style="width:110px">Resultado</th><th style="width:140px">Observaciones</th></tr></thead><tbody>'+pruebasRows+'</tbody></table></div>'
 
     + '<div class="mf-section-title" style="background:#263238">📋 RESULTADO FINAL DEL MANTENIMIENTO</div>'
@@ -288,6 +291,7 @@
     + '<div style="margin:14px 0"><label class="mf-label" style="margin-bottom:8px;display:block">Acciones realizadas</label><div class="mf-checkbox-group">'+accionesChecks+'</div></div>'
     + '<div class="mf-row"><div class="mf-group mf-full"><label class="mf-label">Observaciones técnicas</label><textarea id="mfObservaciones" class="mf-textarea" rows="3" placeholder="Observaciones sobre el estado del equipo..."></textarea></div></div>'
     + '<div class="mf-row"><div class="mf-group mf-full"><label class="mf-label">Recomendaciones</label><textarea id="mfRecomendaciones" class="mf-textarea" rows="3" placeholder="Recomendaciones para próximos mantenimientos..."></textarea></div></div>'
+    + buildPhotoCaptureSectionHTML('final', '📸 Foto final del equipo (después del mantenimiento)', '3️⃣')
 
     + '<div class="mf-section-title" style="background:#263238">✍️ TRAZABILIDAD Y FIRMAS</div>'
     + '<div class="mf-firma-container"><div class="mf-firma-box"><div class="mf-firma-title">Elaboró / Ejecutó</div><canvas id="sigPadEjecuto" class="mf-signature-canvas" width="320" height="120"></canvas><button type="button" class="mf-firma-clear" onclick="clearSignature(\'sigPadEjecuto\')">Limpiar</button><input type="text" id="mfNombreEjecuto" class="mf-input" placeholder="Nombre completo" style="margin-top:6px;font-size:12px"><input type="text" id="mfCargoEjecuto" class="mf-input" placeholder="Cargo" style="margin-top:4px;font-size:12px"></div><div class="mf-firma-box"><div class="mf-firma-title">Recibió / Verificó</div><canvas id="sigPadRecibio" class="mf-signature-canvas" width="320" height="120"></canvas><button type="button" class="mf-firma-clear" onclick="clearSignature(\'sigPadRecibio\')">Limpiar</button><input type="text" id="mfNombreRecibio" class="mf-input" placeholder="Nombre completo" style="margin-top:6px;font-size:12px"><input type="text" id="mfCargoRecibio" class="mf-input" placeholder="Cargo" style="margin-top:4px;font-size:12px"></div></div>'
@@ -344,6 +348,70 @@
     var btn = document.getElementById('mfTimerStartBtn');
     if (btn) btn.textContent = '▶ Iniciar Protocolo';
   };
+
+  // Auto-iniciar cronómetro al marcar condiciones previas
+  window.onCondicionesPreviasChange = function(checkbox) {
+    if (checkbox.checked) {
+      if (!mtState.timerRunning) {
+        startTimer();
+        showMtToast('⏱️ Cronómetro iniciado automáticamente', 'ok');
+      }
+    }
+  };
+
+  // ══════════════════════════════════════════════════════════════════════
+  // CAPTURA DE FOTOS (Inicio, Mitad, Final del procedimiento)
+  // ══════════════════════════════════════════════════════════════════════
+  window.capturePhoto = function(photoId) {
+    var input = document.getElementById('photoInput_' + photoId);
+    if (input) input.click();
+  };
+
+  window.onPhotoSelected = function(input, photoId) {
+    var file = input.files && input.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var preview = document.getElementById('photoPreview_' + photoId);
+      var placeholder = document.getElementById('photoPlaceholder_' + photoId);
+      var removeBtn = document.getElementById('photoRemoveBtn_' + photoId);
+      if (preview) {
+        preview.src = e.target.result;
+        preview.style.display = 'block';
+      }
+      if (placeholder) placeholder.style.display = 'none';
+      if (removeBtn) removeBtn.style.display = 'inline-block';
+      // Guardar en estado
+      if (!mtState.photos) mtState.photos = {};
+      mtState.photos[photoId] = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  window.removePhoto = function(photoId) {
+    var preview = document.getElementById('photoPreview_' + photoId);
+    var placeholder = document.getElementById('photoPlaceholder_' + photoId);
+    var removeBtn = document.getElementById('photoRemoveBtn_' + photoId);
+    var input = document.getElementById('photoInput_' + photoId);
+    if (preview) { preview.src = ''; preview.style.display = 'none'; }
+    if (placeholder) placeholder.style.display = 'flex';
+    if (removeBtn) removeBtn.style.display = 'none';
+    if (input) input.value = '';
+    if (mtState.photos) delete mtState.photos[photoId];
+  };
+
+  function buildPhotoCaptureSectionHTML(position, label, icon) {
+    return '<div class="mf-photo-capture" style="margin:12px 0;padding:12px 16px;background:#f8f9fa;border:1.5px dashed #b0bec5;border-radius:10px">'
+      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:20px">'+icon+'</span><div style="font-weight:700;font-size:13px;color:#263238">'+esc(label)+'</div></div>'
+      + '<input type="file" accept="image/*" capture="environment" id="photoInput_'+position+'" style="display:none" onchange="onPhotoSelected(this,\''+position+'\')">'
+      + '<div id="photoPlaceholder_'+position+'" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;background:white;border-radius:8px;cursor:pointer;border:1px solid #e0e0e0" onclick="capturePhoto(\''+position+'\')">'
+      + '<span style="font-size:32px;opacity:0.5">📷</span>'
+      + '<span style="font-size:12px;color:#78909c;margin-top:6px">Toca para tomar foto</span>'
+      + '</div>'
+      + '<img id="photoPreview_'+position+'" style="display:none;max-width:100%;max-height:200px;border-radius:8px;margin-top:8px;object-fit:contain;border:1px solid #e0e0e0">'
+      + '<button type="button" id="photoRemoveBtn_'+position+'" style="display:none;margin-top:6px;padding:4px 12px;font-size:11px;color:#c62828;background:#ffebee;border:1px solid #ef9a9a;border-radius:6px;cursor:pointer" onclick="removePhoto(\''+position+'\')">✕ Eliminar foto</button>'
+      + '</div>';
+  }
   function updateTimerDisplay() {
     var el = document.getElementById('mfTimerDisplay');
     if (!el) return;
@@ -477,7 +545,17 @@
         var f=r.fields||{};
         var nm=f['Equipo']||f['EQUIPO']||'';
         var pl=f['Numero de Placa']||f['PLACA']||'';
-        return '<option value="'+esc(r.id)+'" data-equipo="'+esc(nm)+'" data-placa="'+esc(pl)+'" data-marca="'+esc(f['Marca']||f['MARCA']||'')+'" data-modelo="'+esc(f['Modelo']||f['MODELO']||'')+'" data-serie="'+esc(f['Serie']||f['SERIE']||'')+'" data-servicio="'+esc(f['Servicio']||f['SERVICIO']||'')+'" data-riesgo="'+esc(f['Clasificacion Riesgo']||f['Clasificacion de Riesgo']||f['CLASIFICACION RIESGO']||f['Clasificación de Riesgo']||'')+'">'+esc(nm)+(pl?' — '+pl:'')+'</option>';
+        var marca=f['Marca']||f['MARCA']||'';
+        var modelo=f['Modelo']||f['MODELO']||'';
+        var serie=f['Serie']||f['SERIE']||'';
+        var servicio=f['Servicio']||f['SERVICIO']||'';
+        var riesgo=f['Clasificacion del Riesgo']||f['Clasificacion Riesgo']||f['Clasificacion de Riesgo']||f['CLASIFICACION RIESGO']||f['Clasificación del Riesgo']||f['Clasificación de Riesgo']||'';
+        // Texto del option: NOMBRE — MARCA MODELO — Serie: XXXX — Servicio
+        var label = nm;
+        if (marca || modelo) label += ' — ' + [marca, modelo].filter(Boolean).join(' ');
+        if (serie) label += ' — S/N: ' + serie;
+        if (servicio) label += ' — ' + servicio;
+        return '<option value="'+esc(r.id)+'" data-equipo="'+esc(nm)+'" data-placa="'+esc(pl)+'" data-marca="'+esc(marca)+'" data-modelo="'+esc(modelo)+'" data-serie="'+esc(serie)+'" data-servicio="'+esc(servicio)+'" data-riesgo="'+esc(riesgo)+'">'+esc(label)+'</option>';
       }).join('');
     sel.onchange = function() {
       var opt = sel.options[sel.selectedIndex];
@@ -594,6 +672,9 @@
       firmaEjecuto:getSignatureDataURL('sigPadEjecuto'), nombreEjecuto:getVal('mfNombreEjecuto'),
       cargoEjecuto:getVal('mfCargoEjecuto'), firmaRecibio:getSignatureDataURL('sigPadRecibio'),
       nombreRecibio:getVal('mfNombreRecibio'), cargoRecibio:getVal('mfCargoRecibio'),
+      fotoInicio: (mtState.photos && mtState.photos['inicio']) || '',
+      fotoMitad: (mtState.photos && mtState.photos['mitad']) || '',
+      fotoFinal: (mtState.photos && mtState.photos['final']) || '',
     };
   }
 
@@ -624,10 +705,15 @@
     + '<div class="hdr"><div><div class="hdr-hosp">HOSPITAL SUSANA LÓPEZ DE VALENCIA E.S.E</div><div class="hdr-dept">GESTIÓN DEL AMBIENTE Y LA TECNOLOGÍA</div><div class="hdr-addr">Calle 15 N°17A-196 Tel. 8217190</div></div><div class="hdr-center"><div class="hdr-title">FORMATO DE MANTENIMIENTO PREVENTIVO Y VERIFICACIÓN FUNCIONAL</div><div class="hdr-sub">'+esc(proto.nombre)+'</div><div class="hdr-code">Código: '+esc(codigo)+'</div></div><div class="hdr-right"><div>Fecha: '+fmt(d.fecha)+'</div><div>Duración: '+esc(d.duracion)+'</div><div>Página 1 de 1</div></div></div>'
     + '<div class="sec">🏥 DATOS DEL EQUIPO</div><table class="tbl"><tr><td class="lb">Fecha</td><td class="vl">'+fmt(d.fecha)+'</td><td class="lb">Servicio / Área</td><td class="vl">'+esc(d.servicio)+'</td></tr><tr><td class="lb">Marca</td><td class="vl">'+esc(d.marca)+'</td><td class="lb">Modelo</td><td class="vl">'+esc(d.modelo)+'</td></tr><tr><td class="lb">No. Inventario</td><td class="vl">'+esc(d.placa)+'</td><td class="lb">No. Serie</td><td class="vl">'+esc(d.serie)+'</td></tr><tr><td class="lb">Ubicación</td><td class="vl">'+esc(d.servicio)+'</td><td class="lb">Frecuencia</td><td class="vl">'+esc(d.frecuencia)+'</td></tr><tr><td class="lb">Responsable</td><td class="vl">'+esc(d.tecnico)+'</td><td class="lb">Clasificación Riesgo</td><td class="vl">'+esc(d.riesgo)+'</td></tr></table>'
     + '<div class="sec sec-dark">⚠️ CONDICIONES PREVIAS Y SEGURIDAD</div><div class="cond-box"><ul>'+condPrevias+'</ul><div style="margin-top:4px;font-weight:700;color:'+(d.condicionesOk?'#2e7d32':'#c62828')+'">'+(d.condicionesOk?'✅ Condiciones verificadas y cumplidas':'⚠️ Condiciones no verificadas')+'</div></div>'
-    + '<div class="sec">🔍 INSPECCIÓN VISUAL Y LIMPIEZA</div><table class="tbl"><tr><th style="width:30px">No.</th><th>Ítem a verificar</th><th style="width:60px">Cumple</th><th style="width:150px">Observaciones</th></tr>'+inspeccionRows+'</table>'
+    + '<div class="sec">🔍 INSPECCIÓN VISUAL Y LIMPIEZA</div>'
+    + (d.fotoInicio ? '<div style="margin:4px 0;text-align:center"><div style="font-size:9px;font-weight:700;color:#37474f;margin-bottom:3px">📸 Foto inicial del equipo</div><img src="'+d.fotoInicio+'" style="max-width:100%;max-height:180px;border:1px solid #b0bec5;border-radius:3px"></div>' : '')
+    + '<table class="tbl"><tr><th style="width:30px">No.</th><th>Ítem a verificar</th><th style="width:60px">Cumple</th><th style="width:150px">Observaciones</th></tr>'+inspeccionRows+'</table>'
     + '<div class="sec">📐 EQUIPO DE VERIFICACIÓN UTILIZADO</div><table class="tbl"><tr><td class="lb">Equipo utilizado</td><td class="vl">'+esc(d.equipoVerificacion)+'</td><td class="lb">Marca / Modelo</td><td class="vl">'+esc(d.marcaPatron)+'</td></tr><tr><td class="lb">No. Serie patrón</td><td class="vl">'+esc(d.seriePatron)+'</td><td class="lb">Certificado hasta</td><td class="vl">'+fmt(d.certificadoVigente)+'</td></tr><tr><td class="lb">Tolerancia</td><td class="vl" colspan="3">'+esc(d.tolerancia)+'</td></tr></table>'
-    + '<div class="sec">⚡ PRUEBA FUNCIONAL DEL REGULADOR</div><table class="tbl"><tr><th style="width:30px">No.</th><th>Prueba</th><th style="width:100px">Valor esperado</th><th style="width:80px">Medido</th><th style="width:60px">Result.</th><th style="width:120px">Obs.</th></tr>'+pruebasRows+'</table>'
-    + '<div class="sec sec-dark">📋 RESULTADO FINAL DEL MANTENIMIENTO</div><table class="tbl"><tr><td class="lb">Estado final</td><td class="vl"><span class="estado-badge" style="background:'+estadoColor+'">'+esc(d.estadoFinal)+'</span></td></tr><tr><td class="lb">Acciones realizadas</td><td class="vl">'+(d.acciones.length?d.acciones.map(function(a){return esc(a)}).join(' · '):'—')+'</td></tr><tr><td class="lb">Observaciones técnicas</td><td class="vl">'+esc(d.observaciones)+'</td></tr><tr><td class="lb">Recomendaciones</td><td class="vl">'+esc(d.recomendaciones)+'</td></tr><tr><td class="lb">Duración total</td><td class="vl">'+esc(d.duracion)+'</td></tr></table>'
+    + '<div class="sec">⚡ PRUEBA FUNCIONAL DEL REGULADOR</div>'
+    + (d.fotoMitad ? '<div style="margin:4px 0;text-align:center"><div style="font-size:9px;font-weight:700;color:#37474f;margin-bottom:3px">📸 Foto durante el procedimiento</div><img src="'+d.fotoMitad+'" style="max-width:100%;max-height:180px;border:1px solid #b0bec5;border-radius:3px"></div>' : '')
+    + '<table class="tbl"><tr><th style="width:30px">No.</th><th>Prueba</th><th style="width:100px">Valor esperado</th><th style="width:80px">Medido</th><th style="width:60px">Result.</th><th style="width:120px">Obs.</th></tr>'+pruebasRows+'</table>'
+    + '<div class="sec sec-dark">📋 RESULTADO FINAL DEL MANTENIMIENTO</div><table class="tbl"><tr><td class="lb">Estado final</td><td class="vl"><span class="estado-badge" style="background:'+estadoColor+'">'+esc(d.estadoFinal)+'</span></td></tr><tr><td class="lb">Acciones realizadas</td><td class="vl">'+(d.acciones.length?d.acciones.map(function(a){return esc(a)}).join(' · '):'—')+'</td></tr><tr><td class="lb">Observaciones técnicas</td><td class="vl">'+esc(d.observaciones)+'</td></tr><tr><td class="lb">Recomendaciones</td><td class="vl">'+esc(d.recomendaciones)+'</td></tr><tr><td class="lb">Duración total del mantenimiento</td><td class="vl" style="font-weight:700;font-size:11px;color:'+color+'">⏱️ '+esc(d.duracion)+'</td></tr></table>'
+    + (d.fotoFinal ? '<div style="margin:6px 0;text-align:center"><div style="font-size:9px;font-weight:700;color:#37474f;margin-bottom:3px">📸 Foto final del equipo</div><img src="'+d.fotoFinal+'" style="max-width:100%;max-height:180px;border:1px solid #b0bec5;border-radius:3px"></div>' : '')
     + '<div class="firmas"><div class="firma">'+(d.firmaEjecuto?'<img src="'+d.firmaEjecuto+'" alt="Firma">':'<div class="firma-line"></div>')+'<div>Elaboró / Ejecutó</div><div class="firma-name">'+esc(d.nombreEjecuto)+'</div><div class="firma-cargo">'+esc(d.cargoEjecuto)+'</div></div><div class="firma">'+(d.firmaRecibio?'<img src="'+d.firmaRecibio+'" alt="Firma">':'<div class="firma-line"></div>')+'<div>Recibió / Verificó</div><div class="firma-name">'+esc(d.nombreRecibio)+'</div><div class="firma-cargo">'+esc(d.cargoRecibio)+'</div></div></div>'
     + '<div class="nota"><strong>Nota técnica:</strong> Este formato está diseñado para mantenimiento preventivo rutinario y verificación funcional externa. No autoriza apertura, ajuste interno o reparación del regulador. Cualquier desviación debe documentarse y remitirse a soporte técnico autorizado.</div>'
     + '<div class="footer">HSLV · Sistema de Gestión de la Tecnología · '+esc(proto.codigo)+' · '+esc(codigo)+' · Generado: '+new Date().toLocaleString('es-CO')+'</div>'
