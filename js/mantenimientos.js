@@ -640,20 +640,27 @@
 
       // Quitar script y botón imprimir del HTML para el PDF
       var cleanHTML = htmlReport.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<button[^>]*id="btnPrint"[^>]*>[\s\S]*?<\/button>/gi, '');
-      // Inyectar estilos de ajuste para PDF A4 - forzar que todo quepa en el ancho
-      cleanHTML = cleanHTML.replace('</style>', 'body{padding:8px !important;width:100% !important;max-width:100% !important;overflow:hidden !important} .hdr{flex-wrap:wrap !important} .tbl{table-layout:fixed !important;word-wrap:break-word !important} img{max-width:100% !important;height:auto !important}</style>');
+      // Inyectar estilos para que el contenido se ajuste al ancho del contenedor
+      cleanHTML = cleanHTML.replace('</style>', '\nhtml,body{margin:0 !important;padding:6px !important;width:100% !important;max-width:100% !important;overflow-x:hidden !important;font-size:9px !important}\n.hdr{padding:6px 8px !important}\n.tbl{width:100% !important;table-layout:fixed !important;word-wrap:break-word !important}\n.tbl td,.tbl th{padding:2px 4px !important;word-wrap:break-word !important;overflow-wrap:break-word !important}\nimg{max-width:100% !important;height:auto !important}\n.firmas{flex-wrap:wrap !important}\n.firma img{max-height:40px !important}\n</style>');
 
-      // Crear iframe oculto para renderizar el HTML completo con sus estilos
-      // A4 = 210mm x 297mm. A 96dpi ≈ 794 x 1123px. Margen 8mm ≈ 30px cada lado → contenido 734px
+      // Crear iframe para renderizar el HTML completo
       var pdfBlob = await new Promise(function(resolve, reject) {
         var iframe = document.createElement('iframe');
-        iframe.style.cssText = 'position:fixed;top:0;left:0;width:760px;height:1200px;border:none;z-index:-9999;opacity:0.01';
+        // Ancho exacto para que html2canvas mapee 1:1 con A4
+        iframe.style.cssText = 'position:fixed;top:0;left:0;width:210mm;height:297mm;border:none;z-index:-9999;opacity:0.01';
         document.body.appendChild(iframe);
 
-        iframe.onload = function() {
-          // Esperar a que imágenes carguen dentro del iframe
-          var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-          var imgs = iframeDoc.querySelectorAll('img');
+        // Escribir el HTML primero, luego esperar load
+        var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+        iframeDoc.open();
+        iframeDoc.write(cleanHTML);
+        iframeDoc.close();
+
+        // Esperar renderizado completo
+        setTimeout(function() {
+          var iDoc = iframe.contentDocument || iframe.contentWindow.document;
+          // Esperar imágenes
+          var imgs = iDoc.querySelectorAll('img');
           var imgPromises = Array.from(imgs).map(function(img) {
             if (img.complete && img.naturalWidth > 0) return Promise.resolve();
             return new Promise(function(res) {
@@ -664,34 +671,36 @@
           });
 
           Promise.all(imgPromises).then(function() {
-            // Pausa adicional para estabilizar el render
             setTimeout(function() {
-              var element = iframeDoc.body;
+              // Obtener ancho real del body renderizado
+              var bodyEl = iDoc.body;
+              var bodyWidth = bodyEl.scrollWidth || bodyEl.offsetWidth;
+              
               html2pdf().set({
-                margin: [6, 6, 6, 6],
+                margin: 0,
                 filename: filename,
-                image: { type: 'jpeg', quality: 0.90 },
+                image: { type: 'jpeg', quality: 0.92 },
                 html2canvas: {
                   scale: 2,
                   useCORS: true,
                   logging: false,
-                  width: 760,
-                  windowWidth: 760,
                   scrollX: 0,
-                  scrollY: 0
+                  scrollY: 0,
+                  width: bodyWidth,
+                  windowWidth: bodyWidth
                 },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
                 pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-              }).from(element).outputPdf('blob').then(function(blob) {
+              }).from(bodyEl).outputPdf('blob').then(function(blob) {
                 document.body.removeChild(iframe);
                 resolve(blob);
               }).catch(function(err) {
                 document.body.removeChild(iframe);
                 reject(err);
               });
-            }, 800);
+            }, 1000);
           });
-        };
+        }, 500);
 
         // Escribir el HTML completo en el iframe
         var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
