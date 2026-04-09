@@ -638,75 +638,59 @@
       var filename = (isPrev?'PREV':'CORR')+'_'+safeName+'_'+fecha+'_Completado.pdf';
       var fieldName = isPrev ? FIELD_PREV : FIELD_CORR;
 
-      // Quitar script y botón imprimir del HTML para el PDF
+      // Quitar script y botón imprimir del HTML
       var cleanHTML = htmlReport.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<button[^>]*id="btnPrint"[^>]*>[\s\S]*?<\/button>/gi, '');
-      // Inyectar estilos para que el contenido se ajuste al ancho del contenedor
-      cleanHTML = cleanHTML.replace('</style>', '\nhtml,body{margin:0 !important;padding:6px !important;width:100% !important;max-width:100% !important;overflow-x:hidden !important;font-size:9px !important}\n.hdr{padding:6px 8px !important}\n.tbl{width:100% !important;table-layout:fixed !important;word-wrap:break-word !important}\n.tbl td,.tbl th{padding:2px 4px !important;word-wrap:break-word !important;overflow-wrap:break-word !important}\nimg{max-width:100% !important;height:auto !important}\n.firmas{flex-wrap:wrap !important}\n.firma img{max-height:40px !important}\n</style>');
 
-      // Crear iframe para renderizar el HTML completo
+      // Generar PDF: abrir nueva ventana oculta, renderizar HTML, capturar con html2pdf
       var pdfBlob = await new Promise(function(resolve, reject) {
-        var iframe = document.createElement('iframe');
-        // Ancho exacto para que html2canvas mapee 1:1 con A4
-        iframe.style.cssText = 'position:fixed;top:0;left:0;width:210mm;height:297mm;border:none;z-index:-9999;opacity:0.01';
-        document.body.appendChild(iframe);
+        // Usar window.open en vez de iframe - más confiable para html2canvas
+        var win = window.open('', '_blank', 'width=800,height=600,left=-9999,top=-9999');
+        if (!win) {
+          // Fallback: si popup bloqueado, usar iframe
+          reject(new Error('Popup bloqueado. Permite popups para generar PDF.'));
+          return;
+        }
+        win.document.open();
+        win.document.write(cleanHTML);
+        win.document.close();
 
-        // Escribir el HTML primero, luego esperar load
-        var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-        iframeDoc.open();
-        iframeDoc.write(cleanHTML);
-        iframeDoc.close();
-
-        // Esperar renderizado completo
+        // Esperar renderizado
         setTimeout(function() {
-          var iDoc = iframe.contentDocument || iframe.contentWindow.document;
-          // Esperar imágenes
-          var imgs = iDoc.querySelectorAll('img');
+          var imgs = win.document.querySelectorAll('img');
           var imgPromises = Array.from(imgs).map(function(img) {
             if (img.complete && img.naturalWidth > 0) return Promise.resolve();
             return new Promise(function(res) {
               img.onload = res;
               img.onerror = res;
-              setTimeout(res, 4000);
+              setTimeout(res, 5000);
             });
           });
 
           Promise.all(imgPromises).then(function() {
             setTimeout(function() {
-              // Obtener ancho real del body renderizado
-              var bodyEl = iDoc.body;
-              var bodyWidth = bodyEl.scrollWidth || bodyEl.offsetWidth;
-              
+              var bodyEl = win.document.body;
+              // Usar html2pdf desde la ventana principal pero apuntando al body de la ventana abierta
               html2pdf().set({
-                margin: 0,
+                margin: [8, 6, 8, 6],
                 filename: filename,
                 image: { type: 'jpeg', quality: 0.92 },
                 html2canvas: {
                   scale: 2,
                   useCORS: true,
-                  logging: false,
-                  scrollX: 0,
-                  scrollY: 0,
-                  width: bodyWidth,
-                  windowWidth: bodyWidth
+                  logging: false
                 },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
                 pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
               }).from(bodyEl).outputPdf('blob').then(function(blob) {
-                document.body.removeChild(iframe);
+                win.close();
                 resolve(blob);
               }).catch(function(err) {
-                document.body.removeChild(iframe);
+                win.close();
                 reject(err);
               });
             }, 1000);
           });
-        }, 500);
-
-        // Escribir el HTML completo en el iframe
-        var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-        iframeDoc.open();
-        iframeDoc.write(cleanHTML);
-        iframeDoc.close();
+        }, 800);
       });
 
       // Convertir blob a base64 para enviar al backend
