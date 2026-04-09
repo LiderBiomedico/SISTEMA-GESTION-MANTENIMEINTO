@@ -268,8 +268,8 @@
     + '<div class="mf-inv-card"><div class="mf-inv-title">📋 Datos del Equipo (autocompletados)</div><div class="mf-inv-grid"><div><span class="mf-inv-label">Nombre</span><input id="mf_equipo" class="mf-inv-val" readonly></div><div><span class="mf-inv-label">Placa</span><input id="mf_placa" class="mf-inv-val" readonly></div><div><span class="mf-inv-label">Marca</span><input id="mf_marca" class="mf-inv-val" readonly></div><div><span class="mf-inv-label">Modelo</span><input id="mf_modelo" class="mf-inv-val" readonly></div><div><span class="mf-inv-label">Serie</span><input id="mf_serie" class="mf-inv-val" readonly></div><div><span class="mf-inv-label">Servicio / Ubicación</span><input id="mf_servicio" class="mf-inv-val" readonly></div><div><span class="mf-inv-label">Clasificación Riesgo</span><input id="mf_riesgo" class="mf-inv-val" readonly></div></div></div>'
 
     + '<div class="mf-section-title" style="background:'+color+'">📅 EJECUCIÓN Y CRONÓMETRO</div>'
-    + '<div class="mf-row"><div class="mf-group"><label class="mf-label">Fecha de Ejecución *</label><input type="date" id="mfFechaEjecucion" class="mf-input" value="'+new Date().toISOString().slice(0,10)+'"></div><div class="mf-group"><label class="mf-label">Responsable / Ingeniero *</label><input type="text" id="mfTecnico" class="mf-input" placeholder="Nombre del ingeniero responsable"></div><div class="mf-group"><label class="mf-label">Frecuencia</label><select id="mfFrecuencia" class="mf-select">'+frecOptions+'</select></div></div>'
-    + '<div class="mf-timer-container"><div class="mf-timer-display" id="mfTimerDisplay">00:00:00</div><div class="mf-timer-buttons"><button type="button" class="mf-timer-btn mf-timer-start" id="mfTimerStartBtn" onclick="toggleTimer()">▶ Iniciar Protocolo</button><button type="button" class="mf-timer-btn mf-timer-reset" onclick="resetTimer()">↺ Reiniciar</button></div><div style="font-size:11px;color:#78909c;margin-top:6px;text-align:center">El cronómetro registra la duración total del mantenimiento</div></div>'
+    + '<div class="mf-row"><div class="mf-group"><label class="mf-label">Fecha de Ejecución *</label><input type="date" id="mfFechaEjecucion" class="mf-input" value="'+new Date().toISOString().slice(0,10)+'"></div><div class="mf-group"><label class="mf-label">Responsable / Ingeniero *</label><input type="text" id="mfTecnico" class="mf-input" placeholder="Nombre del ingeniero responsable"></div><div class="mf-group"><label class="mf-label">Frecuencia</label><input type="text" id="mfFrecuencia" class="mf-inv-val" readonly placeholder="Se autocompleta al seleccionar equipo"></div></div>'
+    + '<div class="mf-timer-container"><div class="mf-timer-display" id="mfTimerDisplay">00:00:00</div><div style="font-size:11px;color:#78909c;margin-top:6px;text-align:center">El cronómetro se inicia automáticamente al verificar las condiciones previas</div></div>'
 
     + '<div class="mf-section-title" style="background:#37474f">⚠️ CONDICIONES PREVIAS Y SEGURIDAD</div>'
     + '<div class="mf-conditions-box"><ul style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px">'+condList+'</ul><div style="margin-top:10px"><label class="mf-checkbox-card" style="background:#fff8e1;border-color:#ffd54f"><input type="checkbox" id="mfCondicionesOk" required onchange="onCondicionesPreviasChange(this)"><span class="mf-checkbox-card-label" style="font-weight:700;color:#795548">He leído y verifico que se cumplen todas las condiciones previas</span></label></div></div>'
@@ -535,6 +535,9 @@
       var el = document.getElementById('mf_'+k);
       if (el) el.value = opt.dataset[k] || '';
     });
+    // Autocompletar frecuencia desde Airtable
+    var freqEl = document.getElementById('mfFrecuencia');
+    if (freqEl) freqEl.value = opt.dataset.frecuencia || '';
   };
 
   function loadInvSelect() {
@@ -550,12 +553,13 @@
         var serie=f['Serie']||f['SERIE']||'';
         var servicio=f['Servicio']||f['SERVICIO']||'';
         var riesgo=f['Clasificacion del Riesgo']||f['Clasificacion Riesgo']||f['Clasificacion de Riesgo']||f['CLASIFICACION RIESGO']||f['Clasificación del Riesgo']||f['Clasificación de Riesgo']||'';
+        var frecuencia=f['Frecuencia de MTTO Preventivo']||f['Frecuencia de Mantenimiento']||f['FRECUENCIA DE MTTO PREVENTIVO']||f['Frecuencia de MTTO']||'';
         // Texto del option: NOMBRE — MARCA MODELO — Serie: XXXX — Servicio
         var label = nm;
         if (marca || modelo) label += ' — ' + [marca, modelo].filter(Boolean).join(' ');
         if (serie) label += ' — S/N: ' + serie;
         if (servicio) label += ' — ' + servicio;
-        return '<option value="'+esc(r.id)+'" data-equipo="'+esc(nm)+'" data-placa="'+esc(pl)+'" data-marca="'+esc(marca)+'" data-modelo="'+esc(modelo)+'" data-serie="'+esc(serie)+'" data-servicio="'+esc(servicio)+'" data-riesgo="'+esc(riesgo)+'">'+esc(label)+'</option>';
+        return '<option value="'+esc(r.id)+'" data-equipo="'+esc(nm)+'" data-placa="'+esc(pl)+'" data-marca="'+esc(marca)+'" data-modelo="'+esc(modelo)+'" data-serie="'+esc(serie)+'" data-servicio="'+esc(servicio)+'" data-riesgo="'+esc(riesgo)+'" data-frecuencia="'+esc(frecuencia)+'">'+esc(label)+'</option>';
       }).join('');
     sel.onchange = function() {
       var opt = sel.options[sel.selectedIndex];
@@ -564,6 +568,9 @@
         var el = document.getElementById('mf_'+k);
         if (el) el.value = opt.dataset[k] || '';
       });
+      // Autocompletar frecuencia desde Airtable
+      var freqEl = document.getElementById('mfFrecuencia');
+      if (freqEl) freqEl.value = opt.dataset.frecuencia || '';
     };
   }
 
