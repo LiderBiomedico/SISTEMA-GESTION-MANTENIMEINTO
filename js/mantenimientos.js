@@ -640,11 +640,14 @@
 
       // Quitar script y botón imprimir del HTML para el PDF
       var cleanHTML = htmlReport.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<button[^>]*id="btnPrint"[^>]*>[\s\S]*?<\/button>/gi, '');
+      // Inyectar estilos de ajuste para PDF A4 - forzar que todo quepa en el ancho
+      cleanHTML = cleanHTML.replace('</style>', 'body{padding:8px !important;width:100% !important;max-width:100% !important;overflow:hidden !important} .hdr{flex-wrap:wrap !important} .tbl{table-layout:fixed !important;word-wrap:break-word !important} img{max-width:100% !important;height:auto !important}</style>');
 
       // Crear iframe oculto para renderizar el HTML completo con sus estilos
+      // A4 = 210mm x 297mm. A 96dpi ≈ 794 x 1123px. Margen 8mm ≈ 30px cada lado → contenido 734px
       var pdfBlob = await new Promise(function(resolve, reject) {
         var iframe = document.createElement('iframe');
-        iframe.style.cssText = 'position:fixed;top:0;left:0;width:794px;height:1123px;border:none;z-index:-9999;opacity:0.01';
+        iframe.style.cssText = 'position:fixed;top:0;left:0;width:760px;height:1200px;border:none;z-index:-9999;opacity:0.01';
         document.body.appendChild(iframe);
 
         iframe.onload = function() {
@@ -665,15 +668,15 @@
             setTimeout(function() {
               var element = iframeDoc.body;
               html2pdf().set({
-                margin: [4, 4, 4, 4],
+                margin: [6, 6, 6, 6],
                 filename: filename,
                 image: { type: 'jpeg', quality: 0.90 },
                 html2canvas: {
                   scale: 2,
                   useCORS: true,
                   logging: false,
-                  width: 794,
-                  windowWidth: 794,
+                  width: 760,
+                  windowWidth: 760,
                   scrollX: 0,
                   scrollY: 0
                 },
