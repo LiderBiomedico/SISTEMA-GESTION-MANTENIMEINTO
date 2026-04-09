@@ -370,20 +370,33 @@
   window.onPhotoSelected = function(input, photoId) {
     var file = input.files && input.files[0];
     if (!file) return;
+    // Comprimir imagen a max 800px y calidad 0.6 para que el HTML no sea enorme
     var reader = new FileReader();
     reader.onload = function(e) {
-      var preview = document.getElementById('photoPreview_' + photoId);
-      var placeholder = document.getElementById('photoPlaceholder_' + photoId);
-      var removeBtn = document.getElementById('photoRemoveBtn_' + photoId);
-      if (preview) {
-        preview.src = e.target.result;
-        preview.style.display = 'block';
-      }
-      if (placeholder) placeholder.style.display = 'none';
-      if (removeBtn) removeBtn.style.display = 'inline-block';
-      // Guardar en estado
-      if (!mtState.photos) mtState.photos = {};
-      mtState.photos[photoId] = e.target.result;
+      var img = new Image();
+      img.onload = function() {
+        var maxW = 800, maxH = 600;
+        var w = img.width, h = img.height;
+        if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
+        if (h > maxH) { w = Math.round(w * maxH / h); h = maxH; }
+        var canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        var ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        var compressed = canvas.toDataURL('image/jpeg', 0.6);
+
+        var preview = document.getElementById('photoPreview_' + photoId);
+        var placeholder = document.getElementById('photoPlaceholder_' + photoId);
+        var removeBtn = document.getElementById('photoRemoveBtn_' + photoId);
+        if (preview) { preview.src = compressed; preview.style.display = 'block'; }
+        if (placeholder) placeholder.style.display = 'none';
+        if (removeBtn) removeBtn.style.display = 'inline-block';
+        if (!mtState.photos) mtState.photos = {};
+        mtState.photos[photoId] = compressed;
+      };
+      img.src = e.target.result;
     };
     reader.readAsDataURL(file);
   };
@@ -713,18 +726,19 @@
     + '<div class="sec">🏥 DATOS DEL EQUIPO</div><table class="tbl"><tr><td class="lb">Fecha</td><td class="vl">'+fmt(d.fecha)+'</td><td class="lb">Servicio / Área</td><td class="vl">'+esc(d.servicio)+'</td></tr><tr><td class="lb">Marca</td><td class="vl">'+esc(d.marca)+'</td><td class="lb">Modelo</td><td class="vl">'+esc(d.modelo)+'</td></tr><tr><td class="lb">No. Inventario</td><td class="vl">'+esc(d.placa)+'</td><td class="lb">No. Serie</td><td class="vl">'+esc(d.serie)+'</td></tr><tr><td class="lb">Ubicación</td><td class="vl">'+esc(d.servicio)+'</td><td class="lb">Frecuencia</td><td class="vl">'+esc(d.frecuencia)+'</td></tr><tr><td class="lb">Responsable</td><td class="vl">'+esc(d.tecnico)+'</td><td class="lb">Clasificación Riesgo</td><td class="vl">'+esc(d.riesgo)+'</td></tr></table>'
     + '<div class="sec sec-dark">⚠️ CONDICIONES PREVIAS Y SEGURIDAD</div><div class="cond-box"><ul>'+condPrevias+'</ul><div style="margin-top:4px;font-weight:700;color:'+(d.condicionesOk?'#2e7d32':'#c62828')+'">'+(d.condicionesOk?'✅ Condiciones verificadas y cumplidas':'⚠️ Condiciones no verificadas')+'</div></div>'
     + '<div class="sec">🔍 INSPECCIÓN VISUAL Y LIMPIEZA</div>'
-    + (d.fotoInicio ? '<div style="margin:4px 0;text-align:center"><div style="font-size:9px;font-weight:700;color:#37474f;margin-bottom:3px">📸 Foto inicial del equipo</div><img src="'+d.fotoInicio+'" style="max-width:100%;max-height:180px;border:1px solid #b0bec5;border-radius:3px"></div>' : '')
+    + (d.fotoInicio ? '<div style="margin:4px 0;text-align:center"><div style="font-size:9px;font-weight:700;color:#37474f;margin-bottom:3px">📸 Foto inicial del equipo</div><img src="'+d.fotoInicio+'" style="max-width:100%;max-height:180px;border:1px solid #b0bec5;border-radius:3px" alt="Foto inicial"></div>' : '')
     + '<table class="tbl"><tr><th style="width:30px">No.</th><th>Ítem a verificar</th><th style="width:60px">Cumple</th><th style="width:150px">Observaciones</th></tr>'+inspeccionRows+'</table>'
     + '<div class="sec">📐 EQUIPO DE VERIFICACIÓN UTILIZADO</div><table class="tbl"><tr><td class="lb">Equipo utilizado</td><td class="vl">'+esc(d.equipoVerificacion)+'</td><td class="lb">Marca / Modelo</td><td class="vl">'+esc(d.marcaPatron)+'</td></tr><tr><td class="lb">No. Serie patrón</td><td class="vl">'+esc(d.seriePatron)+'</td><td class="lb">Certificado hasta</td><td class="vl">'+fmt(d.certificadoVigente)+'</td></tr><tr><td class="lb">Tolerancia</td><td class="vl" colspan="3">'+esc(d.tolerancia)+'</td></tr></table>'
     + '<div class="sec">⚡ PRUEBA FUNCIONAL DEL REGULADOR</div>'
-    + (d.fotoMitad ? '<div style="margin:4px 0;text-align:center"><div style="font-size:9px;font-weight:700;color:#37474f;margin-bottom:3px">📸 Foto durante el procedimiento</div><img src="'+d.fotoMitad+'" style="max-width:100%;max-height:180px;border:1px solid #b0bec5;border-radius:3px"></div>' : '')
+    + (d.fotoMitad ? '<div style="margin:4px 0;text-align:center"><div style="font-size:9px;font-weight:700;color:#37474f;margin-bottom:3px">📸 Foto durante el procedimiento</div><img src="'+d.fotoMitad+'" style="max-width:100%;max-height:180px;border:1px solid #b0bec5;border-radius:3px" alt="Foto procedimiento"></div>' : '')
     + '<table class="tbl"><tr><th style="width:30px">No.</th><th>Prueba</th><th style="width:100px">Valor esperado</th><th style="width:80px">Medido</th><th style="width:60px">Result.</th><th style="width:120px">Obs.</th></tr>'+pruebasRows+'</table>'
     + '<div class="sec sec-dark">📋 RESULTADO FINAL DEL MANTENIMIENTO</div><table class="tbl"><tr><td class="lb">Estado final</td><td class="vl"><span class="estado-badge" style="background:'+estadoColor+'">'+esc(d.estadoFinal)+'</span></td></tr><tr><td class="lb">Acciones realizadas</td><td class="vl">'+(d.acciones.length?d.acciones.map(function(a){return esc(a)}).join(' · '):'—')+'</td></tr><tr><td class="lb">Observaciones técnicas</td><td class="vl">'+esc(d.observaciones)+'</td></tr><tr><td class="lb">Recomendaciones</td><td class="vl">'+esc(d.recomendaciones)+'</td></tr><tr><td class="lb">Duración total del mantenimiento</td><td class="vl" style="font-weight:700;font-size:11px;color:'+color+'">⏱️ '+esc(d.duracion)+'</td></tr></table>'
-    + (d.fotoFinal ? '<div style="margin:6px 0;text-align:center"><div style="font-size:9px;font-weight:700;color:#37474f;margin-bottom:3px">📸 Foto final del equipo</div><img src="'+d.fotoFinal+'" style="max-width:100%;max-height:180px;border:1px solid #b0bec5;border-radius:3px"></div>' : '')
+    + (d.fotoFinal ? '<div style="margin:6px 0;text-align:center"><div style="font-size:9px;font-weight:700;color:#37474f;margin-bottom:3px">📸 Foto final del equipo</div><img src="'+d.fotoFinal+'" style="max-width:100%;max-height:180px;border:1px solid #b0bec5;border-radius:3px" alt="Foto final"></div>' : '')
     + '<div class="firmas"><div class="firma">'+(d.firmaEjecuto?'<img src="'+d.firmaEjecuto+'" alt="Firma">':'<div class="firma-line"></div>')+'<div>Elaboró / Ejecutó</div><div class="firma-name">'+esc(d.nombreEjecuto)+'</div><div class="firma-cargo">'+esc(d.cargoEjecuto)+'</div></div><div class="firma">'+(d.firmaRecibio?'<img src="'+d.firmaRecibio+'" alt="Firma">':'<div class="firma-line"></div>')+'<div>Recibió / Verificó</div><div class="firma-name">'+esc(d.nombreRecibio)+'</div><div class="firma-cargo">'+esc(d.cargoRecibio)+'</div></div></div>'
     + '<div class="nota"><strong>Nota técnica:</strong> Este formato está diseñado para mantenimiento preventivo rutinario y verificación funcional externa. No autoriza apertura, ajuste interno o reparación del regulador. Cualquier desviación debe documentarse y remitirse a soporte técnico autorizado.</div>'
-    + '<button class="btn-print" onclick="window.print()">🖨️ Imprimir Reporte</button>'
+    + '<button id="btnPrint" class="btn-print">🖨️ Imprimir Reporte</button>'
     + '<div class="footer">HSLV · Sistema de Gestión de la Tecnología · '+esc(proto.codigo)+' · '+esc(codigo)+' · Generado: '+new Date().toLocaleString('es-CO')+'</div>'
+    + '<script>document.getElementById("btnPrint").addEventListener("click",function(){window.print();});<\/script>'
     + '</body></html>';
   }
 
@@ -744,8 +758,10 @@
     + sec('🔧 ANÁLISIS CORRECTIVO', row('Falla Reportada',d.fallaReportada)+row('Diagnóstico Técnico',d.diagnostico)+row('Acción Tomada',d.accionTomada)+row('Causa Raíz',d.causaRaiz)+row('Repuestos Cambiados',d.repuestos)+row('Hallazgos',d.hallazgos))
     + sec('📝 OBSERVACIONES', row('Observaciones y Recomendaciones',d.observaciones))
     + '<div class="firmas"><div class="firma"><div class="firma-line"></div>Técnico Responsable<div class="firma-name">'+esc(d.tecnico)+'</div></div><div class="firma"><div class="firma-line"></div>Supervisor / Jefe de Área</div><div class="firma"><div class="firma-line"></div>Ingeniero Biomédico<div class="firma-name">'+esc(d.firmaResponsable)+'</div></div></div>'
-    + '<button class="btn-print" onclick="window.print()">🖨️ Imprimir Reporte</button>'
-    + '<div class="footer">HSLV · Sistema de Gestión de la Tecnología · SLV-GAT-MANT-CORR · '+esc(codigo)+' · Generado: '+new Date().toLocaleString('es-CO')+'</div></body></html>';
+    + '<button id="btnPrint" class="btn-print">🖨️ Imprimir Reporte</button>'
+    + '<div class="footer">HSLV · Sistema de Gestión de la Tecnología · SLV-GAT-MANT-CORR · '+esc(codigo)+' · Generado: '+new Date().toLocaleString('es-CO')+'</div>'
+    + '<script>document.getElementById("btnPrint").addEventListener("click",function(){window.print();});<\/script>'
+    + '</body></html>';
   }
 
   // ── TOAST ──────────────────────────────────────────────────────────────
