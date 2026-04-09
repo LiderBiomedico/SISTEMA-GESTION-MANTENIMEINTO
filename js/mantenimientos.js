@@ -634,27 +634,65 @@
       // ── Generar PDF real con html2pdf.js ──
       if (saveBtn) saveBtn.innerHTML = '<span style="display:inline-flex;align-items:center;gap:8px"><span class="mt-spinner" style="width:18px;height:18px;border-width:3px"></span>Generando PDF...</span>';
 
-      // Crear contenedor temporal oculto para renderizar el HTML
+      // Crear contenedor temporal VISIBLE (html2canvas necesita que sea renderizado)
       var tempDiv = document.createElement('div');
-      tempDiv.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;background:white;z-index:-1';
-      tempDiv.innerHTML = htmlReport;
-      // Quitar botón imprimir y scripts del contenedor temporal
-      var btnPrint = tempDiv.querySelector('#btnPrint');
+      tempDiv.style.cssText = 'position:absolute;top:0;left:0;width:794px;background:white;z-index:99999;opacity:0;pointer-events:none;overflow:hidden';
+      // Parsear el HTML y extraer solo el body content
+      var parser = new DOMParser();
+      var doc = parser.parseFromString(htmlReport, 'text/html');
+      // Copiar estilos del reporte
+      var styles = doc.querySelectorAll('style');
+      styles.forEach(function(s) {
+        var styleEl = document.createElement('style');
+        styleEl.textContent = s.textContent;
+        tempDiv.appendChild(styleEl);
+      });
+      // Copiar contenido del body
+      var bodyContent = doc.body.innerHTML;
+      var contentDiv = document.createElement('div');
+      contentDiv.innerHTML = bodyContent;
+      // Quitar botón imprimir y scripts
+      var btnPrint = contentDiv.querySelector('#btnPrint');
       if (btnPrint) btnPrint.remove();
-      var scripts = tempDiv.querySelectorAll('script');
+      var scripts = contentDiv.querySelectorAll('script');
       scripts.forEach(function(s) { s.remove(); });
+      tempDiv.appendChild(contentDiv);
       document.body.appendChild(tempDiv);
+
+      // Esperar que las imágenes carguen
+      var imgs = tempDiv.querySelectorAll('img');
+      if (imgs.length > 0) {
+        await Promise.all(Array.from(imgs).map(function(img) {
+          if (img.complete) return Promise.resolve();
+          return new Promise(function(resolve) {
+            img.onload = resolve;
+            img.onerror = resolve;
+            setTimeout(resolve, 3000);
+          });
+        }));
+      }
+      // Pequeña pausa para render
+      await new Promise(function(r) { setTimeout(r, 500); });
 
       var safeName = (opt.dataset.equipo||'equipo').replace(/[^a-zA-Z0-9]/g,'_').slice(0,30);
       var filename = (isPrev?'PREV':'CORR')+'_'+safeName+'_'+fecha+'_Completado.pdf';
       var fieldName = isPrev ? FIELD_PREV : FIELD_CORR;
+
+      // Hacer visible brevemente para captura (html2canvas necesita visibilidad)
+      tempDiv.style.opacity = '1';
+      tempDiv.style.position = 'fixed';
+      tempDiv.style.top = '0';
+      tempDiv.style.left = '0';
+      tempDiv.style.height = 'auto';
+      tempDiv.style.overflow = 'visible';
+      tempDiv.style.zIndex = '-1';
 
       // Generar PDF como blob
       var pdfBlob = await html2pdf().set({
         margin: [5, 5, 5, 5],
         filename: filename,
         image: { type: 'jpeg', quality: 0.85 },
-        html2canvas: { scale: 2, useCORS: true, logging: false },
+        html2canvas: { scale: 2, useCORS: true, logging: false, windowWidth: 794 },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
         pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
       }).from(tempDiv).outputPdf('blob');
