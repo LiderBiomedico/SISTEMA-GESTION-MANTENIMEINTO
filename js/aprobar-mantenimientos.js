@@ -55,21 +55,26 @@
           var servicio = f['Servicio']||f['SERVICIO']||'';
           var prevs = f[FIELD_PREV]||[];
           var aprobados = f[FIELD_APROBADO]||[];
-          // Crear un Set con los nombres base de los aprobados (sin _APROBADO.pdf)
-          var aprobadosBaseNames = {};
+
+          // Crear un Set con los IDs de attachments que ya fueron aprobados
+          // El nombre del aprobado tiene el formato: APROBADO_{attId}_{filename}
+          var aprobadosIds = {};
           aprobados.forEach(function(a) {
             var name = a.filename||'';
-            // Extraer el nombre base quitando _APROBADO.pdf
-            var baseName = name.replace(/_APROBADO\.pdf$/i, '.pdf');
-            aprobadosBaseNames[baseName] = true;
+            // Extraer el attId del nombre: APROBADO_{attId}_resto.pdf
+            var match = name.match(/^APROBADO_([^_]+)_/);
+            if (match) {
+              aprobadosIds[match[1]] = true;
+            }
           });
 
           prevs.forEach(function(att) {
             var fn = att.filename||att.name||'reporte.pdf';
-            // Un preventivo está aprobado SOLO si existe exactamente su versión _APROBADO
-            var yaAprobado = aprobadosBaseNames[fn] === true;
+            var attId = att.id||'';
+            // Un preventivo está aprobado SOLO si su ID de attachment aparece en los aprobados
+            var yaAprobado = attId ? (aprobadosIds[attId] === true) : false;
             aproState.records.push({
-              id: att.id||att.url,
+              attId: attId,
               equipoId: rec.id,
               equipo: equipo,
               placa: placa,
@@ -303,7 +308,8 @@
       });
 
       // 5. Subir a Airtable campo "Mantenimiento Aprobado"
-      var aprobadoFilename = r.filename.replace(/\.pdf$/i, '_APROBADO.pdf');
+      // Nombre incluye el ID del attachment original para rastreo único
+      var aprobadoFilename = 'APROBADO_' + (r.attId || 'x') + '_' + r.filename;
       var uploadRes = await axios.post(BASE+'/upload-pdf', {
         recordId: r.equipoId,
         fieldName: FIELD_APROBADO,
