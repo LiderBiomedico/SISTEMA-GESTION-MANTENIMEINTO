@@ -251,33 +251,34 @@
       var pdfDoc = await PDFLib.PDFDocument.load(pdfBytes);
       var selloImg = await pdfDoc.embedPng(selloImgBytes);
       var pages = pdfDoc.getPages();
+      var lastIdx = pages.length - 1;
 
-      // Estampar sello en TODAS las páginas para máxima visibilidad
-      var selloW = 160;
-      var selloH = 160;
+      // Estampar sello en primera y última página
+      var selloW = 150;
+      var selloH = 150;
       for (var pi = 0; pi < pages.length; pi++) {
         var pg = pages[pi];
         var pgW = pg.getWidth();
         var pgH = pg.getHeight();
 
         if (pi === 0) {
-          // Primera página: sello grande arriba a la derecha
+          // Primera página: sello arriba a la derecha, debajo del header
           pg.drawImage(selloImg, {
-            x: pgW - selloW - 30,
-            y: pgH - selloH - 100,
+            x: pgW - selloW - 20,
+            y: pgH - selloH - 80,
             width: selloW,
             height: selloH,
-            opacity: 0.75,
           });
-        } else {
-          // Páginas siguientes: sello más pequeño centrado abajo
-          var smallSize = 130;
+        }
+        if (pi === lastIdx) {
+          // Última página: sello grande centrado en mitad inferior
+          var bigW = 180;
+          var bigH = 180;
           pg.drawImage(selloImg, {
-            x: pgW - smallSize - 40,
-            y: pgH / 2 - smallSize / 2,
-            width: smallSize,
-            height: smallSize,
-            opacity: 0.6,
+            x: (pgW - bigW) / 2,
+            y: pgH * 0.15,
+            width: bigW,
+            height: bigH,
           });
         }
       }
