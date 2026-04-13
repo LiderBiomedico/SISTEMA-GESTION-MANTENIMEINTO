@@ -56,7 +56,8 @@ function switchModule(moduleName, evt) {
     kpis: '📈 Indicadores de Desempeño',
     reportes: '📝 Reportes e Informes',
     auditoria: '🔍 Auditoría y Trazabilidad',
-    'hojas-vida': '📋 Hojas de Vida · SLV-GAT-GAB-12-F02'
+    'hojas-vida': '📋 Hojas de Vida · SLV-GAT-GAB-12-F02',
+    aprobar: '✅ Aprobar Mantenimientos Preventivos'
   };
   const t = document.getElementById('moduleTitle');
   if (t) t.textContent = titles[moduleName] || moduleName;
@@ -103,6 +104,9 @@ function loadModuleData(moduleName) {
       break;
     case 'hv-personal':
       if (typeof loadHVPersonal === 'function') loadHVPersonal(true);
+      break;
+    case 'aprobar':
+      if (typeof loadAprobarModule === 'function') loadAprobarModule(false);
       break;
   }
 }

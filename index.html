@@ -1221,6 +1221,10 @@
                     <span class="nav-item-icon">📅</span>
                     <span>Cronograma Preventivo</span>
                 </div>
+                <div class="nav-item" onclick="switchModule('aprobar')">
+                    <span class="nav-item-icon">✅</span>
+                    <span>Aprobar Mantenimientos</span>
+                </div>
             </div>
 
             <div class="nav-section">
@@ -1751,6 +1755,17 @@
                                 <div class="cr-spinner"></div>
                                 <p>Haz clic en "Cronograma Preventivo" para cargar el cronograma.</p>
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- APROBAR MANTENIMIENTOS MODULE -->
+                <div id="aprobar" class="module">
+                    <div id="aprobarBody" style="padding:4px 0">
+                        <div style="text-align:center;padding:60px;color:#90a4ae">
+                            <div style="font-size:48px;margin-bottom:12px">✅</div>
+                            <div style="font-size:16px;font-weight:600">Aprobar Mantenimientos</div>
+                            <div style="font-size:13px;margin-top:6px">Cargando reportes preventivos...</div>
                         </div>
                     </div>
                 </div>
@@ -3482,6 +3497,7 @@
     </script>
     <script src="js/documentos.js"></script>
     <script src="js/mantenimientos.js?v=3"></script>
+    <script src="js/aprobar-mantenimientos.js?v=1"></script>
     <script src="js/metrologia.js"></script>
     <script src="js/cronograma.js"></script>
 
