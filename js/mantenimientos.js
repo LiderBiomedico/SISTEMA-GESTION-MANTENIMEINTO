@@ -674,7 +674,7 @@
               script.onload = function() {
                 var iframeHtml2pdf = iframe.contentWindow.html2pdf;
                 iframeHtml2pdf().set({
-                  margin: [10, 8, 10, 8],
+                  margin: 10,
                   filename: filename,
                   image: { type: 'jpeg', quality: 0.95 },
                   html2canvas: {
@@ -698,7 +698,7 @@
               script.onerror = function() {
                 // Fallback: usar html2pdf de la ventana principal (sin estilos iframe)
                 html2pdf().set({
-                  margin: [10, 8, 10, 8],
+                  margin: 10,
                   filename: filename,
                   image: { type: 'jpeg', quality: 0.92 },
                   html2canvas: { scale: 2, useCORS: true, logging: false },
