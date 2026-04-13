@@ -252,23 +252,35 @@
       var selloImg = await pdfDoc.embedPng(selloImgBytes);
       var pages = pdfDoc.getPages();
 
-      // Estampar en la última página
-      var lastPage = pages[pages.length - 1];
-      var pageW = lastPage.getWidth();
-      var pageH = lastPage.getHeight();
+      // Estampar sello en TODAS las páginas para máxima visibilidad
+      var selloW = 160;
+      var selloH = 160;
+      for (var pi = 0; pi < pages.length; pi++) {
+        var pg = pages[pi];
+        var pgW = pg.getWidth();
+        var pgH = pg.getHeight();
 
-      // Sello de 120x120 en esquina inferior derecha
-      var selloSize = 120;
-      var selloX = pageW - selloSize - 40;
-      var selloY = 40;
-
-      lastPage.drawImage(selloImg, {
-        x: selloX,
-        y: selloY,
-        width: selloSize,
-        height: selloSize,
-        opacity: 0.85,
-      });
+        if (pi === 0) {
+          // Primera página: sello grande arriba a la derecha
+          pg.drawImage(selloImg, {
+            x: pgW - selloW - 30,
+            y: pgH - selloH - 100,
+            width: selloW,
+            height: selloH,
+            opacity: 0.75,
+          });
+        } else {
+          // Páginas siguientes: sello más pequeño centrado abajo
+          var smallSize = 130;
+          pg.drawImage(selloImg, {
+            x: pgW - smallSize - 40,
+            y: pgH / 2 - smallSize / 2,
+            width: smallSize,
+            height: smallSize,
+            opacity: 0.6,
+          });
+        }
+      }
 
       var modifiedPdfBytes = await pdfDoc.save();
 
