@@ -671,13 +671,15 @@
               var bodyEl = win.document.body;
               // Usar html2pdf desde la ventana principal pero apuntando al body de la ventana abierta
               html2pdf().set({
-                margin: [8, 6, 8, 6],
+                margin: [10, 8, 10, 8],
                 filename: filename,
-                image: { type: 'jpeg', quality: 0.92 },
+                image: { type: 'jpeg', quality: 0.95 },
                 html2canvas: {
-                  scale: 2,
+                  scale: 2.5,
                   useCORS: true,
-                  logging: false
+                  logging: false,
+                  letterRendering: true,
+                  allowTaint: false
                 },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
                 pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
@@ -773,38 +775,85 @@
   // ══════════════════════════════════════════════════════════════════════
   function buildProtocolPDFHTML(d, proto) {
     var color = '#1565c0';
+    var colorDark = '#0d47a1';
     var codigo = proto.codigo+'-'+d.fecha+'-'+(d.equipo||'').replace(/[^a-zA-Z0-9]/g,'').slice(0,8).toUpperCase();
 
     var inspeccionRows = d.inspeccion.map(function(item, i) {
       var bgCumple = item.cumple === 'Si' ? '#e8f5e9' : item.cumple === 'No' ? '#ffebee' : '#f5f5f5';
       var txtColor = item.cumple === 'Si' ? '#2e7d32' : item.cumple === 'No' ? '#c62828' : '#757575';
-      return '<tr><td style="text-align:center;font-weight:700;width:30px">'+(i+1)+'</td><td style="font-size:10px">'+esc(item.item)+'</td><td style="text-align:center;background:'+bgCumple+';font-weight:700;font-size:10px;color:'+txtColor+'">'+esc(item.cumple)+'</td><td style="font-size:10px;color:#607d8b">'+esc(item.observaciones)+'</td></tr>';
+      var rowBg = i % 2 === 0 ? '#ffffff' : '#f8f9fa';
+      return '<tr style="background:'+rowBg+'"><td style="text-align:center;font-weight:700;width:40px;font-size:11px;color:#455a64">'+(i+1)+'</td><td style="font-size:10.5px;padding:6px 10px;color:#263238">'+esc(item.item)+'</td><td style="text-align:center;background:'+bgCumple+';font-weight:700;font-size:11px;color:'+txtColor+';-webkit-print-color-adjust:exact;print-color-adjust:exact">'+esc(item.cumple)+'</td><td style="font-size:10px;color:#607d8b;padding:6px 10px">'+esc(item.observaciones)+'</td></tr>';
     }).join('');
 
     var pruebasRows = d.pruebas.map(function(pf, i) {
       var bgRes = (pf.resultado==='Pasa'||pf.resultado==='Aplica') ? '#e8f5e9' : pf.resultado==='Falla' ? '#ffebee' : '#f5f5f5';
-      var txtColor = (pf.resultado==='Pasa'||pf.resultado==='Aplica') ? '#2e7d32' : '#c62828';
-      return '<tr><td style="text-align:center;font-weight:700;width:30px">'+(i+1)+'</td><td style="font-size:10px">'+esc(pf.prueba)+'</td><td style="font-size:10px;text-align:center;color:#607d8b">'+esc(pf.valorEsperado)+'</td><td style="font-size:10px;text-align:center;font-weight:700">'+esc(pf.valorMedido)+'</td><td style="text-align:center;background:'+bgRes+';font-weight:700;font-size:10px;color:'+txtColor+'">'+esc(pf.resultado)+'</td><td style="font-size:9px;color:#607d8b">'+esc(pf.observaciones)+'</td></tr>';
+      var txtColor = (pf.resultado==='Pasa'||pf.resultado==='Aplica') ? '#2e7d32' : pf.resultado==='Falla' ? '#c62828' : '#757575';
+      var rowBg = i % 2 === 0 ? '#ffffff' : '#f8f9fa';
+      return '<tr style="background:'+rowBg+'"><td style="text-align:center;font-weight:700;width:40px;font-size:11px;color:#455a64">'+(i+1)+'</td><td style="font-size:10.5px;padding:6px 10px;color:#263238">'+esc(pf.prueba)+'</td><td style="font-size:10px;text-align:center;color:#546e7a;padding:6px 8px">'+esc(pf.valorEsperado)+'</td><td style="font-size:11px;text-align:center;font-weight:700;color:#212121">'+esc(pf.valorMedido)+'</td><td style="text-align:center;background:'+bgRes+';font-weight:700;font-size:11px;color:'+txtColor+';-webkit-print-color-adjust:exact;print-color-adjust:exact">'+esc(pf.resultado)+'</td><td style="font-size:9.5px;color:#607d8b;padding:6px 8px">'+esc(pf.observaciones)+'</td></tr>';
     }).join('');
 
     var estadoColor = d.estadoFinal==='Apto para uso'?'#2e7d32':d.estadoFinal==='Apto con observaciones'?'#f57f17':'#c62828';
 
-    var condPrevias = proto.condicionesPrevias.map(function(c){ return '<li>'+esc(c)+'</li>'; }).join('');
+    var condPrevias = proto.condicionesPrevias.map(function(c){ return '<li style="margin-bottom:3px;line-height:1.4">'+esc(c)+'</li>'; }).join('');
 
-    return '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>MANTENIMIENTO PREVENTIVO - '+esc(proto.nombre)+'</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:10px;color:#212121;padding:12px;background:white}.hdr{display:flex;justify-content:space-between;align-items:flex-start;border:2px solid '+color+';border-radius:4px;padding:8px 12px;margin-bottom:8px;background:#e3f2fd}.hdr-hosp{font-weight:800;font-size:12px;color:#212121;text-transform:uppercase}.hdr-dept{font-size:10px;font-weight:600;color:#263238;margin-top:2px}.hdr-addr{font-size:9px;color:#607d8b;margin-top:1px}.hdr-center{text-align:center;flex:1}.hdr-title{font-weight:800;font-size:12px;color:'+color+';text-transform:uppercase;letter-spacing:.3px}.hdr-sub{font-weight:700;font-size:10px;color:#263238;margin-top:2px}.hdr-code{font-weight:600;font-size:9px;color:#607d8b;margin-top:2px}.hdr-right{text-align:right;font-size:9px;color:#607d8b;white-space:nowrap}.sec{background:'+color+';color:white;font-weight:700;padding:4px 8px;font-size:10px;text-transform:uppercase;border-radius:2px;margin:6px 0 0;-webkit-print-color-adjust:exact;print-color-adjust:exact}.sec-dark{background:#263238}.tbl{width:100%;border-collapse:collapse;font-size:10px;margin-top:1px}.tbl td,.tbl th{border:1px solid #b0bec5;padding:3px 6px;vertical-align:top}.tbl th{background:#eceff1;font-weight:700;font-size:9px;text-transform:uppercase;color:#37474f;-webkit-print-color-adjust:exact;print-color-adjust:exact}.lb{background:#eceff1;font-weight:700;font-size:9px;color:#37474f;text-transform:uppercase;width:28%;white-space:nowrap;-webkit-print-color-adjust:exact;print-color-adjust:exact}.vl{font-size:10px;color:#212121}.cond-box{background:#fff8e1;border:1px solid #ffd54f;border-radius:3px;padding:6px 10px;margin:4px 0;font-size:9px;color:#795548}.cond-box ul{margin:0;padding-left:14px}.cond-box li{margin-bottom:2px}.firmas{display:flex;gap:16px;margin-top:14px;padding-top:8px;border-top:1px solid #e0e0e0}.firma{flex:1;text-align:center;font-size:9px;color:#607d8b}.firma-line{border-bottom:1px solid #263238;height:32px;margin-bottom:3px}.firma-name{font-weight:700;color:#212121;margin-top:1px;font-size:10px}.firma-cargo{font-size:9px;color:#607d8b}.firma img{max-height:50px;margin-bottom:2px}.estado-badge{display:inline-block;padding:3px 12px;border-radius:12px;font-weight:700;font-size:10px;color:white;-webkit-print-color-adjust:exact;print-color-adjust:exact}.footer{margin-top:8px;font-size:8px;color:#9e9e9e;border-top:1px solid #e0e0e0;padding-top:4px;text-align:center}.nota{background:#f5f5f5;border:1px solid #e0e0e0;border-radius:3px;padding:6px 10px;font-size:9px;color:#607d8b;margin-top:8px;font-style:italic}.btn-print{display:block;margin:14px auto 4px;padding:10px 32px;background:'+color+';color:white;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;font-family:Arial,sans-serif;letter-spacing:.3px}.btn-print:hover{opacity:.85}@media print{@page{size:A4 portrait;margin:8mm}body{padding:0}.btn-print{display:none!important}}</style></head><body>'
-    + '<div class="hdr"><div><div class="hdr-hosp">HOSPITAL SUSANA LÓPEZ DE VALENCIA E.S.E</div><div class="hdr-dept">GESTIÓN DEL AMBIENTE Y LA TECNOLOGÍA</div><div class="hdr-addr">Calle 15 N°17A-196 Tel. 8217190</div></div><div class="hdr-center"><div class="hdr-title">FORMATO DE MANTENIMIENTO PREVENTIVO Y VERIFICACIÓN FUNCIONAL</div><div class="hdr-sub">'+esc(proto.nombre)+'</div><div class="hdr-code">Código: '+esc(codigo)+'</div></div><div class="hdr-right"><div>Fecha: '+fmt(d.fecha)+'</div><div>Duración: '+esc(d.duracion)+'</div><div>Página 1 de 1</div></div></div>'
-    + '<div class="sec">🏥 DATOS DEL EQUIPO</div><table class="tbl"><tr><td class="lb">Fecha</td><td class="vl">'+fmt(d.fecha)+'</td><td class="lb">Servicio / Área</td><td class="vl">'+esc(d.servicio)+'</td></tr><tr><td class="lb">Marca</td><td class="vl">'+esc(d.marca)+'</td><td class="lb">Modelo</td><td class="vl">'+esc(d.modelo)+'</td></tr><tr><td class="lb">No. Inventario</td><td class="vl">'+esc(d.placa)+'</td><td class="lb">No. Serie</td><td class="vl">'+esc(d.serie)+'</td></tr><tr><td class="lb">Ubicación</td><td class="vl">'+esc(d.servicio)+'</td><td class="lb">Frecuencia</td><td class="vl">'+esc(d.frecuencia)+'</td></tr><tr><td class="lb">Responsable</td><td class="vl">'+esc(d.tecnico)+'</td><td class="lb">Clasificación Riesgo</td><td class="vl">'+esc(d.riesgo)+'</td></tr></table>'
-    + '<div class="sec sec-dark">⚠️ CONDICIONES PREVIAS Y SEGURIDAD</div><div class="cond-box"><ul>'+condPrevias+'</ul><div style="margin-top:4px;font-weight:700;color:'+(d.condicionesOk?'#2e7d32':'#c62828')+'">'+(d.condicionesOk?'✅ Condiciones verificadas y cumplidas':'⚠️ Condiciones no verificadas')+'</div></div>'
-    + '<div class="sec">🔍 INSPECCIÓN VISUAL Y LIMPIEZA</div>'
-    + (d.fotoInicio ? '<div style="margin:4px 0;text-align:center"><div style="font-size:9px;font-weight:700;color:#37474f;margin-bottom:3px">📸 Foto inicial del equipo</div><img src="'+d.fotoInicio+'" style="max-width:100%;max-height:180px;border:1px solid #b0bec5;border-radius:3px" alt="Foto inicial"></div>' : '')
-    + '<table class="tbl"><tr><th style="width:30px">No.</th><th>Ítem a verificar</th><th style="width:60px">Cumple</th><th style="width:150px">Observaciones</th></tr>'+inspeccionRows+'</table>'
-    + '<div class="sec">📐 EQUIPO DE VERIFICACIÓN UTILIZADO</div><table class="tbl"><tr><td class="lb">Equipo utilizado</td><td class="vl">'+esc(d.equipoVerificacion)+'</td><td class="lb">Marca / Modelo</td><td class="vl">'+esc(d.marcaPatron)+'</td></tr><tr><td class="lb">No. Serie patrón</td><td class="vl">'+esc(d.seriePatron)+'</td><td class="lb">Certificado hasta</td><td class="vl">'+fmt(d.certificadoVigente)+'</td></tr><tr><td class="lb">Tolerancia</td><td class="vl" colspan="3">'+esc(d.tolerancia)+'</td></tr></table>'
-    + '<div class="sec">⚡ PRUEBA FUNCIONAL DEL REGULADOR</div>'
-    + (d.fotoMitad ? '<div style="margin:4px 0;text-align:center"><div style="font-size:9px;font-weight:700;color:#37474f;margin-bottom:3px">📸 Foto durante el procedimiento</div><img src="'+d.fotoMitad+'" style="max-width:100%;max-height:180px;border:1px solid #b0bec5;border-radius:3px" alt="Foto procedimiento"></div>' : '')
-    + '<table class="tbl"><tr><th style="width:30px">No.</th><th>Prueba</th><th style="width:100px">Valor esperado</th><th style="width:80px">Medido</th><th style="width:60px">Result.</th><th style="width:120px">Obs.</th></tr>'+pruebasRows+'</table>'
-    + '<div class="sec sec-dark">📋 RESULTADO FINAL DEL MANTENIMIENTO</div><table class="tbl"><tr><td class="lb">Estado final</td><td class="vl"><span class="estado-badge" style="background:'+estadoColor+'">'+esc(d.estadoFinal)+'</span></td></tr><tr><td class="lb">Acciones realizadas</td><td class="vl">'+(d.acciones.length?d.acciones.map(function(a){return esc(a)}).join(' · '):'—')+'</td></tr><tr><td class="lb">Observaciones técnicas</td><td class="vl">'+esc(d.observaciones)+'</td></tr><tr><td class="lb">Recomendaciones</td><td class="vl">'+esc(d.recomendaciones)+'</td></tr><tr><td class="lb">Duración total del mantenimiento</td><td class="vl" style="font-weight:700;font-size:11px;color:'+color+'">⏱️ '+esc(d.duracion)+'</td></tr></table>'
-    + (d.fotoFinal ? '<div style="margin:6px 0;text-align:center"><div style="font-size:9px;font-weight:700;color:#37474f;margin-bottom:3px">📸 Foto final del equipo</div><img src="'+d.fotoFinal+'" style="max-width:100%;max-height:180px;border:1px solid #b0bec5;border-radius:3px" alt="Foto final"></div>' : '')
-    + '<div class="firmas"><div class="firma">'+(d.firmaEjecuto?'<img src="'+d.firmaEjecuto+'" alt="Firma">':'<div class="firma-line"></div>')+'<div>Elaboró / Ejecutó</div><div class="firma-name">'+esc(d.nombreEjecuto)+'</div><div class="firma-cargo">'+esc(d.cargoEjecuto)+'</div></div><div class="firma">'+(d.firmaRecibio?'<img src="'+d.firmaRecibio+'" alt="Firma">':'<div class="firma-line"></div>')+'<div>Recibió / Verificó</div><div class="firma-name">'+esc(d.nombreRecibio)+'</div><div class="firma-cargo">'+esc(d.cargoRecibio)+'</div></div></div>'
+    var css = '*{box-sizing:border-box;margin:0;padding:0}'
+      + 'body{font-family:"Segoe UI",Arial,Helvetica,sans-serif;font-size:10.5px;color:#212121;padding:16px 20px;background:white;line-height:1.35}'
+      + '.hdr{display:flex;justify-content:space-between;align-items:stretch;border:2.5px solid '+color+';border-radius:6px;overflow:hidden;margin-bottom:12px}'
+      + '.hdr-left{padding:10px 14px;background:white;min-width:210px}'
+      + '.hdr-hosp{font-weight:800;font-size:12.5px;color:#1a237e;text-transform:uppercase;letter-spacing:.2px}'
+      + '.hdr-dept{font-size:10px;font-weight:600;color:#37474f;margin-top:3px}'
+      + '.hdr-addr{font-size:9px;color:#78909c;margin-top:2px}'
+      + '.hdr-center{text-align:center;flex:1;padding:10px 14px;background:linear-gradient(180deg,#e8eaf6 0%,#e3f2fd 100%);border-left:2.5px solid '+color+';border-right:2.5px solid '+color+';-webkit-print-color-adjust:exact;print-color-adjust:exact}'
+      + '.hdr-title{font-weight:800;font-size:13px;color:'+color+';text-transform:uppercase;letter-spacing:.4px;line-height:1.3}'
+      + '.hdr-sub{font-weight:700;font-size:11px;color:#263238;margin-top:4px}'
+      + '.hdr-code{font-weight:600;font-size:9px;color:#607d8b;margin-top:3px;letter-spacing:.2px}'
+      + '.hdr-right{text-align:right;font-size:9.5px;color:#455a64;white-space:nowrap;padding:10px 14px;background:white;min-width:130px}'
+      + '.hdr-right div{margin-bottom:2px}'
+      + '.sec{color:white;font-weight:700;padding:6px 12px;font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;border-radius:4px;margin:10px 0 2px;-webkit-print-color-adjust:exact;print-color-adjust:exact;display:flex;align-items:center;gap:6px}'
+      + '.sec-blue{background:'+color+'}'
+      + '.sec-dark{background:#37474f}'
+      + '.sec-icon{font-size:13px;line-height:1}'
+      + '.tbl{width:100%;border-collapse:collapse;font-size:10.5px;margin-top:0;border:1px solid #cfd8dc;border-radius:4px;overflow:hidden}'
+      + '.tbl td,.tbl th{border:1px solid #cfd8dc;padding:5px 10px;vertical-align:middle}'
+      + '.tbl th{background:#eceff1;font-weight:700;font-size:9.5px;text-transform:uppercase;color:#37474f;letter-spacing:.3px;padding:7px 10px;-webkit-print-color-adjust:exact;print-color-adjust:exact}'
+      + '.lb{background:#eceff1;font-weight:700;font-size:9.5px;color:#37474f;text-transform:uppercase;width:26%;white-space:nowrap;-webkit-print-color-adjust:exact;print-color-adjust:exact;letter-spacing:.2px}'
+      + '.vl{font-size:10.5px;color:#212121}'
+      + '.cond-box{background:#fffde7;border:1.5px solid #ffe082;border-radius:6px;padding:10px 14px;margin:6px 0;font-size:10px;color:#5d4037}'
+      + '.cond-box ul{margin:0;padding-left:16px}'
+      + '.cond-check{margin-top:6px;font-weight:700;font-size:10.5px;padding:4px 0}'
+      + '.foto-wrap{margin:8px 0;text-align:center}'
+      + '.foto-label{font-size:9.5px;font-weight:700;color:#37474f;margin-bottom:5px;text-transform:uppercase;letter-spacing:.3px}'
+      + '.foto-frame{display:inline-block;border:2px solid #cfd8dc;border-radius:6px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);max-width:90%}'
+      + '.foto-frame img{display:block;max-width:100%;max-height:200px}'
+      + '.firmas{display:flex;gap:24px;margin-top:16px;padding-top:12px;border-top:2px solid #e0e0e0}'
+      + '.firma{flex:1;text-align:center;font-size:9.5px;color:#607d8b}'
+      + '.firma-sig{min-height:50px;display:flex;align-items:flex-end;justify-content:center;margin-bottom:4px;border-bottom:2px solid #37474f;padding-bottom:4px}'
+      + '.firma-sig img{max-height:55px}'
+      + '.firma-role{font-size:9px;color:#78909c;margin-top:2px}'
+      + '.firma-name{font-weight:700;color:#212121;margin-top:2px;font-size:11px}'
+      + '.firma-cargo{font-size:9.5px;color:#546e7a}'
+      + '.estado-badge{display:inline-block;padding:4px 16px;border-radius:14px;font-weight:700;font-size:11px;color:white;letter-spacing:.3px;-webkit-print-color-adjust:exact;print-color-adjust:exact}'
+      + '.nota{background:#f5f5f5;border:1.5px solid #e0e0e0;border-radius:6px;padding:8px 14px;font-size:9.5px;color:#607d8b;margin-top:12px;line-height:1.4}'
+      + '.nota strong{color:#455a64}'
+      + '.footer{margin-top:10px;font-size:8.5px;color:#9e9e9e;border-top:1.5px solid #e0e0e0;padding-top:6px;text-align:center;letter-spacing:.2px}'
+      + '.btn-print{display:block;margin:16px auto 6px;padding:10px 36px;background:'+color+';color:white;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:"Segoe UI",Arial,sans-serif;letter-spacing:.4px;box-shadow:0 2px 8px rgba(21,101,192,0.3)}'
+      + '.btn-print:hover{opacity:.85}'
+      + '@media print{@page{size:A4 portrait;margin:8mm}body{padding:0}.btn-print{display:none!important}}';
+
+    return '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>MANTENIMIENTO PREVENTIVO - '+esc(proto.nombre)+'</title><style>'+css+'</style></head><body>'
+    + '<div class="hdr"><div class="hdr-left"><div class="hdr-hosp">HOSPITAL SUSANA LÓPEZ DE VALENCIA E.S.E</div><div class="hdr-dept">GESTIÓN DEL AMBIENTE Y LA TECNOLOGÍA</div><div class="hdr-addr">Calle 15 N°17A-196 Tel. 8217190</div></div><div class="hdr-center"><div class="hdr-title">FORMATO DE MANTENIMIENTO PREVENTIVO Y VERIFICACIÓN FUNCIONAL</div><div class="hdr-sub">'+esc(proto.nombre)+'</div><div class="hdr-code">Código: '+esc(codigo)+'</div></div><div class="hdr-right"><div>Fecha: '+fmt(d.fecha)+'</div><div>Duración: '+esc(d.duracion)+'</div><div>Página 1 de 1</div></div></div>'
+    + '<div class="sec sec-blue"><span class="sec-icon">🏥</span> DATOS DEL EQUIPO</div><table class="tbl"><tr><td class="lb">Fecha</td><td class="vl">'+fmt(d.fecha)+'</td><td class="lb">Servicio / Área</td><td class="vl">'+esc(d.servicio)+'</td></tr><tr><td class="lb">Marca</td><td class="vl">'+esc(d.marca)+'</td><td class="lb">Modelo</td><td class="vl">'+esc(d.modelo)+'</td></tr><tr><td class="lb">No. Inventario</td><td class="vl">'+esc(d.placa)+'</td><td class="lb">No. Serie</td><td class="vl">'+esc(d.serie)+'</td></tr><tr><td class="lb">Ubicación</td><td class="vl">'+esc(d.servicio)+'</td><td class="lb">Frecuencia</td><td class="vl">'+esc(d.frecuencia)+'</td></tr><tr><td class="lb">Responsable</td><td class="vl">'+esc(d.tecnico)+'</td><td class="lb">Clasificación Riesgo</td><td class="vl">'+esc(d.riesgo)+'</td></tr></table>'
+    + '<div class="sec sec-dark"><span class="sec-icon">⚠️</span> CONDICIONES PREVIAS Y SEGURIDAD</div><div class="cond-box"><ul>'+condPrevias+'</ul><div class="cond-check" style="color:'+(d.condicionesOk?'#2e7d32':'#c62828')+'">'+(d.condicionesOk?'✅ Condiciones verificadas y cumplidas':'⚠️ Condiciones no verificadas')+'</div></div>'
+    + '<div class="sec sec-blue"><span class="sec-icon">🔍</span> INSPECCIÓN VISUAL Y LIMPIEZA</div>'
+    + (d.fotoInicio ? '<div class="foto-wrap"><div class="foto-label">📸 Foto inicial del equipo</div><div class="foto-frame"><img src="'+d.fotoInicio+'" alt="Foto inicial"></div></div>' : '')
+    + '<table class="tbl"><tr><th style="width:40px">NO.</th><th>ÍTEM A VERIFICAR</th><th style="width:70px">CUMPLE</th><th style="width:160px">OBSERVACIONES</th></tr>'+inspeccionRows+'</table>'
+    + '<div class="sec sec-blue"><span class="sec-icon">📐</span> EQUIPO DE VERIFICACIÓN UTILIZADO</div><table class="tbl"><tr><td class="lb">Equipo utilizado</td><td class="vl">'+esc(d.equipoVerificacion)+'</td><td class="lb">Marca / Modelo</td><td class="vl">'+esc(d.marcaPatron)+'</td></tr><tr><td class="lb">No. Serie patrón</td><td class="vl">'+esc(d.seriePatron)+'</td><td class="lb">Certificado hasta</td><td class="vl">'+fmt(d.certificadoVigente)+'</td></tr><tr><td class="lb">Tolerancia</td><td class="vl" colspan="3">'+esc(d.tolerancia)+'</td></tr></table>'
+    + '<div class="sec sec-blue"><span class="sec-icon">⚡</span> PRUEBA FUNCIONAL DEL REGULADOR</div>'
+    + (d.fotoMitad ? '<div class="foto-wrap"><div class="foto-label">📸 Foto durante el procedimiento</div><div class="foto-frame"><img src="'+d.fotoMitad+'" alt="Foto procedimiento"></div></div>' : '')
+    + '<table class="tbl"><tr><th style="width:40px">NO.</th><th>PRUEBA</th><th style="width:100px">VALOR ESPERADO</th><th style="width:80px">MEDIDO</th><th style="width:70px">RESULT.</th><th style="width:120px">OBS.</th></tr>'+pruebasRows+'</table>'
+    + '<div class="sec sec-dark"><span class="sec-icon">📋</span> RESULTADO FINAL DEL MANTENIMIENTO</div><table class="tbl"><tr><td class="lb">Estado final</td><td class="vl"><span class="estado-badge" style="background:'+estadoColor+'">'+esc(d.estadoFinal)+'</span></td></tr><tr><td class="lb">Acciones realizadas</td><td class="vl">'+(d.acciones.length?d.acciones.map(function(a){return esc(a)}).join(' · '):'—')+'</td></tr><tr><td class="lb">Observaciones técnicas</td><td class="vl">'+esc(d.observaciones)+'</td></tr><tr><td class="lb">Recomendaciones</td><td class="vl">'+esc(d.recomendaciones)+'</td></tr><tr><td class="lb">Duración total del mantenimiento</td><td class="vl" style="font-weight:700;font-size:12px;color:'+color+'">⏱️ '+esc(d.duracion)+'</td></tr></table>'
+    + (d.fotoFinal ? '<div class="foto-wrap"><div class="foto-label">📸 Foto final del equipo</div><div class="foto-frame"><img src="'+d.fotoFinal+'" alt="Foto final"></div></div>' : '')
+    + '<div class="firmas"><div class="firma"><div class="firma-sig">'+(d.firmaEjecuto?'<img src="'+d.firmaEjecuto+'" alt="Firma">':'')+'</div><div class="firma-role">Elaboró / Ejecutó</div><div class="firma-name">'+esc(d.nombreEjecuto)+'</div><div class="firma-cargo">'+esc(d.cargoEjecuto)+'</div></div><div class="firma"><div class="firma-sig">'+(d.firmaRecibio?'<img src="'+d.firmaRecibio+'" alt="Firma">':'')+'</div><div class="firma-role">Recibió / Verificó</div><div class="firma-name">'+esc(d.nombreRecibio)+'</div><div class="firma-cargo">'+esc(d.cargoRecibio)+'</div></div></div>'
     + '<div class="nota"><strong>Nota técnica:</strong> Este formato está diseñado para mantenimiento preventivo rutinario y verificación funcional externa. No autoriza apertura, ajuste interno o reparación del regulador. Cualquier desviación debe documentarse y remitirse a soporte técnico autorizado.</div>'
     + '<button id="btnPrint" class="btn-print">🖨️ Imprimir Reporte</button>'
     + '<div class="footer">HSLV · Sistema de Gestión de la Tecnología · '+esc(proto.codigo)+' · '+esc(codigo)+' · Generado: '+new Date().toLocaleString('es-CO')+'</div>'
@@ -817,12 +866,40 @@
   // ══════════════════════════════════════════════════════════════════════
   function buildCorrectiveReportHTML(d) {
     var color = '#b71c1c';
+    var colorLight = '#ffebee';
     var codigo = 'CORR-'+d.fecha+'-'+(d.equipo||'').replace(/[^a-zA-Z0-9]/g,'').slice(0,8).toUpperCase();
     var row = function(l,v) { return v ? '<tr><td class="lb">'+l+'</td><td class="vl">'+esc(String(v))+'</td></tr>' : ''; };
-    var sec = function(t,rows) { return '<div class="sec" style="background:'+color+'">'+t+'</div><table class="tbl">'+rows+'</table>'; };
+    var sec = function(t,rows) { return '<div class="sec"><span class="sec-icon">'+t.split(' ')[0]+'</span> '+t.split(' ').slice(1).join(' ')+'</div><table class="tbl">'+rows+'</table>'; };
 
-    return '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>REPORTE DE MANTENIMIENTO CORRECTIVO</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:11px;color:#212121;padding:14px;background:white}.hdr{display:flex;justify-content:space-between;align-items:flex-start;border:2px solid '+color+';border-radius:4px;padding:10px 14px;margin-bottom:10px;background:#fce4ec}.hdr-hosp{font-weight:800;font-size:13px;color:#212121;text-transform:uppercase}.hdr-dept{font-size:11px;font-weight:600;color:#263238;margin-top:2px}.hdr-addr{font-size:10px;color:#607d8b;margin-top:2px}.hdr-center{text-align:center;flex:1}.hdr-title{font-weight:800;font-size:14px;color:'+color+';text-transform:uppercase;letter-spacing:.5px}.hdr-code{font-weight:700;font-size:11px;color:#263238;margin-top:4px}.hdr-right{text-align:right;font-size:10px;color:#607d8b;white-space:nowrap}.sec{background:'+color+';color:white;font-weight:700;padding:5px 10px;font-size:11px;text-transform:uppercase;border-radius:3px;margin:8px 0 0;-webkit-print-color-adjust:exact;print-color-adjust:exact}.tbl{width:100%;border-collapse:collapse;font-size:11px;margin-top:1px}.tbl td{border:1px solid #b0bec5;padding:4px 8px;vertical-align:top}.lb{background:#eceff1;font-weight:700;font-size:10px;color:#37474f;text-transform:uppercase;width:30%;white-space:nowrap;-webkit-print-color-adjust:exact;print-color-adjust:exact}.vl{font-size:11px;color:#212121;min-height:18px}.firmas{display:flex;gap:20px;margin-top:22px;padding-top:10px;border-top:1px solid #e0e0e0}.firma{flex:1;text-align:center;font-size:10px;color:#607d8b}.firma-line{border-bottom:1px solid #263238;height:38px;margin-bottom:4px}.firma-name{font-weight:700;color:#212121;margin-top:2px;font-size:11px}.footer{margin-top:12px;font-size:9px;color:#9e9e9e;border-top:1px solid #e0e0e0;padding-top:5px;text-align:center}.btn-print{display:block;margin:14px auto 4px;padding:10px 32px;background:'+color+';color:white;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;font-family:Arial,sans-serif;letter-spacing:.3px}.btn-print:hover{opacity:.85}@media print{@page{size:A4 portrait;margin:10mm}body{padding:0}.btn-print{display:none!important}}</style></head><body>'
-    + '<div class="hdr"><div><div class="hdr-hosp">HOSPITAL SUSANA LÓPEZ DE VALENCIA E.S.E</div><div class="hdr-dept">GESTIÓN DEL AMBIENTE Y LA TECNOLOGÍA</div><div class="hdr-addr">Calle 15 N°17A-196 Tel. 8217190</div></div><div class="hdr-center"><div class="hdr-title">🔧 REPORTE DE MANTENIMIENTO CORRECTIVO</div><div class="hdr-code">Código: '+esc(codigo)+'</div></div><div class="hdr-right"><div>Fecha: '+fmt(d.fecha)+'</div><div>Página 1 de 1</div></div></div>'
+    var css = '*{box-sizing:border-box;margin:0;padding:0}'
+      + 'body{font-family:"Segoe UI",Arial,Helvetica,sans-serif;font-size:11px;color:#212121;padding:16px 20px;background:white;line-height:1.35}'
+      + '.hdr{display:flex;justify-content:space-between;align-items:stretch;border:2.5px solid '+color+';border-radius:6px;overflow:hidden;margin-bottom:12px}'
+      + '.hdr-left{padding:10px 14px;background:white;min-width:210px}'
+      + '.hdr-hosp{font-weight:800;font-size:12.5px;color:#1a237e;text-transform:uppercase;letter-spacing:.2px}'
+      + '.hdr-dept{font-size:10px;font-weight:600;color:#37474f;margin-top:3px}'
+      + '.hdr-addr{font-size:9px;color:#78909c;margin-top:2px}'
+      + '.hdr-center{text-align:center;flex:1;padding:10px 14px;background:linear-gradient(180deg,#ffebee 0%,#fce4ec 100%);border-left:2.5px solid '+color+';border-right:2.5px solid '+color+';-webkit-print-color-adjust:exact;print-color-adjust:exact}'
+      + '.hdr-title{font-weight:800;font-size:13px;color:'+color+';text-transform:uppercase;letter-spacing:.4px;line-height:1.3}'
+      + '.hdr-code{font-weight:700;font-size:10px;color:#263238;margin-top:4px}'
+      + '.hdr-right{text-align:right;font-size:9.5px;color:#455a64;white-space:nowrap;padding:10px 14px;background:white;min-width:130px}'
+      + '.hdr-right div{margin-bottom:2px}'
+      + '.sec{background:'+color+';color:white;font-weight:700;padding:6px 12px;font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;border-radius:4px;margin:10px 0 2px;-webkit-print-color-adjust:exact;print-color-adjust:exact;display:flex;align-items:center;gap:6px}'
+      + '.sec-icon{font-size:13px;line-height:1}'
+      + '.tbl{width:100%;border-collapse:collapse;font-size:11px;margin-top:0;border:1px solid #cfd8dc}'
+      + '.tbl td{border:1px solid #cfd8dc;padding:5px 10px;vertical-align:middle}'
+      + '.lb{background:#eceff1;font-weight:700;font-size:9.5px;color:#37474f;text-transform:uppercase;width:30%;white-space:nowrap;-webkit-print-color-adjust:exact;print-color-adjust:exact;letter-spacing:.2px}'
+      + '.vl{font-size:11px;color:#212121;min-height:18px}'
+      + '.firmas{display:flex;gap:24px;margin-top:20px;padding-top:12px;border-top:2px solid #e0e0e0}'
+      + '.firma{flex:1;text-align:center;font-size:10px;color:#607d8b}'
+      + '.firma-line{border-bottom:2px solid #37474f;height:40px;margin-bottom:4px}'
+      + '.firma-name{font-weight:700;color:#212121;margin-top:2px;font-size:11px}'
+      + '.footer{margin-top:12px;font-size:8.5px;color:#9e9e9e;border-top:1.5px solid #e0e0e0;padding-top:6px;text-align:center;letter-spacing:.2px}'
+      + '.btn-print{display:block;margin:16px auto 6px;padding:10px 36px;background:'+color+';color:white;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:"Segoe UI",Arial,sans-serif;letter-spacing:.4px;box-shadow:0 2px 8px rgba(183,28,28,0.3)}'
+      + '.btn-print:hover{opacity:.85}'
+      + '@media print{@page{size:A4 portrait;margin:10mm}body{padding:0}.btn-print{display:none!important}}';
+
+    return '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>REPORTE DE MANTENIMIENTO CORRECTIVO</title><style>'+css+'</style></head><body>'
+    + '<div class="hdr"><div class="hdr-left"><div class="hdr-hosp">HOSPITAL SUSANA LÓPEZ DE VALENCIA E.S.E</div><div class="hdr-dept">GESTIÓN DEL AMBIENTE Y LA TECNOLOGÍA</div><div class="hdr-addr">Calle 15 N°17A-196 Tel. 8217190</div></div><div class="hdr-center"><div class="hdr-title">🔧 REPORTE DE MANTENIMIENTO CORRECTIVO</div><div class="hdr-code">Código: '+esc(codigo)+'</div></div><div class="hdr-right"><div>Fecha: '+fmt(d.fecha)+'</div><div>Página 1 de 1</div></div></div>'
     + sec('🏥 DATOS DEL EQUIPO', row('Nombre del Equipo',d.equipo)+row('Placa / Inventario',d.placa)+row('Marca',d.marca)+row('Modelo',d.modelo)+row('Serie',d.serie)+row('Servicio / Ubicación',d.servicio)+row('Clasificación de Riesgo',d.riesgo))
     + sec('📅 DATOS DE EJECUCIÓN', row('Fecha de Ejecución',fmt(d.fecha))+row('Técnico Responsable',d.tecnico)+row('Duración',d.duracion?d.duracion+' horas':'')+row('Costo',d.costo?'$ '+Number(d.costo).toLocaleString('es-CO'):'')+row('Estado',d.estado))
     + sec('🔧 ANÁLISIS CORRECTIVO', row('Falla Reportada',d.fallaReportada)+row('Diagnóstico Técnico',d.diagnostico)+row('Acción Tomada',d.accionTomada)+row('Causa Raíz',d.causaRaiz)+row('Repuestos Cambiados',d.repuestos)+row('Hallazgos',d.hallazgos))
