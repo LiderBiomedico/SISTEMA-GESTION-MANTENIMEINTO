@@ -643,65 +643,79 @@
       // Quitar script y botón imprimir del HTML
       var cleanHTML = htmlReport.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<button[^>]*id="btnPrint"[^>]*>[\s\S]*?<\/button>/gi, '');
 
-      // Generar PDF: usar contenedor oculto en el mismo documento para preservar estilos CSS
+      // Generar PDF: usar iframe oculto — html2canvas corre DENTRO del iframe para capturar estilos
       var pdfBlob = await new Promise(function(resolve, reject) {
-        // Extraer el CSS del HTML generado
-        var styleMatch = cleanHTML.match(/<style>([\s\S]*?)<\/style>/);
-        var cssText = styleMatch ? styleMatch[1] : '';
-        var bodyMatch = cleanHTML.match(/<body[^>]*>([\s\S]*)<\/body>/);
-        var bodyContent = bodyMatch ? bodyMatch[1] : cleanHTML;
+        var iframe = document.createElement('iframe');
+        iframe.style.cssText = 'position:fixed;left:0;top:0;width:794px;height:1123px;opacity:0;pointer-events:none;z-index:-1;border:none;';
+        document.body.appendChild(iframe);
 
-        // Crear contenedor oculto en el mismo documento
-        var container = document.createElement('div');
-        container.id = 'pdfRenderContainer';
-        container.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;background:white;z-index:-1;font-family:"Segoe UI",Arial,Helvetica,sans-serif;font-size:10.5px;color:#212121;padding:16px 20px;line-height:1.35;box-sizing:border-box;';
+        var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+        iframeDoc.open();
+        iframeDoc.write(cleanHTML);
+        iframeDoc.close();
 
-        // Inyectar estilos directamente
-        var styleEl = document.createElement('style');
-        styleEl.id = 'pdfRenderStyles';
-        styleEl.textContent = cssText;
-        document.head.appendChild(styleEl);
-
-        container.innerHTML = bodyContent;
-        document.body.appendChild(container);
-
-        // Esperar que las imágenes carguen
-        var imgs = container.querySelectorAll('img');
-        var imgPromises = Array.from(imgs).map(function(img) {
-          if (img.complete && img.naturalWidth > 0) return Promise.resolve();
-          return new Promise(function(res) {
-            img.onload = res;
-            img.onerror = res;
-            setTimeout(res, 5000);
-          });
-        });
-
-        Promise.all(imgPromises).then(function() {
-          setTimeout(function() {
-            html2pdf().set({
-              margin: [10, 8, 10, 8],
-              filename: filename,
-              image: { type: 'jpeg', quality: 0.95 },
-              html2canvas: {
-                scale: 2,
-                useCORS: true,
-                logging: false,
-                letterRendering: true,
-                allowTaint: false,
-                backgroundColor: '#ffffff'
-              },
-              jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-              pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-            }).from(container).outputPdf('blob').then(function(blob) {
-              document.body.removeChild(container);
-              document.head.removeChild(styleEl);
-              resolve(blob);
-            }).catch(function(err) {
-              try { document.body.removeChild(container); document.head.removeChild(styleEl); } catch(e){}
-              reject(err);
+        // Esperar renderizado completo del HTML dentro del iframe
+        setTimeout(function() {
+          var imgs = iframeDoc.querySelectorAll('img');
+          var imgPromises = Array.from(imgs).map(function(img) {
+            if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+            return new Promise(function(res) {
+              img.onload = res;
+              img.onerror = res;
+              setTimeout(res, 5000);
             });
-          }, 1200);
-        });
+          });
+
+          Promise.all(imgPromises).then(function() {
+            setTimeout(function() {
+              // Cargar html2pdf.bundle DENTRO del iframe para que capture los estilos del iframe
+              var script = iframeDoc.createElement('script');
+              script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js';
+              script.onload = function() {
+                var iframeHtml2pdf = iframe.contentWindow.html2pdf;
+                iframeHtml2pdf().set({
+                  margin: [10, 8, 10, 8],
+                  filename: filename,
+                  image: { type: 'jpeg', quality: 0.95 },
+                  html2canvas: {
+                    scale: 2,
+                    useCORS: true,
+                    logging: false,
+                    letterRendering: true,
+                    allowTaint: true,
+                    backgroundColor: '#ffffff'
+                  },
+                  jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                  pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+                }).from(iframeDoc.body).outputPdf('blob').then(function(blob) {
+                  document.body.removeChild(iframe);
+                  resolve(blob);
+                }).catch(function(err) {
+                  document.body.removeChild(iframe);
+                  reject(err);
+                });
+              };
+              script.onerror = function() {
+                // Fallback: usar html2pdf de la ventana principal (sin estilos iframe)
+                html2pdf().set({
+                  margin: [10, 8, 10, 8],
+                  filename: filename,
+                  image: { type: 'jpeg', quality: 0.92 },
+                  html2canvas: { scale: 2, useCORS: true, logging: false },
+                  jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                  pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+                }).from(iframeDoc.body).outputPdf('blob').then(function(blob) {
+                  document.body.removeChild(iframe);
+                  resolve(blob);
+                }).catch(function(err) {
+                  document.body.removeChild(iframe);
+                  reject(err);
+                });
+              };
+              iframeDoc.head.appendChild(script);
+            }, 1000);
+          });
+        }, 800);
       });
 
       // Convertir blob a base64 para enviar al backend
