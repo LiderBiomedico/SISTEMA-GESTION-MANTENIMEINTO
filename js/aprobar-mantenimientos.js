@@ -55,12 +55,19 @@
           var servicio = f['Servicio']||f['SERVICIO']||'';
           var prevs = f[FIELD_PREV]||[];
           var aprobados = f[FIELD_APROBADO]||[];
-          var aprobadosNames = aprobados.map(function(a){ return a.filename||''; });
+          // Crear un Set con los nombres base de los aprobados (sin _APROBADO.pdf)
+          var aprobadosBaseNames = {};
+          aprobados.forEach(function(a) {
+            var name = a.filename||'';
+            // Extraer el nombre base quitando _APROBADO.pdf
+            var baseName = name.replace(/_APROBADO\.pdf$/i, '.pdf');
+            aprobadosBaseNames[baseName] = true;
+          });
 
           prevs.forEach(function(att) {
             var fn = att.filename||att.name||'reporte.pdf';
-            var aprobadoName = fn.replace(/\.pdf$/i, '_APROBADO.pdf');
-            var yaAprobado = aprobadosNames.some(function(n){ return n === aprobadoName || n === fn; });
+            // Un preventivo está aprobado SOLO si existe exactamente su versión _APROBADO
+            var yaAprobado = aprobadosBaseNames[fn] === true;
             aproState.records.push({
               id: att.id||att.url,
               equipoId: rec.id,
