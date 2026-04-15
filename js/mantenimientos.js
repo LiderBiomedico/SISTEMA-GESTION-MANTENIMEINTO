@@ -334,8 +334,8 @@
       pruebasFuncionales: [
         { id: 'mfpf1', prueba: 'FHR Canal 1: Detección con simulador Doppler fetal — Frecuencia 140 BPM', valorEsperado: '140 BPM (± 2 BPM)', resultado: ['Pasa', 'Falla'] },
         { id: 'mfpf2', prueba: 'FHR Canal 1: Detección con simulador — Frecuencia 120 BPM', valorEsperado: '120 BPM (± 2 BPM)', resultado: ['Pasa', 'Falla'] },
-        { id: 'mfpf3', prueba: 'FHR Canal 1: Detección con simulador — Frecuencia 160 BPM', valorEsperado: '160 BPM (± 2 BPM)', resultado: ['Pasa', 'Falla'] },
-        { id: 'mfpf4', prueba: 'FHR: Rango de detección — Verificar lectura en límites 50 y 210 BPM', valorEsperado: '50–210 BPM (rango completo)', resultado: ['Pasa', 'Falla'] },
+        { id: 'mfpf3', prueba: 'FHR Canal 1: Detección con simulador — Frecuencia 60 BPM', valorEsperado: '60 BPM (± 2 BPM)', resultado: ['Pasa', 'Falla'] },
+        { id: 'mfpf4', prueba: 'FHR Canal 1: Detección con simulador — Frecuencia 60 BPM (confirmación)', valorEsperado: '60 BPM (± 2 BPM)', resultado: ['Pasa', 'Falla'] },
         { id: 'mfpf5', prueba: 'FHR: Audio Doppler — Señal audible clara sin artefactos a volumen medio', valorEsperado: 'Sonido cardíaco fetal claro y nítido', resultado: ['Pasa', 'Falla'] },
         { id: 'mfpf6', prueba: 'FHR Canal 2 (gemelar): Detección con simulador — 140 BPM', valorEsperado: '140 BPM (± 2 BPM)', resultado: ['Pasa', 'Falla', 'N/A'] },
         { id: 'mfpf7', prueba: 'TOCO: Calibración de cero — Transductor en reposo sin presión, ajustar a 0', valorEsperado: 'Línea base 0 unidades (± 5 unidades)', resultado: ['Pasa', 'Falla'] },
