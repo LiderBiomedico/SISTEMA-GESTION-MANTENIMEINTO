@@ -58,21 +58,20 @@
 
           // Crear un Set con los IDs de attachments que ya fueron aprobados
           // El nombre del aprobado tiene el formato: APROBADO_{attId}_{filename}
-          var aprobadosIds = {};
+          var aprobadosMap = {};
           aprobados.forEach(function(a) {
             var name = a.filename||'';
-            // Extraer el attId del nombre: APROBADO_{attId}_resto.pdf
             var match = name.match(/^APROBADO_([^_]+)_/);
             if (match) {
-              aprobadosIds[match[1]] = true;
+              aprobadosMap[match[1]] = a.url||'';
             }
           });
 
           prevs.forEach(function(att) {
             var fn = att.filename||att.name||'reporte.pdf';
             var attId = att.id||'';
-            // Un preventivo está aprobado SOLO si su ID de attachment aparece en los aprobados
-            var yaAprobado = attId ? (aprobadosIds[attId] === true) : false;
+            var aprobadoUrl = attId ? (aprobadosMap[attId] || '') : '';
+            var yaAprobado = aprobadoUrl !== '';
             aproState.records.push({
               attId: attId,
               equipoId: rec.id,
@@ -81,6 +80,7 @@
               servicio: servicio,
               filename: fn,
               url: att.url,
+              urlAprobado: aprobadoUrl,
               size: att.size,
               aprobado: yaAprobado,
               fecha: extractDate(fn),
@@ -138,7 +138,11 @@
         + '<td style="padding:10px 8px;font-size:11px;color:#90a4ae;text-align:center">'+sizeKB+'</td>'
         + '<td style="padding:10px 8px;text-align:center">'+estadoBadge+'</td>'
         + '<td style="padding:10px 8px;text-align:center;white-space:nowrap">'
-        + (r.url?'<a href="'+esc(r.url)+'" target="_blank" style="margin-right:6px;font-size:16px;text-decoration:none" title="Ver PDF">📄</a>':'')
+        + (function(){
+          var viewUrl = r.aprobado && r.urlAprobado ? r.urlAprobado : r.url;
+          var viewTitle = r.aprobado ? 'Ver PDF Aprobado' : 'Ver PDF Original';
+          return viewUrl ? '<a href="'+esc(viewUrl)+'" target="_blank" style="margin-right:6px;font-size:16px;text-decoration:none" title="'+viewTitle+'">📄</a>' : '';
+        }())
         + btnAprobar
         + '</td></tr>';
     }).join('');
@@ -320,11 +324,11 @@
 
       if (!uploadRes.data.ok) throw new Error(uploadRes.data.error||'Error al subir');
 
-      // 6. Marcar como aprobado
-      r.aprobado = true;
+      // 6. Recargar datos para obtener la URL del archivo aprobado desde Airtable
       closeAprobarModal();
       showAproToast('✅ Mantenimiento aprobado y guardado en Airtable', 'ok');
-      renderAprobarList();
+      aproState.loaded = false;
+      await loadAprobarModule(true);
 
     } catch(err) {
       console.error('[APRO] Error:', err);
