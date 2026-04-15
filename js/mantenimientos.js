@@ -43,8 +43,13 @@
     'regulador_vacio_amvex_c2a': {
       nombre: 'Regulador de Vacío AMVEX Modelo C2A',
       categoria: 'Biomédico',
+      icono: '🏥',
       codigo: 'SLV-GAT-BIO-RV',
       frecuencia: ['Semestral', 'Anual'],
+      seccionPruebasTitulo: 'PRUEBAS FUNCIONALES DEL EQUIPO',
+      equipoVerificacionTitulo: 'EQUIPO DE VERIFICACIÓN',
+      equipoVerificacionOpciones: ['Vacuómetro patrón', 'Analizador de vacío', 'Otro'],
+      notaTecnica: 'Este formato está diseñado para mantenimiento preventivo rutinario y verificación funcional externa. No autoriza apertura, ajuste interno o reparación del regulador. Cualquier desviación debe documentarse y remitirse a soporte técnico autorizado.',
       condicionesPrevias: [
         'Verifique que el equipo se encuentre limpio, seco y sin evidencia de contaminación visible.',
         'Confirme disponibilidad del equipo de verificación: vacuómetro patrón o analizador de vacío calibrado.',
@@ -70,6 +75,41 @@
       ],
       estadoFinal: ['Apto para uso', 'Apto con observaciones', 'No apto / retirar de servicio'],
       accionesRealizadas: ['Limpieza externa', 'Cambio de accesorios externos', 'Verificación funcional', 'Remisión a servicio técnico'],
+    },
+    'monitor_signos_nihon_kohden_csm_1501': {
+      nombre: 'Monitor de Signos NIHON KOHDEN CSM-1501',
+      categoria: 'Biomédico',
+      icono: '🩺',
+      codigo: 'SLV-GAT-BIO-MSV',
+      frecuencia: ['Semestral', 'Anual'],
+      seccionPruebasTitulo: 'PRUEBAS FUNCIONALES Y VERIFICACIÓN',
+      equipoVerificacionTitulo: 'EQUIPO DE VERIFICACIÓN / SIMULADOR PATRÓN',
+      equipoVerificacionOpciones: ['Analizador de monitor de paciente', 'Simulador multiparámetro', 'Analizador NIBP', 'Simulador SpO₂', 'Otro'],
+      notaTecnica: 'Este formato está diseñado para mantenimiento preventivo rutinario y verificación funcional externa del monitor. No autoriza apertura del equipo, ajuste interno, intervención de tarjetas, calibración de servicio ni reparación avanzada. Cualquier desviación debe documentarse y remitirse a soporte técnico autorizado.',
+      condicionesPrevias: [
+        'Verifique que el equipo se encuentre limpio, seco y sin evidencia de contaminación visible.',
+        'Confirme disponibilidad del equipo de verificación: simulador multiparámetro, verificador NIBP y accesorios compatibles.',
+        'No abra el monitor ni intervenga componentes internos durante el preventivo rutinario.',
+        'Si se evidencian daños, errores de arranque, fallas de batería, lecturas erráticas o alarmas inoperantes, retire de servicio y remita a soporte técnico autorizado.',
+      ],
+      inspeccion: [
+        { id: 'iv1', item: 'Carcasa, pantalla, puertos y conectores sin grietas, deformaciones ni daño visible' },
+        { id: 'iv2', item: 'Cable de poder y clavija en buen estado, sin sulfatación o roturas' },
+        { id: 'iv3', item: 'Accesorios reutilizables (ECG, SpO₂, NIBP, temperatura) íntegros y limpios' },
+        { id: 'iv4', item: 'Equipo limpio externamente; sin residuos, derrames o contaminación visible' },
+        { id: 'iv5', item: 'Batería instalada sin signos externos de fuga, deformación o sobrecalentamiento' },
+        { id: 'iv6', item: 'Etiquetas de identificación, activo fijo y número de serie legibles' },
+      ],
+      pruebasFuncionales: [
+        { id: 'pf1', prueba: 'Encendido y autoverificación', valorEsperado: 'Inicia sin errores técnicos persistentes', resultado: ['Pasa', 'Falla'] },
+        { id: 'pf2', prueba: 'Pantalla y controles', valorEsperado: 'Imagen uniforme y respuesta correcta del panel / teclas', resultado: ['Pasa', 'Falla'] },
+        { id: 'pf3', prueba: 'Alimentación AC y batería', valorEsperado: 'Opera con red y mantiene funcionamiento al desconectar AC', resultado: ['Pasa', 'Falla'] },
+        { id: 'pf4', prueba: 'ECG / RESP / FC', valorEsperado: 'Trazo y lecturas coherentes con el simulador', resultado: ['Pasa', 'Falla'] },
+        { id: 'pf5', prueba: 'SpO₂ / NIBP / Temperatura', valorEsperado: 'Valores estables y coherentes con el simulador', resultado: ['Pasa', 'Falla'] },
+        { id: 'pf6', prueba: 'Alarmas audibles y visuales', valorEsperado: 'Activación, reconocimiento y restablecimiento correctos', resultado: ['Pasa', 'Falla'] },
+      ],
+      estadoFinal: ['Apto para uso', 'Apto con observaciones', 'No apto / retirar de servicio'],
+      accionesRealizadas: ['Limpieza externa', 'Verificación funcional', 'Prueba con simulador patrón', 'Remisión a servicio técnico'],
     },
   };
 
@@ -217,7 +257,7 @@
     var cards = Object.keys(PROTOCOLOS).map(function(key) {
       var proto = PROTOCOLOS[key];
       var catColor = proto.categoria === 'Biomédico' ? '#1565c0' : proto.categoria === 'Mecánico' ? '#e65100' : '#2e7d32';
-      var catIcon = proto.categoria === 'Biomédico' ? '🏥' : proto.categoria === 'Mecánico' ? '⚙️' : '🏗️';
+      var catIcon = proto.icono || (proto.categoria === 'Biomédico' ? '🏥' : proto.categoria === 'Mecánico' ? '⚙️' : '🏗️');
       return '<div class="mf-protocol-card" onclick="selectProtocol(\''+key+'\')" style="cursor:pointer"><div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><span style="font-size:28px">'+catIcon+'</span><div><div style="font-weight:800;font-size:14px;color:#0a1628">'+esc(proto.nombre)+'</div><span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:10px;font-weight:700;background:'+catColor+'22;color:'+catColor+';margin-top:4px">'+esc(proto.categoria)+'</span></div></div><div style="font-size:12px;color:#607d8b;margin-top:4px">Código: <strong>'+esc(proto.codigo)+'</strong> · Frecuencia: '+proto.frecuencia.join(' / ')+'</div><div style="font-size:11px;color:#90a4ae;margin-top:6px">'+proto.inspeccion.length+' ítems de inspección · '+proto.pruebasFuncionales.length+' pruebas funcionales</div></div>';
     }).join('');
     return '<div style="padding:10px 0"><div style="font-size:15px;font-weight:700;color:#0a1628;margin-bottom:6px">Seleccione el protocolo de mantenimiento</div><div style="font-size:12px;color:#78909c;margin-bottom:16px">Cada tipo de equipo tiene su protocolo de inspección y verificación funcional específico.</div><div class="mf-protocol-grid">'+cards+'</div></div>';
@@ -261,9 +301,14 @@
 
     var condList = proto.condicionesPrevias.map(function(c) { return '<li style="font-size:12px;color:#37474f;line-height:1.5">'+esc(c)+'</li>'; }).join('');
 
+    var icono = proto.icono || '🏥';
+    var verifTitle = proto.equipoVerificacionTitulo || 'EQUIPO DE VERIFICACIÓN';
+    var verifOptions = (proto.equipoVerificacionOpciones || ['Otro']).map(function(opt) { return '<option value="'+esc(opt)+'">'+esc(opt)+'</option>'; }).join('');
+    var pruebasTitulo = proto.seccionPruebasTitulo || 'PRUEBAS FUNCIONALES DEL EQUIPO';
+
     return '<input type="hidden" id="mfProtocolKey" value="'+protocolKey+'">'
 
-    + '<div class="mf-proto-header"><div style="display:flex;align-items:center;gap:12px"><span style="font-size:32px">🏥</span><div><div style="font-weight:800;font-size:16px;color:#0a1628">'+esc(proto.nombre)+'</div><div style="font-size:12px;color:#607d8b;margin-top:2px">Código: '+esc(proto.codigo)+' · Categoría: '+esc(proto.categoria)+'</div></div></div></div>'
+    + '<div class="mf-proto-header"><div style="display:flex;align-items:center;gap:12px"><span style="font-size:32px">'+icono+'</span><div><div style="font-weight:800;font-size:16px;color:#0a1628">'+esc(proto.nombre)+'</div><div style="font-size:12px;color:#607d8b;margin-top:2px">Código: '+esc(proto.codigo)+' · Categoría: '+esc(proto.categoria)+'</div></div></div></div>'
 
     + '<div class="mf-section-title" style="background:'+color+'">🏥 DATOS DEL EQUIPO</div>'
     + '<div class="mf-row"><div class="mf-group mf-full"><label class="mf-label">Equipo del Inventario *</label><select id="mfEquipoSelect" class="mf-select" onchange="onEquipoSelectChange()"><option value="">Cargando...</option></select></div></div>'
@@ -280,11 +325,11 @@
     + buildPhotoCaptureSectionHTML('inicio', '📸 Foto inicial del equipo (antes de iniciar)', '1️⃣')
     + '<div class="mf-table-container"><table class="mf-protocol-table"><thead><tr><th style="width:40px">No.</th><th>Ítem a verificar</th><th style="width:100px">Cumple</th><th style="width:180px">Observaciones</th></tr></thead><tbody>'+inspeccionRows+'</tbody></table></div>'
 
-    + '<div class="mf-section-title" style="background:'+color+'">📐 EQUIPO DE VERIFICACIÓN</div>'
-    + '<div class="mf-row"><div class="mf-group"><label class="mf-label">Equipo utilizado</label><select id="mfEquipoVerificacion" class="mf-select"><option value="Vacuómetro patrón">Vacuómetro patrón</option><option value="Analizador de vacío">Analizador de vacío</option><option value="Otro">Otro</option></select></div><div class="mf-group"><label class="mf-label">Marca / Modelo del patrón</label><input type="text" id="mfMarcaPatron" class="mf-input" placeholder="Marca y modelo"></div></div>'
+    + '<div class="mf-section-title" style="background:'+color+'">📐 '+esc(verifTitle)+'</div>'
+    + '<div class="mf-row"><div class="mf-group"><label class="mf-label">Equipo utilizado</label><select id="mfEquipoVerificacion" class="mf-select">'+verifOptions+'</select></div><div class="mf-group"><label class="mf-label">Marca / Modelo del patrón</label><input type="text" id="mfMarcaPatron" class="mf-input" placeholder="Marca y modelo"></div></div>'
     + '<div class="mf-row"><div class="mf-group"><label class="mf-label">No. Serie del patrón</label><input type="text" id="mfSeriePatron" class="mf-input" placeholder="Número de serie"></div><div class="mf-group"><label class="mf-label">Certificado vigente hasta</label><input type="date" id="mfCertificadoVigente" class="mf-input"></div><div class="mf-group"><label class="mf-label">Tolerancia definida (mmHg/kPa)</label><input type="text" id="mfTolerancia" class="mf-input" placeholder="± ____ mmHg / kPa"></div></div>'
 
-    + '<div class="mf-section-title" style="background:'+color+'">⚡ PRUEBA FUNCIONAL DEL REGULADOR</div>'
+    + '<div class="mf-section-title" style="background:'+color+'">⚡ '+esc(pruebasTitulo)+'</div>'
     + buildPhotoCaptureSectionHTML('mitad', '📸 Foto durante el procedimiento (verificación)', '2️⃣')
     + '<div class="mf-table-container"><table class="mf-protocol-table"><thead><tr><th style="width:40px">No.</th><th>Prueba</th><th style="width:140px">Valor esperado</th><th style="width:120px">Valor medido</th><th style="width:110px">Resultado</th><th style="width:140px">Observaciones</th></tr></thead><tbody>'+pruebasRows+'</tbody></table></div>'
 
@@ -871,13 +916,13 @@
     + (d.fotoInicio ? '<div class="foto-wrap"><div class="foto-label">📸 Foto inicial del equipo</div><div class="foto-frame"><img src="'+d.fotoInicio+'" alt="Foto inicial"></div></div>' : '')
     + '<table class="tbl"><tr><th style="width:40px">NO.</th><th>ÍTEM A VERIFICAR</th><th style="width:70px">CUMPLE</th><th style="width:160px">OBSERVACIONES</th></tr>'+inspeccionRows+'</table>'
     + '<div class="sec sec-blue"><span class="sec-icon">📐</span> EQUIPO DE VERIFICACIÓN UTILIZADO</div><table class="tbl"><tr><td class="lb">Equipo utilizado</td><td class="vl">'+esc(d.equipoVerificacion)+'</td><td class="lb">Marca / Modelo</td><td class="vl">'+esc(d.marcaPatron)+'</td></tr><tr><td class="lb">No. Serie patrón</td><td class="vl">'+esc(d.seriePatron)+'</td><td class="lb">Certificado hasta</td><td class="vl">'+fmt(d.certificadoVigente)+'</td></tr><tr><td class="lb">Tolerancia</td><td class="vl" colspan="3">'+esc(d.tolerancia)+'</td></tr></table>'
-    + '<div class="sec sec-blue"><span class="sec-icon">⚡</span> PRUEBA FUNCIONAL DEL REGULADOR</div>'
+    + '<div class="sec sec-blue"><span class="sec-icon">⚡</span> '+esc(proto.seccionPruebasTitulo || 'PRUEBAS FUNCIONALES DEL EQUIPO')+'</div>'
     + (d.fotoMitad ? '<div class="foto-wrap"><div class="foto-label">📸 Foto durante el procedimiento</div><div class="foto-frame"><img src="'+d.fotoMitad+'" alt="Foto procedimiento"></div></div>' : '')
     + '<table class="tbl"><tr><th style="width:40px">NO.</th><th>PRUEBA</th><th style="width:100px">VALOR ESPERADO</th><th style="width:80px">MEDIDO</th><th style="width:70px">RESULT.</th><th style="width:120px">OBS.</th></tr>'+pruebasRows+'</table>'
     + '<div class="sec sec-dark"><span class="sec-icon">📋</span> RESULTADO FINAL DEL MANTENIMIENTO</div><table class="tbl"><tr><td class="lb">Estado final</td><td class="vl"><span class="estado-badge" style="background:'+estadoColor+'">'+esc(d.estadoFinal)+'</span></td></tr><tr><td class="lb">Acciones realizadas</td><td class="vl">'+(d.acciones.length?d.acciones.map(function(a){return esc(a)}).join(' · '):'—')+'</td></tr><tr><td class="lb">Observaciones técnicas</td><td class="vl">'+esc(d.observaciones)+'</td></tr><tr><td class="lb">Recomendaciones</td><td class="vl">'+esc(d.recomendaciones)+'</td></tr><tr><td class="lb">Duración total del mantenimiento</td><td class="vl" style="font-weight:700;font-size:12px;color:'+color+'">⏱️ '+esc(d.duracion)+'</td></tr></table>'
     + (d.fotoFinal ? '<div class="foto-wrap"><div class="foto-label">📸 Foto final del equipo</div><div class="foto-frame"><img src="'+d.fotoFinal+'" alt="Foto final"></div></div>' : '')
     + '<div class="firmas"><div class="firma"><div class="firma-sig">'+(d.firmaEjecuto?'<img src="'+d.firmaEjecuto+'" alt="Firma">':'')+'</div><div class="firma-role">Elaboró / Ejecutó</div><div class="firma-name">'+esc(d.nombreEjecuto)+'</div><div class="firma-cargo">'+esc(d.cargoEjecuto)+'</div></div><div class="firma"><div class="firma-sig">'+(d.firmaRecibio?'<img src="'+d.firmaRecibio+'" alt="Firma">':'')+'</div><div class="firma-role">Recibió / Verificó</div><div class="firma-name">'+esc(d.nombreRecibio)+'</div><div class="firma-cargo">'+esc(d.cargoRecibio)+'</div></div></div>'
-    + '<div class="nota"><strong>Nota técnica:</strong> Este formato está diseñado para mantenimiento preventivo rutinario y verificación funcional externa. No autoriza apertura, ajuste interno o reparación del regulador. Cualquier desviación debe documentarse y remitirse a soporte técnico autorizado.</div>'
+    + '<div class="nota"><strong>Nota técnica:</strong> '+esc(proto.notaTecnica || 'Este formato está diseñado para mantenimiento preventivo rutinario y verificación funcional externa. Cualquier desviación debe documentarse y remitirse a soporte técnico autorizado.')+'</div>'
     + '<button id="btnPrint" class="btn-print">🖨️ Imprimir Reporte</button>'
     + '<div class="footer">HSLV · Sistema de Gestión de la Tecnología · '+esc(proto.codigo)+' · '+esc(codigo)+' · Generado: '+new Date().toLocaleString('es-CO')+'</div>'
     + '<script>document.getElementById("btnPrint").addEventListener("click",function(){window.print();});<\/script>'
