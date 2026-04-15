@@ -119,6 +119,62 @@
       estadoFinal: ['Apto para uso', 'Apto con observaciones', 'No apto / retirar de servicio'],
       accionesRealizadas: ['Limpieza externa', 'Verificación funcional con simulador', 'Cambio de accesorios', 'Calibración de parámetros', 'Remisión a servicio técnico'],
     },
+    'desfibrilador_mindray_d6': {
+      nombre: 'Desfibrilador Mindray BeneHeart D6',
+      categoria: 'Biomédico',
+      codigo: 'SLV-GAT-BIO-DF',
+      frecuencia: ['Semestral', 'Anual'],
+      condicionesPrevias: [
+        'Verifique que el equipo esté apagado y desconectado de la red eléctrica antes de iniciar la inspección física.',
+        'Confirme disponibilidad del analizador de desfibrilador Fluke Impulse 4000 (o equivalente) con certificado de calibración vigente.',
+        'Utilice las paletas internas o parches de desfibrilación del equipo para conectar al analizador Impulse 4000.',
+        'No desarme el equipo ni intervenga componentes internos durante el preventivo rutinario.',
+        'Asegúrese de que no haya pacientes ni personal en contacto con las paletas durante las pruebas de descarga.',
+        'Si se evidencian daños, errores persistentes o mal funcionamiento, retire de servicio y remita a soporte técnico autorizado Mindray.',
+      ],
+      inspeccion: [
+        { id: 'df1', item: 'Carcasa, pantalla y panel frontal sin grietas, deformaciones ni daño visible' },
+        { id: 'df2', item: 'Cable de poder, clavija y fusibles en buen estado' },
+        { id: 'df3', item: 'Paletas externas e internas sin daño, electrodos limpios y contacto firme' },
+        { id: 'df4', item: 'Parches de desfibrilación (fecha de vencimiento vigente)' },
+        { id: 'df5', item: 'Cable de ECG y electrodos en buen estado, conexiones firmes' },
+        { id: 'df6', item: 'Cable de SpO2 y sensor en buen estado' },
+        { id: 'df7', item: 'Batería instalada sin signos de fuga, deformación o sobrecalentamiento' },
+        { id: 'df8', item: 'Indicador de carga de batería verificado (nivel adecuado)' },
+        { id: 'df9', item: 'Papel de registro térmico disponible y mecanismo de impresión funcional' },
+        { id: 'df10', item: 'Etiquetas de identificación, activo fijo y número de serie legibles' },
+      ],
+      verificacionBasica: [
+        { id: 'dfvb1', item: 'Enciende correctamente con AC y en modo batería' },
+        { id: 'dfvb2', item: 'Pantalla muestra información clara y sin artefactos' },
+        { id: 'dfvb3', item: 'Autotest inicial del equipo pasa sin errores' },
+        { id: 'dfvb4', item: 'Selector de modo funcional: Monitor / Desfibrilación / Marcapasos / DEA' },
+        { id: 'dfvb5', item: 'Botones de carga, descarga y sincronización responden correctamente' },
+        { id: 'dfvb6', item: 'Alarma audible de carga lista funcional' },
+        { id: 'dfvb7', item: 'Impresora / registrador térmico funcional' },
+        { id: 'dfvb8', item: 'Operación con batería: descarga completa posible sin AC conectado' },
+      ],
+      pruebasFuncionales: [
+        { id: 'dfpf1', prueba: 'Energía entregada 10 J — Carga y descarga en Impulse 4000 (carga interna 50 Ω)', valorEsperado: '10 J (± 15% = 8.5–11.5 J)', resultado: ['Pasa', 'Falla'] },
+        { id: 'dfpf2', prueba: 'Energía entregada 50 J — Carga y descarga en Impulse 4000', valorEsperado: '50 J (± 15% = 42.5–57.5 J)', resultado: ['Pasa', 'Falla'] },
+        { id: 'dfpf3', prueba: 'Energía entregada 100 J — Carga y descarga en Impulse 4000', valorEsperado: '100 J (± 15% = 85–115 J)', resultado: ['Pasa', 'Falla'] },
+        { id: 'dfpf4', prueba: 'Energía entregada 150 J — Carga y descarga en Impulse 4000', valorEsperado: '150 J (± 15% = 127.5–172.5 J)', resultado: ['Pasa', 'Falla'] },
+        { id: 'dfpf5', prueba: 'Energía entregada 200 J — Carga y descarga en Impulse 4000', valorEsperado: '200 J (± 15% = 170–230 J)', resultado: ['Pasa', 'Falla'] },
+        { id: 'dfpf6', prueba: 'Energía máxima 360 J — Carga y descarga en Impulse 4000', valorEsperado: '360 J (± 15% = 306–414 J)', resultado: ['Pasa', 'Falla'] },
+        { id: 'dfpf7', prueba: 'Tiempo de carga a 360 J — Desde inicio hasta "listo" con batería nueva', valorEsperado: '≤ 9 segundos', resultado: ['Pasa', 'Falla'] },
+        { id: 'dfpf8', prueba: 'Modo sincronizado — Descarga sincronizada con onda R del ECG simulado', valorEsperado: 'Retardo sync ≤ 60 ms', resultado: ['Pasa', 'Falla'] },
+        { id: 'dfpf9', prueba: 'ECG: Ritmo sinusal normal — Simulación Impulse 4000, derivación II', valorEsperado: '80 BPM (± 1 BPM)', resultado: ['Pasa', 'Falla'] },
+        { id: 'dfpf10', prueba: 'ECG: Detección de fibrilación ventricular — Señal V-Fib de Impulse 4000', valorEsperado: 'Detección y alarma VF', resultado: ['Pasa', 'Falla'] },
+        { id: 'dfpf11', prueba: 'Modo DEA: Análisis de ritmo — V-Fib simulado en Impulse 4000', valorEsperado: 'Recomienda descarga', resultado: ['Pasa', 'Falla'] },
+        { id: 'dfpf12', prueba: 'Modo DEA: Análisis de ritmo — NSR simulado en Impulse 4000', valorEsperado: 'No recomienda descarga', resultado: ['Pasa', 'Falla'] },
+        { id: 'dfpf13', prueba: 'Marcapasos: Estimulación en modo fijo — Frecuencia y corriente configuradas', valorEsperado: 'Freq: 80 PPM (± 1.5%), Corriente: según config', resultado: ['Pasa', 'Falla'] },
+        { id: 'dfpf14', prueba: 'Marcapasos: Captura de pulso — Detección por Impulse 4000', valorEsperado: 'Ancho de pulso 20–40 ms', resultado: ['Pasa', 'Falla'] },
+        { id: 'dfpf15', prueba: 'Seguridad: Descarga interna automática — Energía cargada sin descargar por 60 s', valorEsperado: 'Desarme automático (0 J residual)', resultado: ['Pasa', 'Falla'] },
+        { id: 'dfpf16', prueba: 'Batería: Autonomía — Mínimo 3 descargas a 360 J con batería cargada', valorEsperado: '≥ 3 descargas a máxima energía', resultado: ['Pasa', 'Falla'] },
+      ],
+      estadoFinal: ['Apto para uso', 'Apto con observaciones', 'No apto / retirar de servicio'],
+      accionesRealizadas: ['Limpieza externa', 'Verificación de energía con analizador', 'Cambio de batería', 'Cambio de paletas/parches', 'Verificación de marcapasos', 'Remisión a servicio técnico'],
+    },
   };
 
   // ── INIT ──────────────────────────────────────────────────────────────
@@ -338,7 +394,7 @@
     }()) : '')
 
     + '<div class="mf-section-title" style="background:'+color+'">📐 EQUIPO DE VERIFICACIÓN</div>'
-    + '<div class="mf-row"><div class="mf-group"><label class="mf-label">Equipo utilizado</label><select id="mfEquipoVerificacion" class="mf-select"><option value="Simulador multiparámetro">Simulador multiparámetro</option><option value="Vacuómetro patrón">Vacuómetro patrón</option><option value="Analizador de vacío">Analizador de vacío</option><option value="Otro">Otro</option></select></div><div class="mf-group"><label class="mf-label">Marca / Modelo del patrón</label><input type="text" id="mfMarcaPatron" class="mf-input" placeholder="Marca y modelo"></div></div>'
+    + '<div class="mf-row"><div class="mf-group"><label class="mf-label">Equipo utilizado</label><select id="mfEquipoVerificacion" class="mf-select"><option value="Simulador multiparámetro">Simulador multiparámetro</option><option value="Analizador de desfibrilador">Analizador de desfibrilador</option><option value="Vacuómetro patrón">Vacuómetro patrón</option><option value="Analizador de vacío">Analizador de vacío</option><option value="Otro">Otro</option></select></div><div class="mf-group"><label class="mf-label">Marca / Modelo del patrón</label><input type="text" id="mfMarcaPatron" class="mf-input" placeholder="Marca y modelo"></div></div>'
     + '<div class="mf-row"><div class="mf-group"><label class="mf-label">No. Serie del patrón</label><input type="text" id="mfSeriePatron" class="mf-input" placeholder="Número de serie"></div><div class="mf-group"><label class="mf-label">Certificado vigente hasta</label><input type="date" id="mfCertificadoVigente" class="mf-input"></div><div class="mf-group"><label class="mf-label">Tolerancia definida (mmHg/kPa)</label><input type="text" id="mfTolerancia" class="mf-input" placeholder="± ____ mmHg / kPa"></div></div>'
 
     + '<div class="mf-section-title" style="background:'+color+'">⚡ PRUEBAS FUNCIONALES</div>'
