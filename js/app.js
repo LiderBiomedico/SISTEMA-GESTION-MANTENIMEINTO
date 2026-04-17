@@ -70,8 +70,7 @@ function loadModuleData(moduleName) {
   console.log(`Cargando datos del módulo: ${moduleName}`);
   switch (moduleName) {
     case 'dashboard':
-      if (typeof initializeDashboard === 'function') initializeDashboard();
-      else initDashboard();
+      initDashboard();
       break;
     case 'inventario':
       if (typeof loadInventario === 'function') loadInventario();
@@ -189,15 +188,13 @@ window.addEventListener('click', (event) => {
 // ============================================================================
 
 function initDashboard() {
-  const alert = document.getElementById('dashboardAlert');
-  if (alert) {
-    alert.style.display = 'block';
-    setTimeout(() => alert.style.display = 'none', 5000);
-  }
-
-  initMTBFChart();
-  initComplianceChart();
-  initMaintenanceTypeChart();
+  // Mostrar estado de carga en todas las tarjetas
+  ['kpiEquipos','kpiCumplimiento','kpiPendientes','kpiTotalReportes',
+   'kpiPreventivos','kpiCorrectivos','kpiTerceros','kpiEquiposManto',
+   'kpiVencidos','kpiPendientes30d'].forEach(function(id) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = '⏳';
+  });
   fetchDashboardData();
 }
 
