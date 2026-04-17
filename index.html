@@ -1148,13 +1148,14 @@
                 item.title = 'Sin acceso';
             }
         });
-        var headerActions = document.querySelector('.header-actions');
-        if (headerActions && !document.getElementById('userBadge')) {
-            var badge = document.createElement('span');
-            badge.id = 'userBadge';
-            badge.style.cssText = 'font-size:13px;color:#607d8b;margin-right:8px;font-family:Outfit,sans-serif;';
-            badge.textContent = '👤 ' + (sessionStorage.getItem('NEXA_USUARIO') || '');
-            headerActions.insertBefore(badge, headerActions.firstChild);
+        // Rellenar el perfil de usuario en el header con el nombre real de Airtable
+        var nombre = sessionStorage.getItem('NEXA_NOMBRE') || sessionStorage.getItem('NEXA_USUARIO') || '';
+        var avatarEl = document.getElementById('headerUserAvatar');
+        var nameEl   = document.getElementById('headerUserName');
+        if (nombre) {
+            var initials = nombre.split(' ').filter(Boolean).slice(0,2).map(function(w){return w[0].toUpperCase();}).join('');
+            if (avatarEl) avatarEl.textContent = initials;
+            if (nameEl)   nameEl.textContent   = nombre;
         }
     }
 
@@ -1182,6 +1183,8 @@
                 sessionStorage.setItem('NEXA_AUTH', 'ok');
                 sessionStorage.setItem('NEXA_USUARIO', data.usuario || usr);
                 sessionStorage.setItem('NEXA_NIVEL', data.nivel || 'inventario maestro');
+                sessionStorage.setItem('NEXA_NOMBRE', data.nombre || data.usuario || usr);
+                sessionStorage.setItem('NEXA_EMAIL', data.email || '');
                 document.getElementById('loginScreen').style.display = 'none';
                 document.querySelector('.container-app').style.display = 'flex';
                 applyAccessControl(data.nivel || 'inventario maestro');
@@ -1206,8 +1209,11 @@
         sessionStorage.removeItem('NEXA_AUTH');
         sessionStorage.removeItem('NEXA_USUARIO');
         sessionStorage.removeItem('NEXA_NIVEL');
-        var badge = document.getElementById('userBadge');
-        if (badge) badge.remove();
+        // Resetear nombre en header
+        var avatarEl = document.getElementById('headerUserAvatar');
+        var nameEl = document.getElementById('headerUserName');
+        if (avatarEl) avatarEl.textContent = '?';
+        if (nameEl) nameEl.textContent = '...';
         document.querySelectorAll('.nav-item[onclick]').forEach(function(item) {
             item.style.opacity = '';
             item.style.cursor = '';
@@ -1321,9 +1327,9 @@
                     <button class="btn-icon" onclick="printModule()" title="Imprimir">🖨️</button>
                     <button class="btn-icon" onclick="exportData()" title="Exportar">💾</button>
                     <button class="btn-icon" onclick="cerrarSesion()" title="Cerrar sesión" style="background:#c62828;color:white;font-size:13px;padding:6px 12px;border-radius:8px;font-weight:600;width:auto;">🚪 Salir</button>
-                    <div class="user-profile">
-                        <div class="avatar">PM</div>
-                        <span style="font-size: 12px; color: var(--neutral-dark);">Ing. Paul Eduardo Muñoz Rodriguez</span>
+                    <div class="user-profile" id="headerUserProfile">
+                        <div class="avatar" id="headerUserAvatar">?</div>
+                        <span id="headerUserName" style="font-size: 12px; color: var(--neutral-dark);">...</span>
                     </div>
                 </div>
             </div>
