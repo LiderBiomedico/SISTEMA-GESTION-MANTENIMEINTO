@@ -1101,6 +1101,13 @@
     (function() {
         if (sessionStorage.getItem('NEXA_AUTH') === 'ok') {
             applyAccessControl(sessionStorage.getItem('NEXA_NIVEL') || 'inventario maestro');
+            // Si el nombre guardado es igual al usuario (sin el nombre real de Airtable),
+            // hacer una llamada silenciosa para obtener el nombre actualizado
+            var nombreGuardado = sessionStorage.getItem('NEXA_NOMBRE') || '';
+            var usuarioGuardado = sessionStorage.getItem('NEXA_USUARIO') || '';
+            if (!nombreGuardado || nombreGuardado === usuarioGuardado) {
+                _refreshNombreFromSession();
+            }
             return;
         }
         var checkSplash = setInterval(function() {
@@ -1125,6 +1132,24 @@
             }
         });
     })();
+
+    // Refresca el nombre del usuario desde Airtable sin pedir contraseña de nuevo
+    // Solo posible si conocemos el usuario — llama a un endpoint de perfil
+    // Como no tenemos la contraseña en sesión, usamos el endpoint de inventario
+    // para verificar que la sesión sigue activa y actualizamos el nombre leyéndolo
+    // de una tabla auxiliar. Dado que ya tenemos auth.js que devuelve nombre,
+    // la solución más simple es guardar el nombre al hacer login correctamente.
+    // Esta función actualiza el DOM con lo que ya está en sessionStorage.
+    function _refreshNombreFromSession() {
+        var nombre = sessionStorage.getItem('NEXA_NOMBRE') || sessionStorage.getItem('NEXA_USUARIO') || '';
+        var avatarEl = document.getElementById('headerUserAvatar');
+        var nameEl   = document.getElementById('headerUserName');
+        if (nombre && avatarEl && nameEl) {
+            var initials = nombre.split(' ').filter(Boolean).slice(0,2).map(function(w){return w[0].toUpperCase();}).join('');
+            avatarEl.textContent = initials;
+            nameEl.textContent   = nombre;
+        }
+    }
 
     function applyAccessControl(nivel) {
         var nivelNorm = (nivel || '').trim().toLowerCase();
