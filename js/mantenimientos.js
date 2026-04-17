@@ -13,6 +13,7 @@
 
   const FIELD_PREV = 'Mantenimientos preventivo';
   const FIELD_CORR = 'Mantenimientos correctivos';
+  const FIELD_TERC = 'Mantenimientos preventivo'; // Terceros también van al campo preventivo con prefijo TERC_
 
   const mtState = window.__HSLV_MT_STATE || (window.__HSLV_MT_STATE = {
     reports: [],
@@ -440,7 +441,9 @@
       var placa  = f['Numero de Placa']||f['PLACA']||'';
       var servicio = f['Servicio']||f['SERVICIO']||'';
       (f[FIELD_PREV]||[]).forEach(function(att) {
-        mtState.reports.push({ id:att.id||att.url, tipo:'Preventivo', equipo:equipo, placa:placa, servicio:servicio, equipoId:rec.id, filename:att.filename||att.name||'reporte.pdf', url:att.url, fecha:extractDateFromFilename(att.filename||''), estado:extractEstadoFromFilename(att.filename||''), size:att.size });
+        var fn = att.filename||att.name||'reporte.pdf';
+        var esTercero = fn.toUpperCase().startsWith('TERC_');
+        mtState.reports.push({ id:att.id||att.url, tipo: esTercero ? 'Tercero' : 'Preventivo', equipo:equipo, placa:placa, servicio:servicio, equipoId:rec.id, filename:fn, url:att.url, fecha:extractDateFromFilename(fn), estado:extractEstadoFromFilename(fn), size:att.size });
       });
       (f[FIELD_CORR]||[]).forEach(function(att) {
         mtState.reports.push({ id:att.id||att.url, tipo:'Correctivo', equipo:equipo, placa:placa, servicio:servicio, equipoId:rec.id, filename:att.filename||att.name||'reporte.pdf', url:att.url, fecha:extractDateFromFilename(att.filename||''), estado:extractEstadoFromFilename(att.filename||''), size:att.size });
@@ -463,6 +466,7 @@
     setText('mtStatTotal', all.length);
     setText('mtStatPrev', all.filter(function(r){return r.tipo==='Preventivo'}).length);
     setText('mtStatCorr', all.filter(function(r){return r.tipo==='Correctivo'}).length);
+    setText('mtStatTerc', all.filter(function(r){return r.tipo==='Tercero'}).length);
     setText('mtStatEquipos', new Set(all.map(function(r){return r.equipoId})).size);
     setText('mtStatInv', mtState.inventario.length);
   }
@@ -475,7 +479,7 @@
     var filtered = mtState.reports.filter(function(r) {
       if (mtState.filterTipo !== 'TODOS' && r.tipo !== mtState.filterTipo) return false;
       if (mtState.filterEstado !== 'TODOS' && r.estado !== mtState.filterEstado) return false;
-      if (q && !r.equipo.toLowerCase().includes(q) && !r.placa.toLowerCase().includes(q) && !r.servicio.toLowerCase().includes(q) && !r.filename.toLowerCase().includes(q)) return false;
+      if (q && !r.equipo.toLowerCase().includes(q) && !r.placa.toLowerCase().includes(q) && !r.servicio.toLowerCase().includes(q) && !r.filename.toLowerCase().includes(q) && !(r.empresa||'').toLowerCase().includes(q)) return false;
       return true;
     });
     setText('mtCount', filtered.length+' reporte'+(filtered.length!==1?'s':''));
@@ -484,13 +488,15 @@
       return;
     }
     var rows = filtered.map(function(r) {
-      var tipoBadge = r.tipo==='Preventivo' ? '<span class="mt-badge mt-badge-prev">🛡️ Preventivo</span>' : '<span class="mt-badge mt-badge-corr">🔧 Correctivo</span>';
+      var tipoBadge = r.tipo==='Preventivo' ? '<span class="mt-badge mt-badge-prev">🛡️ Preventivo</span>' : r.tipo==='Tercero' ? '<span class="mt-badge" style="background:#e8f5e9;color:#1b5e20;border:1.5px solid #81c784;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">🏢 Tercero</span>' : '<span class="mt-badge mt-badge-corr">🔧 Correctivo</span>';
       var sizeKB = r.size ? Math.round(r.size/1024)+' KB' : '';
-      return '<tr class="mt-row"><td class="mt-td">'+tipoBadge+'</td><td class="mt-td"><div class="mt-eq-name">'+esc(r.equipo)+'</div><div class="mt-eq-sub">'+esc(r.placa)+'</div></td><td class="mt-td">'+esc(r.servicio)+'</td><td class="mt-td">'+esc(fmt(r.fecha)||'—')+'</td><td class="mt-td" style="font-size:11px;color:#78909c;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc(r.filename)+'">'+esc(r.filename)+'</td><td class="mt-td" style="font-size:11px;color:#90a4ae">'+sizeKB+'</td><td class="mt-td mt-actions">'+(r.url?'<a href="'+esc(r.url)+'" target="_blank" class="mt-btn-icon" title="Descargar/Ver PDF">📄</a>':'')+'</td></tr>';
+      var empresaRow = r.tipo==='Tercero' && r.empresa ? '<div style="font-size:11px;color:#2e7d32;font-weight:600;">🏢 '+esc(r.empresa)+'</div>' : '';
+      return '<tr class="mt-row"><td class="mt-td">'+tipoBadge+'</td><td class="mt-td"><div class="mt-eq-name">'+esc(r.equipo)+'</div><div class="mt-eq-sub">'+esc(r.placa)+'</div>'+empresaRow+'</td><td class="mt-td">'+esc(r.servicio)+'</td><td class="mt-td">'+esc(fmt(r.fecha)||'—')+'</td><td class="mt-td" style="font-size:11px;color:#78909c;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc(r.filename)+'">'+esc(r.filename)+'</td><td class="mt-td" style="font-size:11px;color:#90a4ae">'+sizeKB+'</td><td class="mt-td mt-actions">'+(r.url?'<a href="'+esc(r.url)+'" target="_blank" class="mt-btn-icon" title="Descargar/Ver PDF">📄</a>':'')+'</td></tr>';
     }).join('');
     body.innerHTML = '<div class="mt-table-wrap"><table class="mt-table"><thead><tr><th>TIPO</th><th>EQUIPO / PLACA</th><th>SERVICIO</th><th>FECHA</th><th>ARCHIVO</th><th>TAMAÑO</th><th>VER</th></tr></thead><tbody>'+rows+'</tbody></table></div><div style="padding:10px 16px;font-size:12px;color:#90a4ae;background:white;border-radius:0 0 12px 12px;border-top:1px solid #eceff1">Los reportes se almacenan como PDF en Airtable › Inventario › '+FIELD_PREV+' / '+FIELD_CORR+'</div>';
   }
 
+  window.mtRenderList = renderList; // expuesto para modal de terceros
   window.mtSearch = function(){ mtState.filterSearch=(document.getElementById('mtSearchInput')||{}).value||''; renderList(); };
   window.mtFilterTipo = function(v){
     mtState.filterTipo=v;

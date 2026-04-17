@@ -1001,10 +1001,7 @@
                     <span class="login-nexa">NEXA</span>
                     <span class="login-cmms">CMMS</span>
                 </div>
-                <p class="login-subtitle">Ingrese sus credenciales de acceso</p>
-                <div class="login-input-wrap" style="margin-bottom:12px;">
-                    <input type="text" id="loginUsername" placeholder="Usuario" autocomplete="off" style="padding-right:16px;" />
-                </div>
+                <p class="login-subtitle">Ingrese la clave de acceso</p>
                 <div class="login-input-wrap">
                     <input type="password" id="loginPassword" placeholder="Contraseña" autocomplete="off" />
                     <button id="loginTogglePass" type="button" title="Mostrar/ocultar">👁</button>
@@ -1100,10 +1097,7 @@
     // --- LOGIN LOGIC ---
     (function() {
         // Check if already authenticated this session
-        if (sessionStorage.getItem('NEXA_AUTH') === 'ok') {
-            applyAccessControl(sessionStorage.getItem('NEXA_NIVEL') || 'inventario maestro');
-            return;
-        }
+        if (sessionStorage.getItem('NEXA_AUTH') === 'ok') return;
 
         // Show login after splash finishes
         var checkSplash = setInterval(function() {
@@ -1113,7 +1107,7 @@
                 document.getElementById('loginScreen').style.display = 'block';
                 document.querySelector('.container-app').style.display = 'none';
                 setTimeout(function() {
-                    document.getElementById('loginUsername').focus();
+                    document.getElementById('loginPassword').focus();
                 }, 400);
             }
         }, 200);
@@ -1137,65 +1131,14 @@
         });
     })();
 
-    // ============================================================
-    // CONTROL DE ACCESO POR NIVEL
-    // nivel "total" => acceso completo
-    // nivel "inventario maestro" => solo inventario, el resto bloqueado
-    // ============================================================
-    function applyAccessControl(nivel) {
-        var nivelNorm = (nivel || '').trim().toLowerCase();
-
-        // Módulos permitidos según nivel
-        var PERMISOS = {
-            'total': null, // null = acceso a todo
-            'inventario maestro': ['dashboard', 'inventario', 'hojas-vida'],
-            'solo mantenimiento': ['dashboard', 'mantenimientos', 'metrologia', 'planificacion', 'documentos'],
-            'aprobacion': ['dashboard', 'metrologia', 'planificacion', 'aprobar']
-        };
-
-        var permitidos = PERMISOS[nivelNorm];
-
-        // Si tiene acceso total o nivel no reconocido conservador = bloquear todo salvo inventario
-        if (permitidos === null) return; // acceso total, no restringir
-
-        // Bloquear nav-items que no estén permitidos
-        document.querySelectorAll('.nav-item[onclick]').forEach(function(item) {
-            var onclick = item.getAttribute('onclick') || '';
-            // Extraer el nombre del módulo del onclick="switchModule('xxx')"
-            var match = onclick.match(/switchModule\(['"]([^'"]+)['"]\)/);
-            if (!match) return;
-            var modulo = match[1];
-            if (permitidos.indexOf(modulo) === -1) {
-                // Bloquear: deshabilitar visualmente y prevenir clic
-                item.style.opacity = '0.35';
-                item.style.cursor = 'not-allowed';
-                item.style.pointerEvents = 'none';
-                item.title = 'Sin acceso';
-            }
-        });
-
-        // Mostrar badge de usuario en el header
-        var headerActions = document.querySelector('.header-actions');
-        if (headerActions) {
-            var badge = document.createElement('span');
-            badge.id = 'userBadge';
-            badge.style.cssText = 'font-size:13px;color:#607d8b;margin-right:8px;font-family:Outfit,sans-serif;';
-            var usuario = sessionStorage.getItem('NEXA_USUARIO') || '';
-            badge.textContent = '👤 ' + usuario;
-            headerActions.insertBefore(badge, headerActions.firstChild);
-        }
-    }
-
     function handleLogin() {
-        var usr = (document.getElementById('loginUsername').value || '').trim();
-        var pwd = (document.getElementById('loginPassword').value || '').trim();
+        var pwd = document.getElementById('loginPassword').value.trim();
         var errEl = document.getElementById('loginError');
         var btn = document.getElementById('loginBtn');
         var btnText = document.getElementById('loginBtnText');
         var spinner = document.getElementById('loginSpinner');
 
-        if (!usr) { errEl.textContent = 'Ingrese el usuario'; document.getElementById('loginUsername').focus(); return; }
-        if (!pwd) { errEl.textContent = 'Ingrese la contraseña'; document.getElementById('loginPassword').focus(); return; }
+        if (!pwd) { errEl.textContent = 'Ingrese la contraseña'; return; }
 
         errEl.textContent = '';
         btn.disabled = true;
@@ -1205,19 +1148,16 @@
         fetch('/.netlify/functions/auth', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: usr, password: pwd })
+            body: JSON.stringify({ password: pwd })
         })
         .then(function(r) { return r.json(); })
         .then(function(data) {
             if (data.success) {
                 sessionStorage.setItem('NEXA_AUTH', 'ok');
-                sessionStorage.setItem('NEXA_USUARIO', data.usuario || usr);
-                sessionStorage.setItem('NEXA_NIVEL', data.nivel || 'inventario maestro');
                 document.getElementById('loginScreen').style.display = 'none';
                 document.querySelector('.container-app').style.display = 'flex';
-                applyAccessControl(data.nivel || 'inventario maestro');
             } else {
-                errEl.textContent = data.error || 'Usuario o contraseña incorrectos';
+                errEl.textContent = data.error || 'Contraseña incorrecta';
                 btn.disabled = false;
                 btnText.textContent = 'Ingresar';
                 spinner.style.display = 'none';
@@ -1231,32 +1171,6 @@
             spinner.style.display = 'none';
         });
     }
-
-    function cerrarSesion() {
-        if (!confirm('¿Desea cerrar la sesión?')) return;
-        sessionStorage.removeItem('NEXA_AUTH');
-        sessionStorage.removeItem('NEXA_USUARIO');
-        sessionStorage.removeItem('NEXA_NIVEL');
-        var badge = document.getElementById('userBadge');
-        if (badge) badge.remove();
-        // Restaurar nav-items bloqueados
-        document.querySelectorAll('.nav-item[onclick]').forEach(function(item) {
-            item.style.opacity = '';
-            item.style.cursor = '';
-            item.style.pointerEvents = '';
-            item.title = '';
-        });
-        var u = document.getElementById('loginUsername');
-        var p = document.getElementById('loginPassword');
-        if (u) u.value = '';
-        if (p) p.value = '';
-        var err = document.getElementById('loginError');
-        if (err) err.textContent = '';
-        document.querySelector('.container-app').style.display = 'none';
-        document.getElementById('loginScreen').style.display = 'block';
-        setTimeout(function() { document.getElementById('loginUsername').focus(); }, 200);
-    }
-    window.cerrarSesion = cerrarSesion;
     </script>
     <!-- FIN LOGIN SCREEN -->
 
@@ -1355,7 +1269,6 @@
                     <button class="btn-icon" title="Notificaciones">🔔</button>
                     <button class="btn-icon" onclick="printModule()" title="Imprimir">🖨️</button>
                     <button class="btn-icon" onclick="exportData()" title="Exportar">💾</button>
-                    <button class="btn-icon" onclick="cerrarSesion()" title="Cerrar sesión" style="background:#c62828;color:white;font-size:13px;padding:6px 12px;border-radius:8px;font-weight:600;width:auto;">🚪 Salir</button>
                     <div class="user-profile">
                         <div class="avatar">PM</div>
                         <span style="font-size: 12px; color: var(--neutral-dark);">Ing. Paul Eduardo Muñoz Rodriguez</span>
@@ -1651,10 +1564,12 @@
                         <div class="mt-toolbar-left">
                             <button class="mt-new-btn mt-new-prev" onclick="openMantForm('prev')">🛡️ + Preventivo</button>
                             <button class="mt-new-btn mt-new-corr" onclick="openMantForm('corr')">🔧 + Correctivo</button>
+                            <button class="mt-new-btn mt-new-terc" onclick="openTercForm()">🏢 + Terceros</button>
                             <div class="mt-filter-group">
                                 <button class="mt-filter-btn active" data-tipo="TODOS" onclick="mtFilterTipo('TODOS')">Todos</button>
                                 <button class="mt-filter-btn" data-tipo="Preventivo" onclick="mtFilterTipo('Preventivo')">🛡️ Preventivo</button>
                                 <button class="mt-filter-btn" data-tipo="Correctivo" onclick="mtFilterTipo('Correctivo')">🔧 Correctivo</button>
+                                <button class="mt-filter-btn" data-tipo="Tercero" onclick="mtFilterTipo('Tercero')">🏢 Terceros</button>
                             </div>
                         </div>
                         <div class="mt-toolbar-right">
@@ -3442,6 +3357,8 @@
     .mt-new-prev:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(21,101,192,0.35); }
     .mt-new-corr { background:linear-gradient(135deg,#b71c1c,#c62828); color:white; }
     .mt-new-corr:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(183,28,28,0.35); }
+    .mt-new-terc { background:linear-gradient(135deg,#1b5e20,#2e7d32); color:white; }
+    .mt-new-terc:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(27,94,32,0.35); }
     .mt-filter-group { display:flex; gap:6px; }
     .mt-filter-btn { padding:7px 14px; border:1.5px solid #cfd8dc; border-radius:20px; background:white; color:#546e7a; font-size:12px; font-weight:600; cursor:pointer; font-family:'Outfit',sans-serif; transition:all 0.2s; }
     .mt-filter-btn.active { background:#0d47a1; border-color:#0d47a1; color:white; }
@@ -3623,5 +3540,235 @@
 
     <script src="js/hojas-de-vida.js"></script>
     <script src="js/hv-personal.js"></script>
+<!-- ══════════════ MODAL REPORTE TERCEROS ══════════════ -->
+<div id="tercModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:none;align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:16px;width:100%;max-width:520px;margin:20px;box-shadow:0 20px 60px rgba(0,0,0,0.3);overflow:hidden;">
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,#1b5e20,#2e7d32);padding:20px 24px;display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="font-size:18px;font-weight:800;color:white;font-family:'Montserrat',sans-serif;">🏢 Reporte de Tercero</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.75);margin-top:3px;">Mantenimiento preventivo realizado por empresa externa</div>
+      </div>
+      <button onclick="closeTercForm()" style="background:rgba(255,255,255,0.2);border:none;color:white;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>
+    <!-- Body -->
+    <div style="padding:24px;display:flex;flex-direction:column;gap:14px;">
+      <div>
+        <label style="font-size:12px;font-weight:700;color:#455a64;text-transform:uppercase;letter-spacing:.5px;">Empresa / Tercero *</label>
+        <input id="tercEmpresa" type="text" placeholder="Nombre de la empresa o técnico externo" style="width:100%;margin-top:5px;padding:10px 12px;border:1.5px solid #cfd8dc;border-radius:8px;font-size:14px;font-family:'Outfit',sans-serif;box-sizing:border-box;outline:none;">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:700;color:#455a64;text-transform:uppercase;letter-spacing:.5px;">Equipo *</label>
+        <select id="tercEquipoSel" style="width:100%;margin-top:5px;padding:10px 12px;border:1.5px solid #cfd8dc;border-radius:8px;font-size:14px;font-family:'Outfit',sans-serif;box-sizing:border-box;background:white;outline:none;">
+          <option value="">⏳ Cargando equipos...</option>
+        </select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label style="font-size:12px;font-weight:700;color:#455a64;text-transform:uppercase;letter-spacing:.5px;">Fecha del servicio *</label>
+          <input id="tercFecha" type="date" style="width:100%;margin-top:5px;padding:10px 12px;border:1.5px solid #cfd8dc;border-radius:8px;font-size:14px;font-family:'Outfit',sans-serif;box-sizing:border-box;outline:none;">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:700;color:#455a64;text-transform:uppercase;letter-spacing:.5px;">Tipo de servicio</label>
+          <select id="tercTipo" style="width:100%;margin-top:5px;padding:10px 12px;border:1.5px solid #cfd8dc;border-radius:8px;font-size:14px;font-family:'Outfit',sans-serif;box-sizing:border-box;background:white;outline:none;">
+            <option value="Preventivo">Preventivo</option>
+            <option value="Correctivo">Correctivo</option>
+            <option value="Calibracion">Calibración</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:700;color:#455a64;text-transform:uppercase;letter-spacing:.5px;">PDF del reporte *</label>
+        <div id="tercDropZone" onclick="document.getElementById('tercPdfInput').click()" style="margin-top:5px;border:2px dashed #81c784;border-radius:10px;padding:24px;text-align:center;cursor:pointer;background:#f1f8e9;transition:all 0.2s;">
+          <div style="font-size:28px;">📄</div>
+          <div style="font-size:13px;font-weight:700;color:#2e7d32;margin-top:6px;">Haz clic para seleccionar el PDF</div>
+          <div style="font-size:11px;color:#78909c;margin-top:3px;">Máximo 10 MB</div>
+          <input id="tercPdfInput" type="file" accept="application/pdf" style="display:none;" onchange="onTercPdfSelected(this)">
+        </div>
+        <div id="tercPdfName" style="margin-top:6px;font-size:12px;color:#2e7d32;font-weight:600;display:none;"></div>
+      </div>
+      <div id="tercError" style="color:#c62828;font-size:13px;font-weight:600;display:none;"></div>
+    </div>
+    <!-- Footer -->
+    <div style="padding:16px 24px;background:#f5f5f5;border-top:1px solid #eceff1;display:flex;justify-content:flex-end;gap:10px;">
+      <button onclick="closeTercForm()" style="padding:10px 20px;border:1.5px solid #cfd8dc;background:white;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;">Cancelar</button>
+      <button id="tercSaveBtn" onclick="saveTercReport()" style="padding:10px 24px;background:linear-gradient(135deg,#1b5e20,#2e7d32);color:white;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;">💾 Guardar en Airtable</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════ LÓGICA MODAL TERCEROS ══════════════
+(function() {
+
+  var _tercEquipos = []; // cache de inventario
+
+  window.openTercForm = function() {
+    // Fecha por defecto = hoy
+    var hoy = new Date();
+    var yyyy = hoy.getFullYear();
+    var mm = String(hoy.getMonth()+1).padStart(2,'0');
+    var dd = String(hoy.getDate()).padStart(2,'0');
+    document.getElementById('tercFecha').value = yyyy+'-'+mm+'-'+dd;
+    document.getElementById('tercEmpresa').value = '';
+    document.getElementById('tercError').style.display = 'none';
+    document.getElementById('tercPdfName').style.display = 'none';
+    document.getElementById('tercPdfInput').value = '';
+    var modal = document.getElementById('tercModal');
+    modal.style.display = 'flex';
+
+    // Cargar equipos si no están cacheados
+    _loadTercEquipos();
+  };
+
+  window.closeTercForm = function() {
+    document.getElementById('tercModal').style.display = 'none';
+  };
+
+  // Cerrar al clic fuera
+  document.getElementById('tercModal').addEventListener('click', function(e) {
+    if (e.target === this) closeTercForm();
+  });
+
+  window.onTercPdfSelected = function(input) {
+    var file = input.files && input.files[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      document.getElementById('tercError').textContent = 'El PDF supera los 10 MB.';
+      document.getElementById('tercError').style.display = 'block';
+      input.value = '';
+      return;
+    }
+    document.getElementById('tercError').style.display = 'none';
+    var nameEl = document.getElementById('tercPdfName');
+    nameEl.textContent = '✅ ' + file.name + ' (' + Math.round(file.size/1024) + ' KB)';
+    nameEl.style.display = 'block';
+    // Cambiar zona visual
+    document.getElementById('tercDropZone').style.borderColor = '#2e7d32';
+    document.getElementById('tercDropZone').style.background = '#e8f5e9';
+  };
+
+  function _loadTercEquipos() {
+    // Reusar inventario ya cargado en el módulo mantenimientos si está disponible
+    if (window.__HSLV_MT_STATE && window.__HSLV_MT_STATE.inventario && window.__HSLV_MT_STATE.inventario.length > 0) {
+      _populateTercSelect(window.__HSLV_MT_STATE.inventario);
+      return;
+    }
+    var sel = document.getElementById('tercEquipoSel');
+    if (sel) sel.innerHTML = '<option value="">⏳ Cargando...</option>';
+    var headers = typeof getAuthHeader === 'function' ? getAuthHeader() : {};
+    fetch('/.netlify/functions/inventario?pageSize=200', { headers: headers })
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        _tercEquipos = d.records || d.data || [];
+        _populateTercSelect(_tercEquipos);
+      })
+      .catch(function(){
+        if (sel) sel.innerHTML = '<option value="">⚠️ Error al cargar equipos</option>';
+      });
+  }
+
+  function _populateTercSelect(inv) {
+    _tercEquipos = inv;
+    var sel = document.getElementById('tercEquipoSel');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">— Seleccionar equipo —</option>' +
+      inv.map(function(r){
+        var f = r.fields || {};
+        var nombre = f['Equipo'] || f['EQUIPO'] || '';
+        var placa = f['Numero de Placa'] || f['PLACA'] || '';
+        var label = nombre + (placa ? ' · ' + placa : '');
+        return '<option value="'+r.id+'">'+label+'</option>';
+      }).join('');
+  }
+
+  window.saveTercReport = async function() {
+    var empresa = (document.getElementById('tercEmpresa').value || '').trim();
+    var equipoId = document.getElementById('tercEquipoSel').value;
+    var fecha = document.getElementById('tercFecha').value;
+    var tipo = document.getElementById('tercTipo').value;
+    var pdfInput = document.getElementById('tercPdfInput');
+    var file = pdfInput && pdfInput.files && pdfInput.files[0];
+
+    var errEl = document.getElementById('tercError');
+    errEl.style.display = 'none';
+
+    if (!empresa) { errEl.textContent = 'Ingrese el nombre de la empresa o técnico.'; errEl.style.display='block'; return; }
+    if (!equipoId) { errEl.textContent = 'Seleccione el equipo.'; errEl.style.display='block'; return; }
+    if (!fecha) { errEl.textContent = 'Seleccione la fecha del servicio.'; errEl.style.display='block'; return; }
+    if (!file) { errEl.textContent = 'Seleccione el archivo PDF del reporte.'; errEl.style.display='block'; return; }
+
+    var btn = document.getElementById('tercSaveBtn');
+    btn.disabled = true;
+    btn.textContent = '⏳ Subiendo...';
+
+    try {
+      // Construir nombre de archivo estándar: TERC_EMPRESA_EQUIPO_FECHA.pdf
+      var equipoRec = _tercEquipos.find(function(r){ return r.id === equipoId; });
+      var equipoNombre = equipoRec ? (equipoRec.fields['Equipo'] || equipoRec.fields['EQUIPO'] || '') : '';
+      var cleanEmpresa = empresa.replace(/[^a-zA-Z0-9]/g, '_').toUpperCase();
+      var cleanEquipo = equipoNombre.replace(/[^a-zA-Z0-9]/g, '_').toUpperCase();
+      var filename = 'TERC_' + cleanEmpresa + '_' + cleanEquipo + '_' + fecha + '_' + tipo + '.pdf';
+
+      // Convertir a base64
+      var b64 = await new Promise(function(resolve, reject) {
+        var reader = new FileReader();
+        reader.onerror = function(){ reject(new Error('No se pudo leer el archivo')); };
+        reader.onload = function(){
+          var res = String(reader.result || '');
+          var comma = res.indexOf(',');
+          resolve(comma >= 0 ? res.slice(comma+1) : res);
+        };
+        reader.readAsDataURL(file);
+      });
+
+      // Determinar campo Airtable según tipo
+      var fieldName = tipo === 'Correctivo' ? 'Mantenimientos correctivos' : 'Mantenimientos preventivo';
+
+      var headers = typeof getAuthHeader === 'function' ? getAuthHeader() : {};
+      var res = await axios.post('/.netlify/functions/upload-pdf', {
+        recordId: equipoId,
+        fieldName: fieldName,
+        filename: filename,
+        contentType: 'application/pdf',
+        base64: b64,
+        tableName: 'Inventario'
+      }, { headers: Object.assign({}, headers, {'Content-Type':'application/json'}) });
+
+      if (res.data && res.data.ok === false) throw new Error(res.data.error || 'Error al subir');
+
+      // Agregar a la lista local con badge Tercero
+      if (window.__HSLV_MT_STATE) {
+        window.__HSLV_MT_STATE.reports.unshift({
+          id: filename,
+          tipo: 'Tercero',
+          empresa: empresa,
+          equipo: equipoNombre,
+          placa: equipoRec ? (equipoRec.fields['Numero de Placa'] || '') : '',
+          servicio: equipoRec ? (equipoRec.fields['Servicio'] || '') : '',
+          equipoId: equipoId,
+          filename: filename,
+          url: res.data && res.data.url ? res.data.url : '',
+          fecha: fecha,
+          size: file.size
+        });
+        if (typeof window.mtRenderList === 'function') window.mtRenderList();
+        if (typeof window.loadMantenimientosModule === 'function') window.loadMantenimientosModule(true);
+      }
+
+      closeTercForm();
+      alert('✅ Reporte de tercero guardado correctamente en Airtable.');
+    } catch(err) {
+      errEl.textContent = 'Error: ' + (err.message || 'No se pudo guardar');
+      errEl.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '💾 Guardar en Airtable';
+    }
+  };
+
+})();
+</script>
+
 </body>
 </html>
