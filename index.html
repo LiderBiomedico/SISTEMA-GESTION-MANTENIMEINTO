@@ -1231,6 +1231,32 @@
             spinner.style.display = 'none';
         });
     }
+
+    function cerrarSesion() {
+        if (!confirm('¿Desea cerrar la sesión?')) return;
+        sessionStorage.removeItem('NEXA_AUTH');
+        sessionStorage.removeItem('NEXA_USUARIO');
+        sessionStorage.removeItem('NEXA_NIVEL');
+        var badge = document.getElementById('userBadge');
+        if (badge) badge.remove();
+        // Restaurar nav-items bloqueados
+        document.querySelectorAll('.nav-item[onclick]').forEach(function(item) {
+            item.style.opacity = '';
+            item.style.cursor = '';
+            item.style.pointerEvents = '';
+            item.title = '';
+        });
+        var u = document.getElementById('loginUsername');
+        var p = document.getElementById('loginPassword');
+        if (u) u.value = '';
+        if (p) p.value = '';
+        var err = document.getElementById('loginError');
+        if (err) err.textContent = '';
+        document.querySelector('.container-app').style.display = 'none';
+        document.getElementById('loginScreen').style.display = 'block';
+        setTimeout(function() { document.getElementById('loginUsername').focus(); }, 200);
+    }
+    window.cerrarSesion = cerrarSesion;
     </script>
     <!-- FIN LOGIN SCREEN -->
 
@@ -1329,6 +1355,7 @@
                     <button class="btn-icon" title="Notificaciones">🔔</button>
                     <button class="btn-icon" onclick="printModule()" title="Imprimir">🖨️</button>
                     <button class="btn-icon" onclick="exportData()" title="Exportar">💾</button>
+                    <button class="btn-icon" onclick="cerrarSesion()" title="Cerrar sesión" style="background:#c62828;color:white;font-size:13px;padding:6px 12px;border-radius:8px;font-weight:600;width:auto;">🚪 Salir</button>
                     <div class="user-profile">
                         <div class="avatar">PM</div>
                         <span style="font-size: 12px; color: var(--neutral-dark);">Ing. Paul Eduardo Muñoz Rodriguez</span>

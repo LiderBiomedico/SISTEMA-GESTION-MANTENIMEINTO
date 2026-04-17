@@ -33,12 +33,10 @@ function jsonResp(statusCode, body) {
 async function saveLastAccess(recordId) {
   try {
     const url = `${AIRTABLE_API}/${AIRTABLE_BASE_ID}/${AUTH_TABLE_ENCODED}/${recordId}`;
-    // Formato: "17/04/2026 14:35" — legible en Airtable (campo texto)
+    // Airtable campo tipo fecha espera formato ISO 8601: "2026-04-17"
+    // Si el campo incluye hora, usar: "2026-04-17T14:35:00.000Z"
     const now = new Date();
-    const pad = n => String(n).padStart(2, '0');
-    const fechaHora =
-      `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()} ` +
-      `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    const fechaISO = now.toISOString(); // "2026-04-17T19:35:00.000Z"
 
     await fetch(url, {
       method: 'PATCH',
@@ -47,12 +45,11 @@ async function saveLastAccess(recordId) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        fields: { [FIELD_ULTIMO_ACCESO]: fechaHora }
+        fields: { [FIELD_ULTIMO_ACCESO]: fechaISO }
       }),
     });
-    console.log('[AUTH] Ultimo acceso guardado:', fechaHora);
+    console.log('[AUTH] Ultimo acceso guardado:', fechaISO);
   } catch (err) {
-    // No bloquear el login si falla el guardado
     console.error('[AUTH] Error guardando ultimo acceso:', err.message);
   }
 }
