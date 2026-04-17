@@ -2178,14 +2178,55 @@
 
                 <!-- REPORTES MODULE -->
                 <div id="reportes" class="module">
-                    <div class="mb-3">
-                        <button class="btn btn-primary">📑 Generar Reporte Desempeño</button>
-                        <button class="btn btn-secondary">📋 Reporte Cumplimiento</button>
-                        <button class="btn btn-secondary">💰 Reporte Costos</button>
-                        <button class="btn btn-secondary">🔍 Reporte Auditoría</button>
+
+                    <!-- Toolbar -->
+                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px;">
+                        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                            <button class="btn btn-primary" style="background:linear-gradient(135deg,#1565c0,#1976d2);" onclick="loadReporteCostos()">💰 Costos por Servicio</button>
+                            <button class="btn btn-secondary" onclick="exportReporteCostosCSV()">⬇️ Exportar CSV</button>
+                            <button class="btn btn-secondary" onclick="loadReporteCostos()">🔄 Actualizar</button>
+                        </div>
+                        <div style="font-size:13px;color:#78909c;" id="reporteCostosTotal"></div>
                     </div>
-                    <div style="background: white; padding: 20px; border-radius: 8px; color: var(--border); text-align: center;">
-                        Selecciona un tipo de reporte para generar
+
+                    <!-- KPI cards -->
+                    <div id="reporteCostosKpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:20px;"></div>
+
+                    <!-- Gráfica + Tabla side by side -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+                        <div style="background:white;border-radius:14px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,0.07);">
+                            <div style="font-size:14px;font-weight:700;color:#37474f;margin-bottom:14px;">📊 Valor total por servicio</div>
+                            <canvas id="reporteCostosChart" height="300"></canvas>
+                        </div>
+                        <div style="background:white;border-radius:14px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,0.07);">
+                            <div style="font-size:14px;font-weight:700;color:#37474f;margin-bottom:14px;">🏥 Cantidad de equipos por servicio</div>
+                            <canvas id="reporteEquiposChart" height="300"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Tabla detallada -->
+                    <div style="background:white;border-radius:14px;box-shadow:0 2px 8px rgba(0,0,0,0.07);overflow:hidden;">
+                        <div style="padding:16px 20px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;justify-content:space-between;">
+                            <div style="font-size:14px;font-weight:700;color:#37474f;">📋 Detalle por servicio</div>
+                            <input id="reporteCostosSearch" type="text" placeholder="🔍 Filtrar servicio..." oninput="filterReporteTabla(this.value)"
+                                style="padding:7px 12px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:13px;font-family:Outfit,sans-serif;outline:none;width:220px;">
+                        </div>
+                        <div style="overflow-x:auto;">
+                            <table style="width:100%;border-collapse:collapse;" id="reporteCostosTabla">
+                                <thead>
+                                    <tr style="background:#f5f7fa;">
+                                        <th style="padding:11px 16px;text-align:left;font-size:12px;font-weight:700;color:#546e7a;text-transform:uppercase;letter-spacing:.4px;">Servicio</th>
+                                        <th style="padding:11px 16px;text-align:center;font-size:12px;font-weight:700;color:#546e7a;text-transform:uppercase;letter-spacing:.4px;">Equipos</th>
+                                        <th style="padding:11px 16px;text-align:right;font-size:12px;font-weight:700;color:#546e7a;text-transform:uppercase;letter-spacing:.4px;">Valor Total</th>
+                                        <th style="padding:11px 16px;text-align:right;font-size:12px;font-weight:700;color:#546e7a;text-transform:uppercase;letter-spacing:.4px;">Promedio/Equipo</th>
+                                        <th style="padding:11px 16px;text-align:right;font-size:12px;font-weight:700;color:#546e7a;text-transform:uppercase;letter-spacing:.4px;">% del Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="reporteCostosTbody">
+                                    <tr><td colspan="5" style="text-align:center;padding:40px;color:#90a4ae;">⏳ Haz clic en "Costos por Servicio" para cargar los datos</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
@@ -3890,5 +3931,231 @@
 })();
 </script>
 
+
+<script>
+// ══════════════════════════════════════════════════════
+// REPORTE DE COSTOS POR SERVICIO
+// ══════════════════════════════════════════════════════
+(function() {
+
+  var _costosData = []; // [{servicio, equipos, total, promedio, pct}]
+  var _costosRaw  = []; // registros crudos para export
+
+  function fmtPesos(n) {
+    if (!n || isNaN(n)) return '$0';
+    return '$' + Math.round(n).toLocaleString('es-CO');
+  }
+
+  window.loadReporteCostos = async function() {
+    var tbody = document.getElementById('reporteCostosTbody');
+    var kpis  = document.getElementById('reporteCostosKpis');
+    var total = document.getElementById('reporteCostosTotal');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:40px;color:#90a4ae;">⏳ Cargando datos desde Airtable...</td></tr>';
+    if (kpis)  kpis.innerHTML  = '';
+    if (total) total.textContent = '';
+
+    try {
+      var headers = typeof getAuthHeader === 'function' ? getAuthHeader() : {};
+      // Cargar todo el inventario paginado
+      var records = [];
+      var offset  = null;
+      do {
+        var url = '/.netlify/functions/inventario?pageSize=100' + (offset ? '&offset='+encodeURIComponent(offset) : '');
+        var res = await fetch(url, { headers: headers });
+        var data = await res.json();
+        (data.records || data.data || []).forEach(function(r){ records.push(r); });
+        offset = data.offset || null;
+      } while (offset);
+
+      _costosRaw = records;
+
+      // Agrupar por servicio
+      var grupos = {};
+      var totalGeneral = 0;
+
+      records.forEach(function(rec) {
+        var f = rec.fields || {};
+        var servicio = f['Servicio'] || f['SERVICIO'] || 'Sin servicio';
+        // Valor en Pesos — puede ser número o string
+        var valorRaw = f['Valor en Pesos'] || f['VALOR EN PESOS'] || 0;
+        var valor = typeof valorRaw === 'number' ? valorRaw : parseFloat(String(valorRaw).replace(/[^0-9.,]/g,'').replace(',','.')) || 0;
+
+        if (!grupos[servicio]) grupos[servicio] = { equipos: 0, total: 0, items: [] };
+        grupos[servicio].equipos++;
+        grupos[servicio].total += valor;
+        grupos[servicio].items.push({ nombre: f['Equipo']||f['EQUIPO']||'', valor: valor });
+        totalGeneral += valor;
+      });
+
+      // Convertir a array y ordenar por valor desc
+      _costosData = Object.entries(grupos)
+        .map(function(entry) {
+          return {
+            servicio: entry[0],
+            equipos:  entry[1].equipos,
+            total:    entry[1].total,
+            promedio: entry[1].equipos > 0 ? entry[1].total / entry[1].equipos : 0,
+            pct:      totalGeneral > 0 ? (entry[1].total / totalGeneral * 100) : 0
+          };
+        })
+        .sort(function(a,b){ return b.total - a.total; });
+
+      // ── KPI cards ──────────────────────────────────────────────────
+      var top1 = _costosData[0] || {};
+      var serviciosConValor = _costosData.filter(function(d){ return d.total > 0; }).length;
+      var kpiHtml = [
+        { label:'💰 Valor Total Inventario', value: fmtPesos(totalGeneral), color:'#1565c0' },
+        { label:'🏥 Total Servicios',        value: _costosData.length,     color:'#2e7d32' },
+        { label:'📦 Total Equipos',          value: records.length,         color:'#f57f17' },
+        { label:'🏆 Servicio Mayor Valor',   value: top1.servicio || '—',   color:'#6a1b9a', small: true },
+      ].map(function(k) {
+        return '<div style="background:white;border-radius:12px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,0.07);border-left:4px solid '+k.color+';">'
+          + '<div style="font-size:11px;font-weight:700;color:#607d8b;text-transform:uppercase;letter-spacing:.4px;">'+k.label+'</div>'
+          + '<div style="font-size:'+(k.small?'16px':'26px')+';font-weight:800;color:'+k.color+';margin:6px 0 2px;">'+k.value+'</div>'
+          + '</div>';
+      }).join('');
+      if (kpis) kpis.innerHTML = kpiHtml;
+      if (total) total.textContent = records.length + ' equipos · ' + _costosData.length + ' servicios';
+
+      // ── Tabla ──────────────────────────────────────────────────────
+      _renderReporteTabla(_costosData);
+
+      // ── Gráficas ───────────────────────────────────────────────────
+      _renderCostosCharts(_costosData, totalGeneral);
+
+    } catch(err) {
+      console.error('[REPORTE] Error:', err);
+      if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;color:#c62828;">⚠️ Error cargando datos: '+err.message+'</td></tr>';
+    }
+  };
+
+  function _renderReporteTabla(data) {
+    var tbody = document.getElementById('reporteCostosTbody');
+    if (!tbody) return;
+    if (!data.length) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;color:#90a4ae;">Sin datos</td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.map(function(d, i) {
+      var rowBg = i % 2 === 0 ? '#fafafa' : 'white';
+      var pctBar = '<div style="display:flex;align-items:center;gap:8px;justify-content:flex-end;">'
+        + '<div style="width:60px;height:6px;background:#e0e0e0;border-radius:3px;overflow:hidden;">'
+        + '<div style="width:'+Math.min(d.pct,100)+'%;height:100%;background:#1565c0;border-radius:3px;"></div></div>'
+        + '<span>'+d.pct.toFixed(1)+'%</span></div>';
+      return '<tr style="background:'+rowBg+';border-bottom:1px solid #f0f0f0;" class="reporte-fila" data-servicio="'+d.servicio.toLowerCase()+'">'
+        + '<td style="padding:12px 16px;font-size:13px;font-weight:600;color:#263238;">'+d.servicio+'</td>'
+        + '<td style="padding:12px 16px;text-align:center;font-size:13px;color:#546e7a;">'+d.equipos+'</td>'
+        + '<td style="padding:12px 16px;text-align:right;font-size:13px;font-weight:700;color:#1565c0;">'+fmtPesos(d.total)+'</td>'
+        + '<td style="padding:12px 16px;text-align:right;font-size:13px;color:#546e7a;">'+fmtPesos(d.promedio)+'</td>'
+        + '<td style="padding:12px 16px;text-align:right;font-size:13px;color:#546e7a;">'+pctBar+'</td>'
+        + '</tr>';
+    }).join('');
+  }
+
+  window.filterReporteTabla = function(q) {
+    var term = (q||'').toLowerCase().trim();
+    document.querySelectorAll('.reporte-fila').forEach(function(row) {
+      var serv = row.dataset.servicio || '';
+      row.style.display = (!term || serv.includes(term)) ? '' : 'none';
+    });
+  };
+
+  function _renderCostosCharts(data, totalGeneral) {
+    if (typeof Chart === 'undefined') return;
+    var top10 = data.slice(0, 10);
+    var labels = top10.map(function(d){ return d.servicio.length > 22 ? d.servicio.slice(0,20)+'…' : d.servicio; });
+    var colors = ['#1565c0','#1976d2','#1e88e5','#2196f3','#42a5f5','#64b5f6','#1b5e20','#2e7d32','#388e3c','#43a047'];
+
+    // Gráfica de costos (barras horizontales)
+    var ctx1 = document.getElementById('reporteCostosChart');
+    if (ctx1) {
+      if (ctx1._chartInstance) ctx1._chartInstance.destroy();
+      ctx1._chartInstance = new Chart(ctx1, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Valor en Pesos',
+            data: top10.map(function(d){ return d.total; }),
+            backgroundColor: colors,
+            borderRadius: 6,
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: function(ctx) { return ' ' + fmtPesos(ctx.raw); }
+              }
+            }
+          },
+          scales: {
+            x: {
+              beginAtZero: true,
+              ticks: {
+                callback: function(v) {
+                  if (v >= 1000000000) return '$'+(v/1000000000).toFixed(1)+'B';
+                  if (v >= 1000000) return '$'+(v/1000000).toFixed(0)+'M';
+                  if (v >= 1000) return '$'+(v/1000).toFixed(0)+'K';
+                  return '$'+v;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // Gráfica de equipos (dona)
+    var ctx2 = document.getElementById('reporteEquiposChart');
+    if (ctx2) {
+      if (ctx2._chartInstance) ctx2._chartInstance.destroy();
+      ctx2._chartInstance = new Chart(ctx2, {
+        type: 'doughnut',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: top10.map(function(d){ return d.equipos; }),
+            backgroundColor: colors,
+            borderWidth: 2,
+            borderColor: '#fff'
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { position: 'right', labels: { font: { size: 11 }, boxWidth: 14 } },
+            tooltip: {
+              callbacks: {
+                label: function(ctx) {
+                  return ' '+ctx.label+': '+ctx.raw+' equipo'+(ctx.raw!==1?'s':'');
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+  }
+
+  window.exportReporteCostosCSV = function() {
+    if (!_costosData.length) { alert('Primero carga los datos con el botón "Costos por Servicio"'); return; }
+    var rows = [['Servicio','Equipos','Valor Total COP','Promedio por Equipo','% del Total']];
+    _costosData.forEach(function(d) {
+      rows.push([d.servicio, d.equipos, Math.round(d.total), Math.round(d.promedio), d.pct.toFixed(2)+'%']);
+    });
+    var csv = rows.map(function(r){ return r.map(function(c){ return '"'+String(c).replace(/"/g,'""')+'"'; }).join(','); }).join('\n');
+    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'reporte_costos_'+new Date().toISOString().slice(0,10)+'.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  };
+
+})();
+</script>
 </body>
 </html>
