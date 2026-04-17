@@ -258,24 +258,121 @@ async function fetchDashboardData() {
     const response = await axios.get(`${API_BASE_URL}/kpis`, { headers: getAuthHeader() });
     const data = response.data || {};
 
-    const equiposTotal = data.equipos?.total ?? data.equiposTotal ?? 0;
-    const cumplimiento = data.cumplimiento ?? 0;
-    const pendientes = data.pendientes ?? 0;
-    const mtbf = data.mtbf ?? 0;
-    const mttr = data.mttr ?? 0;
-    const costo = data.costo ?? 0;
-
     const setText = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
 
-    setText('kpiEquipos', equiposTotal);
-    setText('kpiCumplimiento', `${cumplimiento}%`);
-    setText('kpiPendientes', pendientes);
-    setText('kpiMTBF', `${Math.round(mtbf)}h`);
-    setText('kpiMTTR', `${Number(mttr).toFixed(1)}h`);
-    setText('kpiCosto', `$${(Number(costo) / 1000).toFixed(0)}K`);
+    // KPIs principales
+    setText('kpiEquipos',      data.equiposTotal ?? 0);
+    setText('kpiCumplimiento', (data.cumplimiento ?? 0) + '%');
+    setText('kpiPendientes',   data.pendientes ?? 0);
+    setText('kpiMTBF',         '—');
+    setText('kpiMTTR',         '—');
+    setText('kpiCosto',        '—');
+
+    // KPIs adicionales
+    setText('kpiTotalReportes',  data.totalReportes ?? 0);
+    setText('kpiPreventivos',    data.totalPreventivos ?? 0);
+    setText('kpiCorrectivos',    data.totalCorrectivos ?? 0);
+    setText('kpiTerceros',       data.totalTerceros ?? 0);
+    setText('kpiEquiposManto',   data.equiposConManto ?? 0);
+    setText('kpiVencidos',       data.vencidos ?? 0);
+    setText('kpiPendientes30d',  data.pendientes30d ?? 0);
+
+    // Gráfica: distribución de tipos
+    _updateDistribucionChart(data.distribucion || {});
+
+    // Gráfica: top servicios
+    _updateServiciosChart(data.topServicios || []);
+
+    // Gráfica: tendencia mensual
+    _updateTendenciaChart(data.tendencia || []);
+
   } catch (error) {
     console.error('Error cargando dashboard:', error);
   }
+}
+
+function _updateDistribucionChart(dist) {
+  const ctx = document.getElementById('maintenanceTypeChart');
+  if (!ctx || typeof Chart === 'undefined') return;
+  if (ctx._chartInstance) ctx._chartInstance.destroy();
+  const prev = dist.preventivo || 0;
+  const corr = dist.correctivo || 0;
+  const terc = dist.terceros   || 0;
+  const total = prev + corr + terc || 1;
+  ctx._chartInstance = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: [
+        `Preventivo (${prev})`,
+        `Correctivo (${corr})`,
+        `Terceros (${terc})`
+      ],
+      datasets: [{
+        data: [prev, corr, terc],
+        backgroundColor: ['#1565c0', '#c62828', '#1b5e20'],
+        borderWidth: 2, borderColor: '#fff'
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: 'bottom' },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) {
+              const val = ctx.raw;
+              const pct = Math.round(val / total * 100);
+              return ` ${val} reportes (${pct}%)`;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+function _updateServiciosChart(servicios) {
+  const ctx = document.getElementById('complianceChart');
+  if (!ctx || typeof Chart === 'undefined' || !servicios.length) return;
+  if (ctx._chartInstance) ctx._chartInstance.destroy();
+  const labels = servicios.map(s => s.nombre.length > 20 ? s.nombre.slice(0,18)+'…' : s.nombre);
+  ctx._chartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Equipos', data: servicios.map(s => s.equip), backgroundColor: '#1565c020', borderColor: '#1565c0', borderWidth: 2 },
+        { label: 'Preventivos', data: servicios.map(s => s.prev), backgroundColor: '#4db84880', borderColor: '#4db848', borderWidth: 2 },
+        { label: 'Correctivos', data: servicios.map(s => s.corr), backgroundColor: '#c6282880', borderColor: '#c62828', borderWidth: 2 },
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'top' } },
+      scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+    }
+  });
+}
+
+function _updateTendenciaChart(tendencia) {
+  const ctx = document.getElementById('mtbfChart');
+  if (!ctx || typeof Chart === 'undefined' || !tendencia.length) return;
+  if (ctx._chartInstance) ctx._chartInstance.destroy();
+  ctx._chartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: tendencia.map(m => m.label),
+      datasets: [
+        { label: 'Preventivos', data: tendencia.map(m => m.prev), backgroundColor: '#1565c0cc', borderRadius: 6 },
+        { label: 'Correctivos', data: tendencia.map(m => m.corr), backgroundColor: '#c62828cc', borderRadius: 6 },
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'top' } },
+      scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } } }
+    }
+  });
 }
 
 // ============================================================================
