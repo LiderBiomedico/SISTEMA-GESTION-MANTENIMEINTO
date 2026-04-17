@@ -15,6 +15,8 @@ const FIELD_CONTRASENA    = 'Contrase\u00F1a';  // Contraseña
 const FIELD_USUARIOS      = 'Usuarios';
 const FIELD_NIVEL         = 'nivel';
 const FIELD_ULTIMO_ACCESO = 'Ultimo acceso';
+const FIELD_NOMBRE        = 'nombre';
+const FIELD_EMAIL         = 'email';
 
 function jsonResp(statusCode, body) {
   return {
@@ -99,6 +101,10 @@ exports.handler = async (event) => {
 
     if (records.length > 0) {
       console.log('[AUTH] Campos disponibles:', JSON.stringify(Object.keys(records[0].fields)));
+      // Log todos los registros para debug de nombre
+      records.forEach(function(r, i) {
+        console.log('[AUTH] Registro '+i+':', JSON.stringify(r.fields));
+      });
     }
 
     const inputUser = username.toLowerCase();
@@ -146,11 +152,30 @@ exports.handler = async (event) => {
       let usuario = username;
       if (fields[FIELD_USUARIOS] !== undefined) usuario = String(fields[FIELD_USUARIOS]).trim();
 
+      // Buscar campo nombre de forma robusta (minúscula, mayúscula, variantes)
+      let nombre = usuario; // fallback al username si no hay nombre
+      for (const [k, v] of Object.entries(fields)) {
+        if (k.toLowerCase() === 'nombre' && v) {
+          nombre = String(v).trim();
+          console.log('[AUTH] Nombre encontrado en campo "'+k+'": '+nombre);
+          break;
+        }
+      }
+
+      // Buscar campo email de forma robusta
+      let email = '';
+      for (const [k, v] of Object.entries(fields)) {
+        if (k.toLowerCase() === 'email' && v) {
+          email = String(v).trim();
+          break;
+        }
+      }
+
       // Guardar último acceso en Airtable (no bloquea la respuesta)
       await saveLastAccess(matchRecord.id);
 
-      console.log('[AUTH] Login exitoso:', usuario, '| nivel:', nivel);
-      return jsonResp(200, { success: true, usuario, nivel });
+      console.log('[AUTH] Login exitoso:', usuario, '| nivel:', nivel, '| nombre:', nombre);
+      return jsonResp(200, { success: true, usuario, nivel, nombre, email });
 
     } else {
       console.log('[AUTH] Login fallido');
