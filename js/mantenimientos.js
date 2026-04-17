@@ -955,17 +955,24 @@
       return;
     }
     list.innerHTML = items.slice(0, 50).map(function(eq) {
-      var label = '<strong>'+esc(eq.nm)+'</strong>';
-      if (eq.marca||eq.modelo) label += ' <span style="color:#78909c;font-size:11px;">'+esc([eq.marca,eq.modelo].filter(Boolean).join(' '))+'</span>';
+      var label = '<strong>' + esc(eq.nm) + '</strong>';
+      if (eq.marca || eq.modelo) label += ' <span style="color:#78909c;font-size:11px;">' + esc([eq.marca, eq.modelo].filter(Boolean).join(' ')) + '</span>';
       var sub = [];
-      if (eq.serie) sub.push('S/N: '+esc(eq.serie));
-      if (eq.pl) sub.push('Placa: '+esc(eq.pl));
+      if (eq.serie) sub.push('S/N: ' + esc(eq.serie));
+      if (eq.pl) sub.push('Placa: ' + esc(eq.pl));
       if (eq.servicio) sub.push(esc(eq.servicio));
-      return '<div class="mf-inv-item" onclick="selectInvEquipo(\''+eq.id+'\')" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #f0f0f0;transition:background 0.15s;" onmouseover="this.style.background='#e3f2fd'" onmouseout="this.style.background=''">'
-        + '<div style="font-size:13px;">'+label+'</div>'
-        + (sub.length ? '<div style="font-size:11px;color:#90a4ae;margin-top:2px;">'+sub.join(' · ')+'</div>' : '')
+      var subHtml = sub.length ? '<div style="font-size:11px;color:#90a4ae;margin-top:2px;">' + sub.join(' · ') + '</div>' : '';
+      return '<div class="mf-inv-item" data-eqid="' + esc(eq.id) + '" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #f0f0f0;">'
+        + '<div style="font-size:13px;">' + label + '</div>'
+        + subHtml
         + '</div>';
     }).join('');
+    // Hover via event delegation (avoids quote conflicts)
+    list.querySelectorAll('.mf-inv-item').forEach(function(item) {
+      item.addEventListener('mouseenter', function() { this.style.background = '#e3f2fd'; });
+      item.addEventListener('mouseleave', function() { this.style.background = ''; });
+      item.addEventListener('click', function() { selectInvEquipo(this.dataset.eqid); });
+    });
     list.style.display = 'block';
   }
 
