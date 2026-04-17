@@ -629,7 +629,7 @@
     + '<div class="mf-proto-header"><div style="display:flex;align-items:center;gap:12px"><span style="font-size:32px">🏥</span><div><div style="font-weight:800;font-size:16px;color:#0a1628">'+esc(proto.nombre)+'</div><div style="font-size:12px;color:#607d8b;margin-top:2px">Código: '+esc(proto.codigo)+' · Categoría: '+esc(proto.categoria)+'</div></div></div></div>'
 
     + '<div class="mf-section-title" style="background:'+color+'">🏥 DATOS DEL EQUIPO</div>'
-    + '<div class="mf-row"><div class="mf-group mf-full"><label class="mf-label">Equipo del Inventario *</label><select id="mfEquipoSelect" class="mf-select" style="display:none"><option value="">Cargando...</option></select><div id="mfEquipoSearchWrap" style="position:relative;"><input id="mfEquipoSearch" type="text" class="mf-input" placeholder="🔍  Buscar por nombre, marca, modelo, serie o servicio..." oninput="onInvSearch(this)" autocomplete="off"><input type="hidden" id="mfEquipoId"><div id="mfEquipoDropdown" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:white;border:1.5px solid #90caf9;border-radius:10px;max-height:260px;overflow-y:auto;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,0.12);"></div></div></div></div>'
+    + '<div class="mf-row"><div class="mf-group mf-full"><label class="mf-label">Equipo del Inventario *</label><select id="mfEquipoSelect" class="mf-select" style="display:none"><option value="">Cargando...</option></select><input type="hidden" id="mfEquipoId"><div id="mfEquipoSearchWrap" style="background:#f0f7ff;border:1.5px solid #90caf9;border-radius:12px;padding:14px;margin-top:6px;"><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;"><div><label style="font-size:11px;font-weight:700;color:#1565c0;text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px;">📋 Nombre / Equipo</label><input id="mfSrchNombre" type="text" class="mf-input" placeholder="Ej: Monitor, Desfibrilador..." oninput="onInvSearchMulti()" autocomplete="off" style="background:white;"></div><div><label style="font-size:11px;font-weight:700;color:#1565c0;text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px;">🏷️ Marca</label><input id="mfSrchMarca" type="text" class="mf-input" placeholder="Ej: Nihon Kohden, Mindray..." oninput="onInvSearchMulti()" autocomplete="off" style="background:white;"></div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;"><div><label style="font-size:11px;font-weight:700;color:#1565c0;text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px;">⚙️ Modelo</label><input id="mfSrchModelo" type="text" class="mf-input" placeholder="Ej: CSM-1501, BeneHeart D6..." oninput="onInvSearchMulti()" autocomplete="off" style="background:white;"></div><div><label style="font-size:11px;font-weight:700;color:#1565c0;text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px;">🔢 Número de Serie</label><input id="mfSrchSerie" type="text" class="mf-input" placeholder="Número de serie..." oninput="onInvSearchMulti()" autocomplete="off" style="background:white;"></div></div><div id="mfEquipoDropdown" style="display:none;background:white;border:1.5px solid #90caf9;border-radius:10px;max-height:280px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.12);"></div><div id="mfEquipoSelected" style="display:none;background:#e8f5e9;border:1.5px solid #81c784;border-radius:8px;padding:10px 14px;margin-top:8px;"><div style="display:flex;justify-content:space-between;align-items:center;"><div id="mfEquipoSelectedLabel" style="font-size:13px;font-weight:700;color:#1b5e20;"></div><button type="button" onclick="clearInvEquipo()" style="background:none;border:none;color:#c62828;cursor:pointer;font-size:16px;font-weight:700;padding:0 4px;" title="Quitar selección">✕</button></div><div id="mfEquipoSelectedSub" style="font-size:11px;color:#388e3c;margin-top:3px;"></div></div></div></div></div>'
     + '<div class="mf-inv-card"><div class="mf-inv-title">📋 Datos del Equipo (autocompletados)</div><div class="mf-inv-grid"><div><span class="mf-inv-label">Nombre</span><input id="mf_equipo" class="mf-inv-val" readonly></div><div><span class="mf-inv-label">Placa</span><input id="mf_placa" class="mf-inv-val" readonly></div><div><span class="mf-inv-label">Marca</span><input id="mf_marca" class="mf-inv-val" readonly></div><div><span class="mf-inv-label">Modelo</span><input id="mf_modelo" class="mf-inv-val" readonly></div><div><span class="mf-inv-label">Serie</span><input id="mf_serie" class="mf-inv-val" readonly></div><div><span class="mf-inv-label">Servicio / Ubicación</span><input id="mf_servicio" class="mf-inv-val" readonly></div><div><span class="mf-inv-label">Clasificación Riesgo</span><input id="mf_riesgo" class="mf-inv-val" readonly></div></div></div>'
 
     + '<div class="mf-section-title" style="background:'+color+'">📅 EJECUCIÓN Y CRONÓMETRO</div>'
@@ -679,7 +679,7 @@
   function buildFormHTML(isPrev) {
     var color = '#b71c1c';
     return '<div class="mf-section-title" style="background:'+color+'">🔧 EQUIPO</div>'
-    + '<div class="mf-row"><div class="mf-group mf-full"><label class="mf-label">Equipo del Inventario *</label><select id="mfEquipoSelect" class="mf-select" style="display:none"><option value="">Cargando...</option></select><div id="mfEquipoSearchWrap" style="position:relative;"><input id="mfEquipoSearch" type="text" class="mf-input" placeholder="🔍  Buscar por nombre, marca, modelo, serie o servicio..." oninput="onInvSearch(this)" autocomplete="off"><input type="hidden" id="mfEquipoId"><div id="mfEquipoDropdown" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:white;border:1.5px solid #90caf9;border-radius:10px;max-height:260px;overflow-y:auto;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,0.12);"></div></div></div></div>'
+    + '<div class="mf-row"><div class="mf-group mf-full"><label class="mf-label">Equipo del Inventario *</label><select id="mfEquipoSelect" class="mf-select" style="display:none"><option value="">Cargando...</option></select><input type="hidden" id="mfEquipoId"><div id="mfEquipoSearchWrap" style="background:#f0f7ff;border:1.5px solid #90caf9;border-radius:12px;padding:14px;margin-top:6px;"><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;"><div><label style="font-size:11px;font-weight:700;color:#1565c0;text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px;">📋 Nombre / Equipo</label><input id="mfSrchNombre" type="text" class="mf-input" placeholder="Ej: Monitor, Desfibrilador..." oninput="onInvSearchMulti()" autocomplete="off" style="background:white;"></div><div><label style="font-size:11px;font-weight:700;color:#1565c0;text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px;">🏷️ Marca</label><input id="mfSrchMarca" type="text" class="mf-input" placeholder="Ej: Nihon Kohden, Mindray..." oninput="onInvSearchMulti()" autocomplete="off" style="background:white;"></div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;"><div><label style="font-size:11px;font-weight:700;color:#1565c0;text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px;">⚙️ Modelo</label><input id="mfSrchModelo" type="text" class="mf-input" placeholder="Ej: CSM-1501, BeneHeart D6..." oninput="onInvSearchMulti()" autocomplete="off" style="background:white;"></div><div><label style="font-size:11px;font-weight:700;color:#1565c0;text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px;">🔢 Número de Serie</label><input id="mfSrchSerie" type="text" class="mf-input" placeholder="Número de serie..." oninput="onInvSearchMulti()" autocomplete="off" style="background:white;"></div></div><div id="mfEquipoDropdown" style="display:none;background:white;border:1.5px solid #90caf9;border-radius:10px;max-height:280px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.12);"></div><div id="mfEquipoSelected" style="display:none;background:#e8f5e9;border:1.5px solid #81c784;border-radius:8px;padding:10px 14px;margin-top:8px;"><div style="display:flex;justify-content:space-between;align-items:center;"><div id="mfEquipoSelectedLabel" style="font-size:13px;font-weight:700;color:#1b5e20;"></div><button type="button" onclick="clearInvEquipo()" style="background:none;border:none;color:#c62828;cursor:pointer;font-size:16px;font-weight:700;padding:0 4px;" title="Quitar selección">✕</button></div><div id="mfEquipoSelectedSub" style="font-size:11px;color:#388e3c;margin-top:3px;"></div></div></div></div></div>'
     + '<div class="mf-inv-card"><div class="mf-inv-title">📋 Datos del Equipo (autocompletados)</div><div class="mf-inv-grid"><div><span class="mf-inv-label">Nombre</span><input id="mf_equipo" class="mf-inv-val" readonly></div><div><span class="mf-inv-label">Placa</span><input id="mf_placa" class="mf-inv-val" readonly></div><div><span class="mf-inv-label">Marca</span><input id="mf_marca" class="mf-inv-val" readonly></div><div><span class="mf-inv-label">Modelo</span><input id="mf_modelo" class="mf-inv-val" readonly></div><div><span class="mf-inv-label">Serie</span><input id="mf_serie" class="mf-inv-val" readonly></div><div><span class="mf-inv-label">Servicio / Ubicación</span><input id="mf_servicio" class="mf-inv-val" readonly></div><div><span class="mf-inv-label">Clasificación Riesgo</span><input id="mf_riesgo" class="mf-inv-val" readonly></div></div></div>'
     + '<div class="mf-section-title" style="background:'+color+'">📅 EJECUCIÓN</div>'
     + '<div class="mf-row"><div class="mf-group"><label class="mf-label">Fecha de Ejecución *</label><input type="date" id="mfFechaEjecucion" class="mf-input" value="'+localDateStr()+'"></div><div class="mf-group"><label class="mf-label">Técnico Responsable *</label><input type="text" id="mfTecnico" class="mf-input" placeholder="Nombre del técnico"></div></div>'
@@ -976,30 +976,60 @@
     list.style.display = 'block';
   }
 
-  window.onInvSearch = function(input) {
-    var q = (input.value || '').toLowerCase().trim();
+  window.onInvSearchMulti = function() {
+    var qNombre = (document.getElementById('mfSrchNombre') && document.getElementById('mfSrchNombre').value || '').toLowerCase().trim();
+    var qMarca  = (document.getElementById('mfSrchMarca')  && document.getElementById('mfSrchMarca').value  || '').toLowerCase().trim();
+    var qModelo = (document.getElementById('mfSrchModelo') && document.getElementById('mfSrchModelo').value || '').toLowerCase().trim();
+    var qSerie  = (document.getElementById('mfSrchSerie')  && document.getElementById('mfSrchSerie').value  || '').toLowerCase().trim();
+
+    // Limpiar selección previa
     var hidden = document.getElementById('mfEquipoId');
     if (hidden) hidden.value = '';
-    // Limpiar campos autocompletados
+    var sel = document.getElementById('mfEquipoSelected');
+    if (sel) sel.style.display = 'none';
     ['equipo','placa','marca','modelo','serie','servicio','riesgo'].forEach(function(k) {
       var el = document.getElementById('mf_'+k); if (el) el.value = '';
     });
-    if (!q) { var list = document.getElementById('mfEquipoDropdown'); if(list) list.style.display='none'; return; }
+
+    // Si todos los campos están vacíos, ocultar dropdown
+    if (!qNombre && !qMarca && !qModelo && !qSerie) {
+      var list = document.getElementById('mfEquipoDropdown');
+      if (list) list.style.display = 'none';
+      return;
+    }
+
     var filtered = _invData.filter(function(eq) {
-      return (eq.nm+eq.marca+eq.modelo+eq.serie+eq.pl+eq.servicio).toLowerCase().includes(q);
+      if (qNombre && !eq.nm.toLowerCase().includes(qNombre)) return false;
+      if (qMarca  && !eq.marca.toLowerCase().includes(qMarca))  return false;
+      if (qModelo && !eq.modelo.toLowerCase().includes(qModelo)) return false;
+      if (qSerie  && !eq.serie.toLowerCase().includes(qSerie))  return false;
+      return true;
     });
     _renderInvDropdown(filtered);
   };
 
+  // Mantener compatibilidad con código que llame onInvSearch
+  window.onInvSearch = window.onInvSearchMulti;
+
   window.selectInvEquipo = function(id) {
     var eq = _invData.find(function(e){ return e.id === id; });
     if (!eq) return;
-    // Llenar campo de búsqueda con nombre del equipo
-    var searchInput = document.getElementById('mfEquipoSearch');
-    if (searchInput) searchInput.value = eq.nm + (eq.marca||eq.modelo ? ' — '+[eq.marca,eq.modelo].filter(Boolean).join(' ') : '') + (eq.pl ? ' · '+eq.pl : '');
     // Guardar ID en campo oculto
     var hidden = document.getElementById('mfEquipoId');
     if (hidden) hidden.value = id;
+    // Mostrar panel de equipo seleccionado
+    var selPanel = document.getElementById('mfEquipoSelected');
+    var selLabel = document.getElementById('mfEquipoSelectedLabel');
+    var selSub   = document.getElementById('mfEquipoSelectedSub');
+    if (selPanel) selPanel.style.display = 'block';
+    if (selLabel) selLabel.textContent = '✅ ' + eq.nm + (eq.marca||eq.modelo ? ' — '+[eq.marca,eq.modelo].filter(Boolean).join(' ') : '');
+    if (selSub) {
+      var parts = [];
+      if (eq.serie) parts.push('S/N: ' + eq.serie);
+      if (eq.pl)    parts.push('Placa: ' + eq.pl);
+      if (eq.servicio) parts.push(eq.servicio);
+      selSub.textContent = parts.join(' · ');
+    }
     // Autocompletar campos del equipo
     ['equipo','placa','marca','modelo','serie','servicio','riesgo'].forEach(function(k) {
       var el = document.getElementById('mf_'+k);
@@ -1012,7 +1042,24 @@
     if (list) list.style.display = 'none';
   };
 
-  // Cerrar dropdown al hacer clic fuera
+  window.clearInvEquipo = function() {
+    var hidden = document.getElementById('mfEquipoId');
+    if (hidden) hidden.value = '';
+    var selPanel = document.getElementById('mfEquipoSelected');
+    if (selPanel) selPanel.style.display = 'none';
+    ['mfSrchNombre','mfSrchMarca','mfSrchModelo','mfSrchSerie'].forEach(function(id) {
+      var el = document.getElementById(id); if (el) el.value = '';
+    });
+    ['equipo','placa','marca','modelo','serie','servicio','riesgo'].forEach(function(k) {
+      var el = document.getElementById('mf_'+k); if (el) el.value = '';
+    });
+    var list = document.getElementById('mfEquipoDropdown');
+    if (list) list.style.display = 'none';
+    var freqEl = document.getElementById('mfFrecuencia');
+    if (freqEl) freqEl.value = '';
+  };
+
+  // Cerrar dropdown al hacer clic fuera del panel de búsqueda
   document.addEventListener('click', function(e) {
     var wrap = document.getElementById('mfEquipoSearchWrap');
     if (wrap && !wrap.contains(e.target)) {
