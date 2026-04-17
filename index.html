@@ -1001,7 +1001,10 @@
                     <span class="login-nexa">NEXA</span>
                     <span class="login-cmms">CMMS</span>
                 </div>
-                <p class="login-subtitle">Ingrese la clave de acceso</p>
+                <p class="login-subtitle">Ingrese sus credenciales de acceso</p>
+                <div class="login-input-wrap" style="margin-bottom:12px;">
+                    <input type="text" id="loginUsername" placeholder="Usuario" autocomplete="off" style="padding-right:16px;" />
+                </div>
                 <div class="login-input-wrap">
                     <input type="password" id="loginPassword" placeholder="Contraseña" autocomplete="off" />
                     <button id="loginTogglePass" type="button" title="Mostrar/ocultar">👁</button>
@@ -1097,7 +1100,10 @@
     // --- LOGIN LOGIC ---
     (function() {
         // Check if already authenticated this session
-        if (sessionStorage.getItem('NEXA_AUTH') === 'ok') return;
+        if (sessionStorage.getItem('NEXA_AUTH') === 'ok') {
+            applyAccessControl(sessionStorage.getItem('NEXA_NIVEL') || 'inventario maestro');
+            return;
+        }
 
         // Show login after splash finishes
         var checkSplash = setInterval(function() {
@@ -1107,7 +1113,7 @@
                 document.getElementById('loginScreen').style.display = 'block';
                 document.querySelector('.container-app').style.display = 'none';
                 setTimeout(function() {
-                    document.getElementById('loginPassword').focus();
+                    document.getElementById('loginUsername').focus();
                 }, 400);
             }
         }, 200);
@@ -1131,14 +1137,63 @@
         });
     })();
 
+    // ============================================================
+    // CONTROL DE ACCESO POR NIVEL
+    // nivel "total" => acceso completo
+    // nivel "inventario maestro" => solo inventario, el resto bloqueado
+    // ============================================================
+    function applyAccessControl(nivel) {
+        var nivelNorm = (nivel || '').trim().toLowerCase();
+
+        // Módulos permitidos según nivel
+        var PERMISOS = {
+            'total': null, // null = acceso a todo
+            'inventario maestro': ['dashboard', 'inventario', 'hojas-vida']
+        };
+
+        var permitidos = PERMISOS[nivelNorm];
+
+        // Si tiene acceso total o nivel no reconocido conservador = bloquear todo salvo inventario
+        if (permitidos === null) return; // acceso total, no restringir
+
+        // Bloquear nav-items que no estén permitidos
+        document.querySelectorAll('.nav-item[onclick]').forEach(function(item) {
+            var onclick = item.getAttribute('onclick') || '';
+            // Extraer el nombre del módulo del onclick="switchModule('xxx')"
+            var match = onclick.match(/switchModule\(['"]([^'"]+)['"]\)/);
+            if (!match) return;
+            var modulo = match[1];
+            if (permitidos.indexOf(modulo) === -1) {
+                // Bloquear: deshabilitar visualmente y prevenir clic
+                item.style.opacity = '0.35';
+                item.style.cursor = 'not-allowed';
+                item.style.pointerEvents = 'none';
+                item.title = 'Sin acceso';
+            }
+        });
+
+        // Mostrar badge de usuario en el header
+        var headerActions = document.querySelector('.header-actions');
+        if (headerActions) {
+            var badge = document.createElement('span');
+            badge.id = 'userBadge';
+            badge.style.cssText = 'font-size:13px;color:#607d8b;margin-right:8px;font-family:Outfit,sans-serif;';
+            var usuario = sessionStorage.getItem('NEXA_USUARIO') || '';
+            badge.textContent = '👤 ' + usuario;
+            headerActions.insertBefore(badge, headerActions.firstChild);
+        }
+    }
+
     function handleLogin() {
-        var pwd = document.getElementById('loginPassword').value.trim();
+        var usr = (document.getElementById('loginUsername').value || '').trim();
+        var pwd = (document.getElementById('loginPassword').value || '').trim();
         var errEl = document.getElementById('loginError');
         var btn = document.getElementById('loginBtn');
         var btnText = document.getElementById('loginBtnText');
         var spinner = document.getElementById('loginSpinner');
 
-        if (!pwd) { errEl.textContent = 'Ingrese la contraseña'; return; }
+        if (!usr) { errEl.textContent = 'Ingrese el usuario'; document.getElementById('loginUsername').focus(); return; }
+        if (!pwd) { errEl.textContent = 'Ingrese la contraseña'; document.getElementById('loginPassword').focus(); return; }
 
         errEl.textContent = '';
         btn.disabled = true;
@@ -1148,16 +1203,19 @@
         fetch('/.netlify/functions/auth', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ password: pwd })
+            body: JSON.stringify({ username: usr, password: pwd })
         })
         .then(function(r) { return r.json(); })
         .then(function(data) {
             if (data.success) {
                 sessionStorage.setItem('NEXA_AUTH', 'ok');
+                sessionStorage.setItem('NEXA_USUARIO', data.usuario || usr);
+                sessionStorage.setItem('NEXA_NIVEL', data.nivel || 'inventario maestro');
                 document.getElementById('loginScreen').style.display = 'none';
                 document.querySelector('.container-app').style.display = 'flex';
+                applyAccessControl(data.nivel || 'inventario maestro');
             } else {
-                errEl.textContent = data.error || 'Contraseña incorrecta';
+                errEl.textContent = data.error || 'Usuario o contraseña incorrectos';
                 btn.disabled = false;
                 btnText.textContent = 'Ingresar';
                 spinner.style.display = 'none';
