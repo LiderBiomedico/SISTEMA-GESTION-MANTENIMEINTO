@@ -1148,7 +1148,8 @@
         // Módulos permitidos según nivel
         var PERMISOS = {
             'total': null, // null = acceso a todo
-            'inventario maestro': ['dashboard', 'inventario', 'hojas-vida']
+            'inventario maestro': ['dashboard', 'inventario', 'hojas-vida'],
+            'solo mantenimiento': ['dashboard', 'inventario', 'mantenimientos', 'metrologia', 'planificacion', 'documentos']
         };
 
         var permitidos = PERMISOS[nivelNorm];
