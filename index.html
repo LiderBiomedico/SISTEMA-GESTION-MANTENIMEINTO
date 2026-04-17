@@ -3610,9 +3610,37 @@
       </div>
       <div>
         <label style="font-size:12px;font-weight:700;color:#455a64;text-transform:uppercase;letter-spacing:.5px;">Equipo *</label>
-        <select id="tercEquipoSel" style="width:100%;margin-top:5px;padding:10px 12px;border:1.5px solid #cfd8dc;border-radius:8px;font-size:14px;font-family:'Outfit',sans-serif;box-sizing:border-box;background:white;outline:none;">
-          <option value="">⏳ Cargando equipos...</option>
-        </select>
+        <input type="hidden" id="tercEquipoId">
+        <div id="tercEquipoSearchWrap" style="background:#f0f7ff;border:1.5px solid #90caf9;border-radius:12px;padding:14px;margin-top:6px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+            <div>
+              <label style="font-size:11px;font-weight:700;color:#1565c0;text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px;">📋 Nombre / Equipo</label>
+              <input id="tercSrchNombre" type="text" placeholder="Ej: Monitor, Desfibrilador..." oninput="onTercSearchMulti()" autocomplete="off" style="width:100%;padding:9px 11px;border:1.5px solid #cfd8dc;border-radius:8px;font-size:13px;font-family:'Outfit',sans-serif;box-sizing:border-box;outline:none;background:white;">
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:700;color:#1565c0;text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px;">🏷️ Marca</label>
+              <input id="tercSrchMarca" type="text" placeholder="Ej: Nihon Kohden, Mindray..." oninput="onTercSearchMulti()" autocomplete="off" style="width:100%;padding:9px 11px;border:1.5px solid #cfd8dc;border-radius:8px;font-size:13px;font-family:'Outfit',sans-serif;box-sizing:border-box;outline:none;background:white;">
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+            <div>
+              <label style="font-size:11px;font-weight:700;color:#1565c0;text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px;">⚙️ Modelo</label>
+              <input id="tercSrchModelo" type="text" placeholder="Ej: CSM-1501, BeneHeart D6..." oninput="onTercSearchMulti()" autocomplete="off" style="width:100%;padding:9px 11px;border:1.5px solid #cfd8dc;border-radius:8px;font-size:13px;font-family:'Outfit',sans-serif;box-sizing:border-box;outline:none;background:white;">
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:700;color:#1565c0;text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px;">🔢 Número de Serie</label>
+              <input id="tercSrchSerie" type="text" placeholder="Número de serie..." oninput="onTercSearchMulti()" autocomplete="off" style="width:100%;padding:9px 11px;border:1.5px solid #cfd8dc;border-radius:8px;font-size:13px;font-family:'Outfit',sans-serif;box-sizing:border-box;outline:none;background:white;">
+            </div>
+          </div>
+          <div id="tercEquipoDropdown" style="display:none;background:white;border:1.5px solid #90caf9;border-radius:10px;max-height:220px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.12);"></div>
+          <div id="tercEquipoSelected" style="display:none;background:#e8f5e9;border:1.5px solid #81c784;border-radius:8px;padding:10px 14px;margin-top:8px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <div id="tercEquipoSelectedLabel" style="font-size:13px;font-weight:700;color:#1b5e20;"></div>
+              <button type="button" onclick="clearTercEquipo()" style="background:none;border:none;color:#c62828;cursor:pointer;font-size:16px;font-weight:700;padding:0 4px;" title="Quitar selección">✕</button>
+            </div>
+            <div id="tercEquipoSelectedSub" style="font-size:11px;color:#388e3c;margin-top:3px;"></div>
+          </div>
+        </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
         <div>
@@ -3662,6 +3690,7 @@
     var modal = document.getElementById('tercModal');
     modal.style.display = 'flex';
     _loadTercEquipos();
+    setTimeout(function(){ if(typeof _resetTercSearch==='function') _resetTercSearch(); }, 50);
   };
   window.closeTercForm = function() { document.getElementById('tercModal').style.display = 'none'; };
   document.getElementById('tercModal').addEventListener('click', function(e) { if (e.target === this) closeTercForm(); });
@@ -3676,27 +3705,101 @@
     document.getElementById('tercDropZone').style.background = '#e8f5e9';
   };
   function _loadTercEquipos() {
-    if (window.__HSLV_MT_STATE && window.__HSLV_MT_STATE.inventario && window.__HSLV_MT_STATE.inventario.length > 0) { _populateTercSelect(window.__HSLV_MT_STATE.inventario); return; }
-    var sel = document.getElementById('tercEquipoSel');
-    if (sel) sel.innerHTML = '<option value="">⏳ Cargando...</option>';
+    if (window.__HSLV_MT_STATE && window.__HSLV_MT_STATE.inventario && window.__HSLV_MT_STATE.inventario.length > 0) {
+      _tercEquipos = window.__HSLV_MT_STATE.inventario.map(function(r){
+        var f=r.fields||{};
+        return { id:r.id, nm:f['Equipo']||f['EQUIPO']||'', pl:f['Numero de Placa']||f['PLACA']||'',
+          marca:f['Marca']||f['MARCA']||'', modelo:f['Modelo']||f['MODELO']||'',
+          serie:f['Serie']||f['SERIE']||'', servicio:f['Servicio']||f['SERVICIO']||'' };
+      });
+      return;
+    }
     var headers = typeof getAuthHeader === 'function' ? getAuthHeader() : {};
     fetch('/.netlify/functions/inventario?pageSize=200', { headers: headers })
       .then(function(r){ return r.json(); })
-      .then(function(d){ _populateTercSelect(d.records || d.data || []); })
-      .catch(function(){ if(sel) sel.innerHTML='<option value="">⚠️ Error al cargar equipos</option>'; });
+      .then(function(d){
+        var inv = d.records || d.data || [];
+        _tercEquipos = inv.map(function(r){
+          var f=r.fields||{};
+          return { id:r.id, nm:f['Equipo']||f['EQUIPO']||'', pl:f['Numero de Placa']||f['PLACA']||'',
+            marca:f['Marca']||f['MARCA']||'', modelo:f['Modelo']||f['MODELO']||'',
+            serie:f['Serie']||f['SERIE']||'', servicio:f['Servicio']||f['SERVICIO']||'' };
+        });
+      })
+      .catch(function(){ console.error('Error cargando inventario para terceros'); });
   }
-  function _populateTercSelect(inv) {
-    _tercEquipos = inv;
-    var sel = document.getElementById('tercEquipoSel');
-    if (!sel) return;
-    sel.innerHTML = '<option value="">— Seleccionar equipo —</option>' + inv.map(function(r){
-      var f=r.fields||{}; var nombre=f['Equipo']||f['EQUIPO']||''; var placa=f['Numero de Placa']||f['PLACA']||'';
-      return '<option value="'+r.id+'">'+(nombre+(placa?' · '+placa:''))+'</option>';
+
+  window.onTercSearchMulti = function() {
+    var qNombre = (document.getElementById('tercSrchNombre').value||'').toLowerCase().trim();
+    var qMarca  = (document.getElementById('tercSrchMarca').value||'').toLowerCase().trim();
+    var qModelo = (document.getElementById('tercSrchModelo').value||'').toLowerCase().trim();
+    var qSerie  = (document.getElementById('tercSrchSerie').value||'').toLowerCase().trim();
+    // Limpiar selección previa
+    document.getElementById('tercEquipoId').value = '';
+    document.getElementById('tercEquipoSelected').style.display = 'none';
+    var list = document.getElementById('tercEquipoDropdown');
+    if (!qNombre && !qMarca && !qModelo && !qSerie) { list.style.display='none'; return; }
+    var filtered = _tercEquipos.filter(function(eq) {
+      if (qNombre && !eq.nm.toLowerCase().includes(qNombre)) return false;
+      if (qMarca  && !eq.marca.toLowerCase().includes(qMarca))  return false;
+      if (qModelo && !eq.modelo.toLowerCase().includes(qModelo)) return false;
+      if (qSerie  && !eq.serie.toLowerCase().includes(qSerie))  return false;
+      return true;
+    });
+    if (!filtered.length) {
+      list.innerHTML = '<div style="padding:12px 14px;color:#90a4ae;font-size:13px;">Sin resultados</div>';
+      list.style.display = 'block'; return;
+    }
+    list.innerHTML = filtered.slice(0,50).map(function(eq) {
+      var label = '<strong>' + eq.nm + '</strong>';
+      if (eq.marca||eq.modelo) label += ' <span style="color:#78909c;font-size:11px;">' + [eq.marca,eq.modelo].filter(Boolean).join(' ') + '</span>';
+      var sub = [];
+      if (eq.serie) sub.push('S/N: '+eq.serie);
+      if (eq.pl)    sub.push('Placa: '+eq.pl);
+      if (eq.servicio) sub.push(eq.servicio);
+      return '<div class="terc-eq-item" data-eqid="'+eq.id+'" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #f0f0f0;">'
+        + '<div style="font-size:13px;">'+label+'</div>'
+        + (sub.length ? '<div style="font-size:11px;color:#90a4ae;margin-top:2px;">'+sub.join(' · ')+'</div>' : '')
+        + '</div>';
     }).join('');
+    list.querySelectorAll('.terc-eq-item').forEach(function(item) {
+      item.addEventListener('mouseenter', function(){ this.style.background='#e3f2fd'; });
+      item.addEventListener('mouseleave', function(){ this.style.background=''; });
+      item.addEventListener('click', function(){ selectTercEquipo(this.dataset.eqid); });
+    });
+    list.style.display = 'block';
+  };
+
+  window.selectTercEquipo = function(id) {
+    var eq = _tercEquipos.find(function(e){ return e.id===id; });
+    if (!eq) return;
+    document.getElementById('tercEquipoId').value = id;
+    var label = document.getElementById('tercEquipoSelectedLabel');
+    var sub   = document.getElementById('tercEquipoSelectedSub');
+    var panel = document.getElementById('tercEquipoSelected');
+    if (label) label.textContent = '✅ ' + eq.nm + (eq.marca||eq.modelo ? ' — '+[eq.marca,eq.modelo].filter(Boolean).join(' ') : '');
+    if (sub) { var parts=[]; if(eq.serie) parts.push('S/N: '+eq.serie); if(eq.pl) parts.push('Placa: '+eq.pl); if(eq.servicio) parts.push(eq.servicio); sub.textContent=parts.join(' · '); }
+    if (panel) panel.style.display = 'block';
+    document.getElementById('tercEquipoDropdown').style.display = 'none';
+  };
+
+  window.clearTercEquipo = function() {
+    document.getElementById('tercEquipoId').value = '';
+    document.getElementById('tercEquipoSelected').style.display = 'none';
+    document.getElementById('tercEquipoDropdown').style.display = 'none';
+    ['tercSrchNombre','tercSrchMarca','tercSrchModelo','tercSrchSerie'].forEach(function(id){
+      var el=document.getElementById(id); if(el) el.value='';
+    });
+  };
+
+  // Reset búsqueda al abrir el modal
+  function _resetTercSearch() {
+    clearTercEquipo();
   }
+
   window.saveTercReport = async function() {
     var empresa=(document.getElementById('tercEmpresa').value||'').trim();
-    var equipoId=document.getElementById('tercEquipoSel').value;
+    var equipoId=document.getElementById('tercEquipoId').value;
     var fecha=document.getElementById('tercFecha').value;
     var tipo=document.getElementById('tercTipo').value;
     var pdfInput=document.getElementById('tercPdfInput');
