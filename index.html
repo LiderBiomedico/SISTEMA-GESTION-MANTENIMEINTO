@@ -1154,13 +1154,8 @@
         .then(function(data) {
             if (data.success) {
                 sessionStorage.setItem('NEXA_AUTH', 'ok');
-                sessionStorage.setItem('NEXA_USER', data.user || '');
-                sessionStorage.setItem('NEXA_ROLE', data.role || 'viewer');
-                sessionStorage.setItem('NEXA_LABEL', data.label || '');
-                sessionStorage.setItem('NEXA_MODULES', JSON.stringify(data.modules || ['dashboard']));
                 document.getElementById('loginScreen').style.display = 'none';
                 document.querySelector('.container-app').style.display = 'flex';
-                applyUserPermissions();
             } else {
                 errEl.textContent = data.error || 'Contraseña incorrecta';
                 btn.disabled = false;
@@ -1176,53 +1171,6 @@
             spinner.style.display = 'none';
         });
     }
-
-    function applyUserPermissions() {
-        var user = sessionStorage.getItem('NEXA_USER') || '';
-        var role = sessionStorage.getItem('NEXA_ROLE') || 'viewer';
-        var label = sessionStorage.getItem('NEXA_LABEL') || '';
-        var modules = [];
-        try { modules = JSON.parse(sessionStorage.getItem('NEXA_MODULES') || '[]'); } catch(e) { modules = []; }
-        var isAdmin = modules.indexOf('ALL') !== -1;
-
-        // Mostrar nombre de usuario en el header si existe el elemento
-        var userNameEl = document.getElementById('headerUserName');
-        if (userNameEl && user) { userNameEl.textContent = user; }
-        var userRoleEl = document.getElementById('headerUserRole');
-        if (userRoleEl && label) { userRoleEl.textContent = label; }
-
-        // Aplicar permisos a los nav-items del sidebar
-        var navItems = document.querySelectorAll('.nav-item');
-        navItems.forEach(function(nav) {
-            var onclickAttr = nav.getAttribute('onclick') || '';
-            var moduleMatch = onclickAttr.match(/switchModule\(['"]([^'"]+)['"]\)/);
-            if (!moduleMatch) return;
-            var moduleName = moduleMatch[1];
-
-            if (isAdmin || modules.indexOf(moduleName) !== -1) {
-                // Tiene acceso
-                nav.classList.remove('nav-disabled');
-                nav.style.opacity = '';
-                nav.style.pointerEvents = '';
-            } else {
-                // Sin acceso — deshabilitar visualmente
-                nav.classList.add('nav-disabled');
-                nav.style.opacity = '0.4';
-                nav.style.pointerEvents = 'none';
-                nav.setAttribute('data-blocked', 'true');
-            }
-        });
-
-        // Guardar permisos globalmente para que switchModule los use
-        window.__NEXA_PERMS = { user: user, role: role, modules: modules, isAdmin: isAdmin };
-    }
-
-    // Aplicar permisos al cargar si ya hay sesión
-    (function() {
-        if (sessionStorage.getItem('NEXA_AUTH') === 'ok') {
-            setTimeout(applyUserPermissions, 500);
-        }
-    })();
     </script>
     <!-- FIN LOGIN SCREEN -->
 

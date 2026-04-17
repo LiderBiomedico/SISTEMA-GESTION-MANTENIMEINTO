@@ -21,14 +21,6 @@ function getAuthHeader() {
 function switchModule(moduleName, evt) {
   const e = evt || window.event;
 
-  // Verificar permisos del usuario
-  var perms = window.__NEXA_PERMS || {};
-  if (perms.modules && !perms.isAdmin && perms.modules.indexOf(moduleName) === -1) {
-    // Sin acceso — mostrar alerta
-    showAccessDenied();
-    return;
-  }
-
   // Ocultar todos los módulos
   document.querySelectorAll('.module').forEach(m => m.classList.remove('active'));
 
@@ -1372,21 +1364,3 @@ window.editEquipo = editEquipo;
 window.deleteEquipo = deleteEquipo;
 window.addCalCertRow = addCalCertRow;
 window.removeCalCertRow = removeCalCertRow;
-
-// ── Control de acceso ─────────────────────────────────────────────────
-function showAccessDenied() {
-  var old = document.getElementById('accessDeniedModal');
-  if (old) old.remove();
-  var modal = document.createElement('div');
-  modal.id = 'accessDeniedModal';
-  modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:99999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px);';
-  modal.innerHTML = '<div style="background:white;border-radius:16px;padding:32px 40px;text-align:center;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.3)">'
-    + '<div style="font-size:48px;margin-bottom:12px">🔒</div>'
-    + '<h3 style="margin:0 0 8px;color:#c62828;font-size:20px;font-weight:800">Acceso Restringido</h3>'
-    + '<p style="color:#546e7a;font-size:14px;margin:0 0 20px;line-height:1.5">No tienes permisos para acceder a este módulo. Contacta al administrador si necesitas acceso.</p>'
-    + '<button onclick="document.getElementById(\'accessDeniedModal\').remove()" style="padding:10px 32px;background:#1565c0;color:white;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">Entendido</button>'
-    + '</div>';
-  document.body.appendChild(modal);
-  modal.addEventListener('click', function(ev) { if (ev.target === modal) modal.remove(); });
-}
-window.showAccessDenied = showAccessDenied;
