@@ -532,7 +532,7 @@
       <div class="hv-section-title">Recomendaciones y Observaciones</div>
       <table class="hv-table">
         <tr>
-          <td class="hv-value" style="height:80px;vertical-align:top;">${esc(get('Observaciones','OBSERVACIONES','Recomendaciones','RECOMENDACIONES'))}</td>
+          <td class="hv-value" style="height:80px;vertical-align:top;white-space:pre-wrap;">${esc(get('Otras Recomendaciones del Fabricante','OTRAS RECOMENDACIONES DEL FABRICANTE','Observaciones','OBSERVACIONES','Recomendaciones','RECOMENDACIONES'))}</td>
         </tr>
       </table>
 
