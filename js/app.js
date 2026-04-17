@@ -251,9 +251,11 @@ function initMaintenanceTypeChart() {
 }
 
 async function fetchDashboardData() {
+  console.log('[DASH] Iniciando fetchDashboardData...');
   try {
     const response = await axios.get(`${API_BASE_URL}/kpis`, { headers: getAuthHeader() });
     const data = response.data || {};
+    console.log('[DASH] Respuesta KPIs:', JSON.stringify(data).slice(0, 500));
 
     const setText = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
 
@@ -284,7 +286,12 @@ async function fetchDashboardData() {
     _updateTendenciaChart(data.tendencia || []);
 
   } catch (error) {
-    console.error('Error cargando dashboard:', error);
+    console.error('[DASH] Error cargando dashboard:', error?.response?.data || error?.message || error);
+    // Mostrar error en las cards
+    ['kpiEquipos','kpiCumplimiento','kpiPendientes','kpiTotalReportes'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el && el.textContent === '⏳') el.textContent = '—';
+    });
   }
 }
 

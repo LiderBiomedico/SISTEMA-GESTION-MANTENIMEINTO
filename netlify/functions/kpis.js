@@ -57,15 +57,21 @@ exports.handler = async (event) => {
   }
 
   try {
-    // Obtener todos los registros del inventario con los campos necesarios
+    // Obtener registros del inventario — pedimos solo los campos necesarios
+    // Los adjuntos SÍ se incluyen al pedir el campo por nombre
     const invFields = [
-      'Equipo', 'Servicio', 'Fecha Programada de Mantenimiento',
-      'Mantenimientos preventivo', 'Mantenimientos correctivos',
-      'Frecuencia de MTTO Preventivo', 'Tipo de MTTO'
+      'Equipo','Servicio','Fecha Programada de Mantenimiento',
+      'Mantenimientos preventivo','Mantenimientos correctivos',
+      'Frecuencia de MTTO Preventivo'
     ];
-
+    console.log('[KPI] Iniciando fetch inventario...');
     const inventario = await fetchAllRecords(TABLE_INV, invFields);
     console.log('[KPI] Total equipos inventario:', inventario.length);
+    if (inventario.length > 0) {
+      const sample = inventario[0].fields || {};
+      console.log('[KPI] Campos del primer registro:', Object.keys(sample).join(', '));
+      console.log('[KPI] Tiene preventivos?', Array.isArray(sample['Mantenimientos preventivo']), 'len:', (sample['Mantenimientos preventivo']||[]).length);
+    }
 
     // ── Métricas básicas ────────────────────────────────────────────────
     const totalEquipos = inventario.length;
@@ -93,8 +99,19 @@ exports.handler = async (event) => {
       const f = rec.fields || {};
 
       // Reportes adjuntos
-      const prev = Array.isArray(f['Mantenimientos preventivo']) ? f['Mantenimientos preventivo'] : [];
-      const corr = Array.isArray(f['Mantenimientos correctivos']) ? f['Mantenimientos correctivos'] : [];
+      // Buscar campos de adjuntos — nombre exacto primero, luego flexible
+      let prev = Array.isArray(f['Mantenimientos preventivo']) ? f['Mantenimientos preventivo'] : [];
+      let corr = Array.isArray(f['Mantenimientos correctivos']) ? f['Mantenimientos correctivos'] : [];
+      // Fallback: búsqueda flexible
+      if (!prev.length || !corr.length) {
+        for (const [k, v] of Object.entries(f)) {
+          if (Array.isArray(v) && v.length > 0) {
+            const kl = k.toLowerCase();
+            if (!prev.length && kl.includes('preventivo')) prev = v;
+            else if (!corr.length && kl.includes('correctivo')) corr = v;
+          }
+        }
+      }
 
       const prevTerceros = prev.filter(a => (a.filename||'').toUpperCase().startsWith('TERC_'));
       const prevPropios  = prev.filter(a => !(a.filename||'').toUpperCase().startsWith('TERC_'));
@@ -160,15 +177,24 @@ exports.handler = async (event) => {
 
     inventario.forEach(rec => {
       const f = rec.fields || {};
-      const prev = Array.isArray(f['Mantenimientos preventivo']) ? f['Mantenimientos preventivo'] : [];
-      const corr = Array.isArray(f['Mantenimientos correctivos']) ? f['Mantenimientos correctivos'] : [];
+      let prev2 = Array.isArray(f['Mantenimientos preventivo']) ? f['Mantenimientos preventivo'] : [];
+      let corr2 = Array.isArray(f['Mantenimientos correctivos']) ? f['Mantenimientos correctivos'] : [];
+      if (!prev2.length || !corr2.length) {
+        for (const [k, v] of Object.entries(f)) {
+          if (Array.isArray(v) && v.length > 0) {
+            const kl = k.toLowerCase();
+            if (!prev2.length && kl.includes('preventivo')) prev2 = v;
+            else if (!corr2.length && kl.includes('correctivo')) corr2 = v;
+          }
+        }
+      }
 
-      [...prev, ...corr].forEach(att => {
+      [...prev2, ...corr2].forEach(att => {
         const fn = att.filename || '';
         // Extraer fecha del nombre del archivo: *_2026-04-16_*
         const match = fn.match(/(\d{4}-\d{2})-\d{2}/);
         if (match && meses[match[1]]) {
-          if (corr.includes(att)) meses[match[1]].corr++;
+          if (corr2.includes(att)) meses[match[1]].corr++;
           else meses[match[1]].prev++;
         }
       });
