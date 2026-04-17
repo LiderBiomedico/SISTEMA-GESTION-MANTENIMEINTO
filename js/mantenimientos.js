@@ -552,14 +552,39 @@
 
   // ── SELECTOR DE PROTOCOLO ─────────────────────────────────────────────
   function buildProtocolSelectorHTML() {
-    var cards = Object.keys(PROTOCOLOS).map(function(key) {
+    var allCards = Object.keys(PROTOCOLOS).map(function(key) {
       var proto = PROTOCOLOS[key];
       var catColor = proto.categoria === 'Biomédico' ? '#1565c0' : proto.categoria === 'Mecánico' ? '#e65100' : '#2e7d32';
       var catIcon = proto.categoria === 'Biomédico' ? '🏥' : proto.categoria === 'Mecánico' ? '⚙️' : '🏗️';
-      return '<div class="mf-protocol-card" onclick="selectProtocol(\''+key+'\')" style="cursor:pointer"><div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><span style="font-size:28px">'+catIcon+'</span><div><div style="font-weight:800;font-size:14px;color:#0a1628">'+esc(proto.nombre)+'</div><span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:10px;font-weight:700;background:'+catColor+'22;color:'+catColor+';margin-top:4px">'+esc(proto.categoria)+'</span></div></div><div style="font-size:12px;color:#607d8b;margin-top:4px">Código: <strong>'+esc(proto.codigo)+'</strong> · Frecuencia: '+proto.frecuencia.join(' / ')+'</div><div style="font-size:11px;color:#90a4ae;margin-top:6px">'+proto.inspeccion.length+' ítems de inspección · '+proto.pruebasFuncionales.length+' pruebas funcionales</div></div>';
+      return '<div class="mf-protocol-card" data-proto-nombre="'+esc(proto.nombre.toLowerCase())+'" data-proto-cat="'+esc(proto.categoria.toLowerCase())+'" data-proto-cod="'+esc(proto.codigo.toLowerCase())+'" onclick="selectProtocol(\''+key+'\')" style="cursor:pointer"><div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><span style="font-size:28px">'+catIcon+'</span><div><div style="font-weight:800;font-size:14px;color:#0a1628">'+esc(proto.nombre)+'</div><span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:10px;font-weight:700;background:'+catColor+'22;color:'+catColor+';margin-top:4px">'+esc(proto.categoria)+'</span></div></div><div style="font-size:12px;color:#607d8b;margin-top:4px">Código: <strong>'+esc(proto.codigo)+'</strong> · Frecuencia: '+proto.frecuencia.join(' / ')+'</div><div style="font-size:11px;color:#90a4ae;margin-top:6px">'+proto.inspeccion.length+' ítems de inspección · '+proto.pruebasFuncionales.length+' pruebas funcionales</div></div>';
     }).join('');
-    return '<div style="padding:10px 0"><div style="font-size:15px;font-weight:700;color:#0a1628;margin-bottom:6px">Seleccione el protocolo de mantenimiento</div><div style="font-size:12px;color:#78909c;margin-bottom:16px">Cada tipo de equipo tiene su protocolo de inspección y verificación funcional específico.</div><div class="mf-protocol-grid">'+cards+'</div></div>';
+    return '<div style="padding:10px 0">'
+      + '<div style="font-size:15px;font-weight:700;color:#0a1628;margin-bottom:6px">Seleccione el protocolo de mantenimiento</div>'
+      + '<div style="font-size:12px;color:#78909c;margin-bottom:12px">Cada tipo de equipo tiene su protocolo de inspección y verificación funcional específico.</div>'
+      + '<div style="position:relative;margin-bottom:16px">'
+      +   '<input id="protoSearch" type="text" placeholder="🔍  Buscar protocolo por nombre o categoría..." oninput="filterProtocolCards(this.value)" style="width:100%;padding:10px 14px 10px 38px;border:1.5px solid #90caf9;border-radius:10px;font-size:13px;font-family:Outfit,sans-serif;outline:none;box-sizing:border-box;background:#f0f7ff;">'
+      +   '<span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:16px;pointer-events:none;">🔍</span>'
+      + '</div>'
+      + '<div id="protoGrid" class="mf-protocol-grid">'+allCards+'</div>'
+      + '<div id="protoEmpty" style="display:none;text-align:center;padding:30px;color:#90a4ae;font-size:13px;">Sin resultados. Intente con otra búsqueda.</div>'
+      + '</div>';
   }
+
+  window.filterProtocolCards = function(q) {
+    var term = (q||'').toLowerCase().trim();
+    var cards = document.querySelectorAll('#protoGrid .mf-protocol-card');
+    var visible = 0;
+    cards.forEach(function(card) {
+      var nombre = card.dataset.protoNombre || '';
+      var cat = card.dataset.protoCat || '';
+      var cod = card.dataset.protoCod || '';
+      var show = !term || nombre.includes(term) || cat.includes(term) || cod.includes(term);
+      card.style.display = show ? '' : 'none';
+      if (show) visible++;
+    });
+    var emptyEl = document.getElementById('protoEmpty');
+    if (emptyEl) emptyEl.style.display = visible === 0 ? 'block' : 'none';
+  };
 
   window.selectProtocol = function(protocolKey) {
     var proto = PROTOCOLOS[protocolKey];
@@ -604,7 +629,7 @@
     + '<div class="mf-proto-header"><div style="display:flex;align-items:center;gap:12px"><span style="font-size:32px">🏥</span><div><div style="font-weight:800;font-size:16px;color:#0a1628">'+esc(proto.nombre)+'</div><div style="font-size:12px;color:#607d8b;margin-top:2px">Código: '+esc(proto.codigo)+' · Categoría: '+esc(proto.categoria)+'</div></div></div></div>'
 
     + '<div class="mf-section-title" style="background:'+color+'">🏥 DATOS DEL EQUIPO</div>'
-    + '<div class="mf-row"><div class="mf-group mf-full"><label class="mf-label">Equipo del Inventario *</label><select id="mfEquipoSelect" class="mf-select" onchange="onEquipoSelectChange()"><option value="">Cargando...</option></select></div></div>'
+    + '<div class="mf-row"><div class="mf-group mf-full"><label class="mf-label">Equipo del Inventario *</label><select id="mfEquipoSelect" class="mf-select" style="display:none"><option value="">Cargando...</option></select><div id="mfEquipoSearchWrap" style="position:relative;"><input id="mfEquipoSearch" type="text" class="mf-input" placeholder="🔍  Buscar por nombre, marca, modelo, serie o servicio..." oninput="onInvSearch(this)" autocomplete="off"><input type="hidden" id="mfEquipoId"><div id="mfEquipoDropdown" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:white;border:1.5px solid #90caf9;border-radius:10px;max-height:260px;overflow-y:auto;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,0.12);"></div></div></div></div>'
     + '<div class="mf-inv-card"><div class="mf-inv-title">📋 Datos del Equipo (autocompletados)</div><div class="mf-inv-grid"><div><span class="mf-inv-label">Nombre</span><input id="mf_equipo" class="mf-inv-val" readonly></div><div><span class="mf-inv-label">Placa</span><input id="mf_placa" class="mf-inv-val" readonly></div><div><span class="mf-inv-label">Marca</span><input id="mf_marca" class="mf-inv-val" readonly></div><div><span class="mf-inv-label">Modelo</span><input id="mf_modelo" class="mf-inv-val" readonly></div><div><span class="mf-inv-label">Serie</span><input id="mf_serie" class="mf-inv-val" readonly></div><div><span class="mf-inv-label">Servicio / Ubicación</span><input id="mf_servicio" class="mf-inv-val" readonly></div><div><span class="mf-inv-label">Clasificación Riesgo</span><input id="mf_riesgo" class="mf-inv-val" readonly></div></div></div>'
 
     + '<div class="mf-section-title" style="background:'+color+'">📅 EJECUCIÓN Y CRONÓMETRO</div>'
@@ -654,7 +679,7 @@
   function buildFormHTML(isPrev) {
     var color = '#b71c1c';
     return '<div class="mf-section-title" style="background:'+color+'">🔧 EQUIPO</div>'
-    + '<div class="mf-row"><div class="mf-group mf-full"><label class="mf-label">Equipo del Inventario *</label><select id="mfEquipoSelect" class="mf-select" onchange="onEquipoSelectChange()"><option value="">Cargando...</option></select></div></div>'
+    + '<div class="mf-row"><div class="mf-group mf-full"><label class="mf-label">Equipo del Inventario *</label><select id="mfEquipoSelect" class="mf-select" style="display:none"><option value="">Cargando...</option></select><div id="mfEquipoSearchWrap" style="position:relative;"><input id="mfEquipoSearch" type="text" class="mf-input" placeholder="🔍  Buscar por nombre, marca, modelo, serie o servicio..." oninput="onInvSearch(this)" autocomplete="off"><input type="hidden" id="mfEquipoId"><div id="mfEquipoDropdown" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:white;border:1.5px solid #90caf9;border-radius:10px;max-height:260px;overflow-y:auto;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,0.12);"></div></div></div></div>'
     + '<div class="mf-inv-card"><div class="mf-inv-title">📋 Datos del Equipo (autocompletados)</div><div class="mf-inv-grid"><div><span class="mf-inv-label">Nombre</span><input id="mf_equipo" class="mf-inv-val" readonly></div><div><span class="mf-inv-label">Placa</span><input id="mf_placa" class="mf-inv-val" readonly></div><div><span class="mf-inv-label">Marca</span><input id="mf_marca" class="mf-inv-val" readonly></div><div><span class="mf-inv-label">Modelo</span><input id="mf_modelo" class="mf-inv-val" readonly></div><div><span class="mf-inv-label">Serie</span><input id="mf_serie" class="mf-inv-val" readonly></div><div><span class="mf-inv-label">Servicio / Ubicación</span><input id="mf_servicio" class="mf-inv-val" readonly></div><div><span class="mf-inv-label">Clasificación Riesgo</span><input id="mf_riesgo" class="mf-inv-val" readonly></div></div></div>'
     + '<div class="mf-section-title" style="background:'+color+'">📅 EJECUCIÓN</div>'
     + '<div class="mf-row"><div class="mf-group"><label class="mf-label">Fecha de Ejecución *</label><input type="date" id="mfFechaEjecucion" class="mf-input" value="'+localDateStr()+'"></div><div class="mf-group"><label class="mf-label">Técnico Responsable *</label><input type="text" id="mfTecnico" class="mf-input" placeholder="Nombre del técnico"></div></div>'
@@ -888,52 +913,121 @@
 
   // Función global para manejar cambio de equipo en select
   window.onEquipoSelectChange = function() {
+    // Compatibilidad con select legacy — el widget de búsqueda usa selectInvEquipo()
     var sel = document.getElementById('mfEquipoSelect');
     if (!sel) return;
     var opt = sel.options[sel.selectedIndex];
     if (!opt || !opt.value) return;
-    console.log('[MANT] Equipo seleccionado:', opt.dataset.equipo, '| Placa:', opt.dataset.placa);
     ['equipo','placa','marca','modelo','serie','servicio','riesgo'].forEach(function(k) {
       var el = document.getElementById('mf_'+k);
       if (el) el.value = opt.dataset[k] || '';
     });
-    // Autocompletar frecuencia desde Airtable
     var freqEl = document.getElementById('mfFrecuencia');
     if (freqEl) freqEl.value = opt.dataset.frecuencia || '';
   };
 
+  // ─── Datos de inventario cacheados para búsqueda ───────────────────────
+  var _invData = []; // Se llena al cargar
+
+  function _buildInvData(inventario) {
+    _invData = inventario.map(function(r) {
+      var f = r.fields || {};
+      return {
+        id: r.id,
+        nm: f['Equipo']||f['EQUIPO']||'',
+        pl: f['Numero de Placa']||f['PLACA']||'',
+        marca: f['Marca']||f['MARCA']||'',
+        modelo: f['Modelo']||f['MODELO']||'',
+        serie: f['Serie']||f['SERIE']||'',
+        servicio: f['Servicio']||f['SERVICIO']||'',
+        riesgo: f['Clasificacion del Riesgo']||f['Clasificacion Riesgo']||f['Clasificacion de Riesgo']||f['CLASIFICACION RIESGO']||f['Clasificación del Riesgo']||'',
+        frecuencia: f['Frecuencia de MTTO Preventivo']||f['Frecuencia de Mantenimiento']||f['FRECUENCIA DE MTTO PREVENTIVO']||f['Frecuencia de MTTO']||'',
+      };
+    });
+  }
+
+  function _renderInvDropdown(items) {
+    var list = document.getElementById('mfEquipoDropdown');
+    if (!list) return;
+    if (!items.length) {
+      list.innerHTML = '<div style="padding:12px 14px;color:#90a4ae;font-size:13px;">Sin resultados</div>';
+      list.style.display = 'block';
+      return;
+    }
+    list.innerHTML = items.slice(0, 50).map(function(eq) {
+      var label = '<strong>'+esc(eq.nm)+'</strong>';
+      if (eq.marca||eq.modelo) label += ' <span style="color:#78909c;font-size:11px;">'+esc([eq.marca,eq.modelo].filter(Boolean).join(' '))+'</span>';
+      var sub = [];
+      if (eq.serie) sub.push('S/N: '+esc(eq.serie));
+      if (eq.pl) sub.push('Placa: '+esc(eq.pl));
+      if (eq.servicio) sub.push(esc(eq.servicio));
+      return '<div class="mf-inv-item" onclick="selectInvEquipo(\''+eq.id+'\')" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #f0f0f0;transition:background 0.15s;" onmouseover="this.style.background='#e3f2fd'" onmouseout="this.style.background=''">'
+        + '<div style="font-size:13px;">'+label+'</div>'
+        + (sub.length ? '<div style="font-size:11px;color:#90a4ae;margin-top:2px;">'+sub.join(' · ')+'</div>' : '')
+        + '</div>';
+    }).join('');
+    list.style.display = 'block';
+  }
+
+  window.onInvSearch = function(input) {
+    var q = (input.value || '').toLowerCase().trim();
+    var hidden = document.getElementById('mfEquipoId');
+    if (hidden) hidden.value = '';
+    // Limpiar campos autocompletados
+    ['equipo','placa','marca','modelo','serie','servicio','riesgo'].forEach(function(k) {
+      var el = document.getElementById('mf_'+k); if (el) el.value = '';
+    });
+    if (!q) { var list = document.getElementById('mfEquipoDropdown'); if(list) list.style.display='none'; return; }
+    var filtered = _invData.filter(function(eq) {
+      return (eq.nm+eq.marca+eq.modelo+eq.serie+eq.pl+eq.servicio).toLowerCase().includes(q);
+    });
+    _renderInvDropdown(filtered);
+  };
+
+  window.selectInvEquipo = function(id) {
+    var eq = _invData.find(function(e){ return e.id === id; });
+    if (!eq) return;
+    // Llenar campo de búsqueda con nombre del equipo
+    var searchInput = document.getElementById('mfEquipoSearch');
+    if (searchInput) searchInput.value = eq.nm + (eq.marca||eq.modelo ? ' — '+[eq.marca,eq.modelo].filter(Boolean).join(' ') : '') + (eq.pl ? ' · '+eq.pl : '');
+    // Guardar ID en campo oculto
+    var hidden = document.getElementById('mfEquipoId');
+    if (hidden) hidden.value = id;
+    // Autocompletar campos del equipo
+    ['equipo','placa','marca','modelo','serie','servicio','riesgo'].forEach(function(k) {
+      var el = document.getElementById('mf_'+k);
+      if (el) el.value = eq[k === 'equipo' ? 'nm' : k === 'placa' ? 'pl' : k] || '';
+    });
+    var freqEl = document.getElementById('mfFrecuencia');
+    if (freqEl) freqEl.value = eq.frecuencia || '';
+    // Cerrar dropdown
+    var list = document.getElementById('mfEquipoDropdown');
+    if (list) list.style.display = 'none';
+  };
+
+  // Cerrar dropdown al hacer clic fuera
+  document.addEventListener('click', function(e) {
+    var wrap = document.getElementById('mfEquipoSearchWrap');
+    if (wrap && !wrap.contains(e.target)) {
+      var list = document.getElementById('mfEquipoDropdown');
+      if (list) list.style.display = 'none';
+    }
+  });
+
+  function _invSearchWidget() {
+    return '<div id="mfEquipoSearchWrap" style="position:relative;">'
+      + '<input id="mfEquipoSearch" type="text" class="mf-input" placeholder="🔍  Buscar por nombre, marca, modelo, serie o servicio..." oninput="onInvSearch(this)" autocomplete="off" style="padding-left:14px;">'
+      + '<input type="hidden" id="mfEquipoId">'
+      + '<div id="mfEquipoDropdown" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:white;border:1.5px solid #90caf9;border-radius:10px;max-height:260px;overflow-y:auto;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,0.12);">'
+      + '</div>'
+      + '</div>';
+  }
+
   function loadInvSelect() {
-    var sel = document.getElementById('mfEquipoSelect');
-    if (!sel) return;
-    sel.innerHTML = '<option value="">— Seleccionar equipo —</option>' +
-      mtState.inventario.map(function(r) {
-        var f=r.fields||{};
-        var nm=f['Equipo']||f['EQUIPO']||'';
-        var pl=f['Numero de Placa']||f['PLACA']||'';
-        var marca=f['Marca']||f['MARCA']||'';
-        var modelo=f['Modelo']||f['MODELO']||'';
-        var serie=f['Serie']||f['SERIE']||'';
-        var servicio=f['Servicio']||f['SERVICIO']||'';
-        var riesgo=f['Clasificacion del Riesgo']||f['Clasificacion Riesgo']||f['Clasificacion de Riesgo']||f['CLASIFICACION RIESGO']||f['Clasificación del Riesgo']||f['Clasificación de Riesgo']||'';
-        var frecuencia=f['Frecuencia de MTTO Preventivo']||f['Frecuencia de Mantenimiento']||f['FRECUENCIA DE MTTO PREVENTIVO']||f['Frecuencia de MTTO']||'';
-        // Texto del option: NOMBRE — MARCA MODELO — Serie: XXXX — Servicio
-        var label = nm;
-        if (marca || modelo) label += ' — ' + [marca, modelo].filter(Boolean).join(' ');
-        if (serie) label += ' — S/N: ' + serie;
-        if (servicio) label += ' — ' + servicio;
-        return '<option value="'+esc(r.id)+'" data-equipo="'+esc(nm)+'" data-placa="'+esc(pl)+'" data-marca="'+esc(marca)+'" data-modelo="'+esc(modelo)+'" data-serie="'+esc(serie)+'" data-servicio="'+esc(servicio)+'" data-riesgo="'+esc(riesgo)+'" data-frecuencia="'+esc(frecuencia)+'">'+esc(label)+'</option>';
-      }).join('');
-    sel.onchange = function() {
-      var opt = sel.options[sel.selectedIndex];
-      if (!opt || !opt.value) return;
-      ['equipo','placa','marca','modelo','serie','servicio','riesgo'].forEach(function(k) {
-        var el = document.getElementById('mf_'+k);
-        if (el) el.value = opt.dataset[k] || '';
-      });
-      // Autocompletar frecuencia desde Airtable
-      var freqEl = document.getElementById('mfFrecuencia');
-      if (freqEl) freqEl.value = opt.dataset.frecuencia || '';
-    };
+    // Poblar datos de búsqueda
+    _buildInvData(mtState.inventario);
+    // El widget de búsqueda ya está en el HTML del formulario (mfEquipoSearchWrap)
+    // Solo necesitamos asegurar que los datos estén listos — nada más que hacer aquí.
   }
 
   // ══════════════════════════════════════════════════════════════════════
@@ -942,12 +1036,28 @@
   window.saveMantForm = async function() {
     var tipo = getVal('mantFormTipoHidden');
     var isPrev = tipo === 'Preventivo';
+
+    // Soporte para widget de búsqueda (mfEquipoId) y select legacy
+    var equipoId = getVal('mfEquipoId');
+    var eq = equipoId ? _invData.find(function(e){ return e.id === equipoId; }) : null;
     var sel = document.getElementById('mfEquipoSelect');
-    var opt = sel ? sel.options[sel.selectedIndex] : null;
+    var opt = null;
+    if (!eq && sel) {
+      opt = sel.options[sel.selectedIndex];
+      if (opt && opt.value) {
+        equipoId = opt.value;
+        eq = { id:equipoId, nm:opt.dataset.equipo||'', pl:opt.dataset.placa||'', marca:opt.dataset.marca||'', modelo:opt.dataset.modelo||'', serie:opt.dataset.serie||'', servicio:opt.dataset.servicio||'', riesgo:opt.dataset.riesgo||'', frecuencia:opt.dataset.frecuencia||'' };
+      }
+    }
+    // Crear opt-like object para compatibilidad con código existente
+    if (eq && !opt) {
+      opt = { value: eq.id, dataset: { equipo:eq.nm, placa:eq.pl, marca:eq.marca, modelo:eq.modelo, serie:eq.serie, servicio:eq.servicio, riesgo:eq.riesgo, frecuencia:eq.frecuencia } };
+    }
+
     var tecnico = getVal('mfTecnico');
     var fecha = getVal('mfFechaEjecucion');
 
-    if (!opt||!opt.value) { showMtToast('⚠️ Selecciona un equipo.','warn'); return; }
+    if (!opt||!opt.value) { showMtToast('⚠️ Selecciona un equipo usando el buscador.','warn'); return; }
     if (!tecnico.trim()) { showMtToast('⚠️ El responsable es requerido.','warn'); return; }
     if (!fecha) { showMtToast('⚠️ La fecha es requerida.','warn'); return; }
 
