@@ -3814,7 +3814,7 @@
     btn.disabled=true; btn.textContent='⏳ Subiendo...';
     try {
       var equipoRec=_tercEquipos.find(function(r){return r.id===equipoId;});
-      var equipoNombre=equipoRec?(equipoRec.fields['Equipo']||equipoRec.fields['EQUIPO']||''):'';
+      var equipoNombre=equipoRec?(equipoRec.nm||equipoRec.fields&&(equipoRec.fields['Equipo']||equipoRec.fields['EQUIPO'])||''):'';
       var cleanEmpresa=empresa.replace(/[^a-zA-Z0-9]/g,'_').toUpperCase();
       var cleanEquipo=equipoNombre.replace(/[^a-zA-Z0-9]/g,'_').toUpperCase();
       var filename='TERC_'+cleanEmpresa+'_'+cleanEquipo+'_'+fecha+'_'+tipo+'.pdf';
