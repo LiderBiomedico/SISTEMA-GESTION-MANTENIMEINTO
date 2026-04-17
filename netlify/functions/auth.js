@@ -1,13 +1,27 @@
 // =============================================================================
 // netlify/functions/auth.js - Validación de contraseña contra Airtable
-// Tabla: "contraseña", Campo: "Contraseña"
+// Tabla: "contraseña", Campos: "Contraseña", "Usuarios"
+// Retorna usuario y permisos según el rol
 // =============================================================================
 
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY || process.env.AIRTABLE_TOKEN || '';
 const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID || '';
 const AUTH_TABLE = 'contraseña';
-const AUTH_FIELD = 'Contraseña';
 const AIRTABLE_API = 'https://api.airtable.com/v0';
+
+// Definir permisos por usuario
+const USER_PERMISSIONS = {
+  'Cristian': {
+    role: 'tecnico',
+    modules: ['dashboard', 'inventario'],
+    label: 'Técnico Biomédico'
+  },
+  'Paulmunoz': {
+    role: 'admin',
+    modules: ['ALL'],
+    label: 'Administrador'
+  }
+};
 
 function json(statusCode, body) {
   return {
@@ -31,7 +45,7 @@ exports.handler = async (event) => {
     if (!password) return json(400, { success: false, error: 'Contraseña requerida' });
 
     // Consultar todos los registros de la tabla contraseña
-    const url = `${AIRTABLE_API}/${AIRTABLE_BASE_ID}/${encodeURIComponent(AUTH_TABLE)}?fields%5B%5D=${encodeURIComponent(AUTH_FIELD)}`;
+    const url = `${AIRTABLE_API}/${AIRTABLE_BASE_ID}/${encodeURIComponent(AUTH_TABLE)}?fields%5B%5D=${encodeURIComponent('Contraseña')}&fields%5B%5D=${encodeURIComponent('Usuarios')}`;
     
     const response = await fetch(url, {
       headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` },
@@ -45,14 +59,23 @@ exports.handler = async (event) => {
     const data = await response.json();
     const records = data.records || [];
 
-    // Buscar si algún registro tiene la contraseña correcta
-    const match = records.some(r => {
-      const stored = (r.fields[AUTH_FIELD] || '').trim();
+    // Buscar registro con contraseña correcta
+    const matchRecord = records.find(r => {
+      const stored = (r.fields['Contraseña'] || '').trim();
       return stored === password.trim();
     });
 
-    if (match) {
-      return json(200, { success: true });
+    if (matchRecord) {
+      const username = (matchRecord.fields['Usuarios'] || '').trim();
+      const perms = USER_PERMISSIONS[username] || { role: 'viewer', modules: ['dashboard'], label: 'Visor' };
+      
+      return json(200, { 
+        success: true, 
+        user: username,
+        role: perms.role,
+        label: perms.label,
+        modules: perms.modules
+      });
     } else {
       return json(401, { success: false, error: 'Contraseña incorrecta' });
     }
