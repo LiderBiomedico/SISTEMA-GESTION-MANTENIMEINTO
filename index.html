@@ -1100,15 +1100,21 @@
     // --- LOGIN LOGIC ---
     (function() {
         if (sessionStorage.getItem('NEXA_AUTH') === 'ok') {
-            applyAccessControl(sessionStorage.getItem('NEXA_NIVEL') || 'inventario maestro');
-            // Si el nombre guardado es igual al usuario (sin el nombre real de Airtable),
-            // hacer una llamada silenciosa para obtener el nombre actualizado
-            var nombreGuardado = sessionStorage.getItem('NEXA_NOMBRE') || '';
+            var nombreGuardado  = sessionStorage.getItem('NEXA_NOMBRE') || '';
             var usuarioGuardado = sessionStorage.getItem('NEXA_USUARIO') || '';
+            // Si el nombre guardado es igual al usuario, la sesión es vieja (sin nombre real).
+            // Limpiar y pedir login de nuevo para obtener el nombre correcto de Airtable.
             if (!nombreGuardado || nombreGuardado === usuarioGuardado) {
-                _refreshNombreFromSession();
+                sessionStorage.removeItem('NEXA_AUTH');
+                sessionStorage.removeItem('NEXA_USUARIO');
+                sessionStorage.removeItem('NEXA_NIVEL');
+                sessionStorage.removeItem('NEXA_NOMBRE');
+                sessionStorage.removeItem('NEXA_EMAIL');
+                // Continuar al flujo normal de login (no hacer return)
+            } else {
+                applyAccessControl(sessionStorage.getItem('NEXA_NIVEL') || 'inventario maestro');
+                return;
             }
-            return;
         }
         var checkSplash = setInterval(function() {
             var splash = document.getElementById('splashScreen');
