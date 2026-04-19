@@ -192,7 +192,7 @@ function initDashboard() {
   ['kpiEquipos','kpiCumplimiento','kpiPendientes','kpiTotalReportes',
    'kpiPreventivos','kpiCorrectivos','kpiTerceros','kpiEquiposManto',
    'kpiVencidos','kpiPendientes30d',
-   'kpiPrevAprobados','kpiPrevPendientes','kpiCorrAprobados','kpiCorrPendientes'].forEach(function(id) {
+   'kpiPrevAprobados','kpiPrevRechazados','kpiPrevPendientes','kpiCorrAprobados','kpiCorrRechazados','kpiCorrPendientes'].forEach(function(id) {
     const el = document.getElementById(id);
     if (el) el.textContent = '⏳';
   });
@@ -283,8 +283,10 @@ async function fetchDashboardData() {
     const corrAprobados  = data.corrAprobados  ?? 0;
     const corrPendientes = data.corrPendientes ?? 0;
     setText('kpiPrevAprobados',  prevAprobados);
+    setText('kpiPrevRechazados', data.prevRechazados  ?? 0);
     setText('kpiPrevPendientes', prevPendientes);
     setText('kpiCorrAprobados',  corrAprobados);
+    setText('kpiCorrRechazados', data.corrRechazados  ?? 0);
     setText('kpiCorrPendientes', corrPendientes);
 
     // Gráfica: distribución de tipos
