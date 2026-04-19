@@ -173,9 +173,9 @@
       return 'display:inline-block;padding:7px 18px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:2px solid ' + (active ? '#1565c0' : '#e0e0e0') + ';background:' + (active ? '#1565c0' : 'white') + ';color:' + (active ? 'white' : '#546e7a') + ';margin-right:6px;transition:all .15s';
     }
     var tabsHTML = '<div style="margin-bottom:14px">'
-      + '<span style="' + tabStyle('todos') + '" onclick="setAproFiltro('todos')">Todos (' + total + ')</span>'
-      + '<span style="' + tabStyle('preventivo') + '" onclick="setAproFiltro('preventivo')">🛡️ Preventivos (' + totalPrev + ')</span>'
-      + '<span style="' + tabStyle('correctivo') + '" onclick="setAproFiltro('correctivo')">🔧 Correctivos (' + totalCorr + ')</span>'
+      + '<span style="' + tabStyle('todos') + '" onclick="setAproFiltro(\'todos\')">Todos (' + total + ')</span>'
+      + '<span style="' + tabStyle('preventivo') + '" onclick="setAproFiltro(\'preventivo\')">🛡️ Preventivos (' + totalPrev + ')</span>'
+      + '<span style="' + tabStyle('correctivo') + '" onclick="setAproFiltro(\'correctivo\')">🔧 Correctivos (' + totalCorr + ')</span>'
       + '</div>';
 
     if (filtered.length === 0) {
@@ -259,11 +259,11 @@
       + '</div>'
       + '<div style="font-size:13px;font-weight:700;color:#37474f;margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px">Seleccionar sello de aprobación:</div>'
       + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:24px">'
-      + '<div id="selloBioCard" onclick="selectSello('biomedico')" style="cursor:pointer;border:3px solid #e0e0e0;border-radius:12px;padding:16px;text-align:center;transition:all 0.2s;background:white">'
+      + '<div id="selloBioCard" onclick="selectSello(\'biomedico\')" style="cursor:pointer;border:3px solid #e0e0e0;border-radius:12px;padding:16px;text-align:center;transition:all 0.2s;background:white">'
       + '<img src="' + SELLO_BIOMEDICO + '" style="max-width:140px;max-height:140px;margin:0 auto;display:block">'
       + '<div style="margin-top:8px;font-size:11px;font-weight:700;color:#2e7d32">Líder Biomédico</div>'
       + '</div>'
-      + '<div id="selloInfraCard" onclick="selectSello('infraestructura')" style="cursor:pointer;border:3px solid #e0e0e0;border-radius:12px;padding:16px;text-align:center;transition:all 0.2s;background:white">'
+      + '<div id="selloInfraCard" onclick="selectSello(\'infraestructura\')" style="cursor:pointer;border:3px solid #e0e0e0;border-radius:12px;padding:16px;text-align:center;transition:all 0.2s;background:white">'
       + '<img src="' + SELLO_INFRAESTRUCTURA + '" style="max-width:140px;max-height:140px;margin:0 auto;display:block">'
       + '<div style="margin-top:8px;font-size:11px;font-weight:700;color:#1565c0">Líder Infraestructura</div>'
       + '</div>'
