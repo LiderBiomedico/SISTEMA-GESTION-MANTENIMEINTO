@@ -1,7 +1,7 @@
 // ============================================================================
 // MÓDULO APROBAR MANTENIMIENTOS - HSLV
-// Carga PDFs de mantenimientos preventivos, permite estampar sellos de
-// aprobación (Biomédico / Infraestructura) y sube a "Mantenimiento Aprobado"
+// Carga PDFs de mantenimientos preventivos Y correctivos, permite estampar
+// sellos de aprobación (Biomédico / Infraestructura) y sube al campo aprobado.
 // ============================================================================
 (function() {
   console.log('[APRO] aprobar-mantenimientos.js cargando...');
@@ -9,8 +9,13 @@
   window.__HSLV_APRO_LOADED = true;
 
   const BASE = typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : '/.netlify/functions';
-  const FIELD_PREV = 'Mantenimientos preventivo';
-  const FIELD_APROBADO = 'Mantenimiento Aprobado';
+  const FIELD_PREV          = 'Mantenimientos preventivo';
+  const FIELD_CORR          = 'Mantenimientos correctivos';
+  const FIELD_APROBADO      = 'Mantenimiento Aprobado';
+  const FIELD_CORR_APROBADO = 'Mantenimiento Correctivo Aprobado';
+
+  // Filtro activo: 'todos' | 'preventivo' | 'correctivo'
+  var aproFiltro = 'todos';
 
   const aproState = {
     records: [],
@@ -107,50 +112,77 @@
     var body = document.getElementById('aprobarBody');
     if (!body) return;
 
-    var total = aproState.records.length;
-    var aprobados = aproState.records.filter(function(r){ return r.aprobado; }).length;
+    var allRecords = aproState.records;
+    // Filtrar por tipo
+    var filtered = aproFiltro === 'todos' ? allRecords
+      : allRecords.filter(function(r){ return r.tipo === aproFiltro; });
+
+    var totalPrev  = allRecords.filter(function(r){ return r.tipo==='preventivo'; }).length;
+    var totalCorr  = allRecords.filter(function(r){ return r.tipo==='correctivo'; }).length;
+    var aprPrev    = allRecords.filter(function(r){ return r.tipo==='preventivo' && r.aprobado; }).length;
+    var aprCorr    = allRecords.filter(function(r){ return r.tipo==='correctivo' && r.aprobado; }).length;
+    var total      = allRecords.length;
+    var aprobados  = aprPrev + aprCorr;
     var pendientes = total - aprobados;
 
-    var statsHTML = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">'
-      + '<div style="background:white;border-radius:12px;padding:16px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.06);border:1px solid #e0e0e0"><div style="font-size:24px;font-weight:800;color:#1565c0">'+total+'</div><div style="font-size:11px;color:#78909c;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-top:4px">Total Reportes</div></div>'
-      + '<div style="background:white;border-radius:12px;padding:16px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.06);border:1px solid #e0e0e0"><div style="font-size:24px;font-weight:800;color:#f57f17">'+pendientes+'</div><div style="font-size:11px;color:#78909c;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-top:4px">Pendientes</div></div>'
-      + '<div style="background:white;border-radius:12px;padding:16px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.06);border:1px solid #e0e0e0"><div style="font-size:24px;font-weight:800;color:#2e7d32">'+aprobados+'</div><div style="font-size:11px;color:#78909c;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-top:4px">Aprobados</div></div>'
+    // Estadísticas por tipo
+    var statsHTML = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">'
+      + '<div style="background:white;border-radius:10px;padding:14px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.06);border:1px solid #e0e0e0"><div style="font-size:22px;font-weight:800;color:#1565c0">'+total+'</div><div style="font-size:10px;color:#78909c;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-top:4px">Total Reportes</div></div>'
+      + '<div style="background:white;border-radius:10px;padding:14px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.06);border:1px solid #e0e0e0"><div style="font-size:22px;font-weight:800;color:#f57f17">'+pendientes+'</div><div style="font-size:10px;color:#78909c;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-top:4px">Pendientes</div></div>'
+      + '<div style="background:white;border-radius:10px;padding:14px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.06);border:1px solid #e0e0e0"><div style="font-size:22px;font-weight:800;color:#2e7d32">'+aprobados+'</div><div style="font-size:10px;color:#78909c;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-top:4px">Aprobados</div></div>'
+      + '</div>'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">'
+      + '<div style="background:white;border-radius:10px;padding:12px 16px;box-shadow:0 2px 8px rgba(0,0,0,0.06);border-left:4px solid #1565c0;display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:10px;font-weight:700;color:#607d8b;text-transform:uppercase;letter-spacing:.5px">🛡️ Preventivos</div><div style="font-size:11px;color:#90a4ae;margin-top:2px">'+aprPrev+' aprobados / '+totalPrev+' total</div></div><div style="font-size:22px;font-weight:800;color:#1565c0">'+totalPrev+'</div></div>'
+      + '<div style="background:white;border-radius:10px;padding:12px 16px;box-shadow:0 2px 8px rgba(0,0,0,0.06);border-left:4px solid #c62828;display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:10px;font-weight:700;color:#607d8b;text-transform:uppercase;letter-spacing:.5px">🔧 Correctivos</div><div style="font-size:11px;color:#90a4ae;margin-top:2px">'+aprCorr+' aprobados / '+totalCorr+' total</div></div><div style="font-size:22px;font-weight:800;color:#c62828">'+totalCorr+'</div></div>'
       + '</div>';
 
-    if (total === 0) {
-      body.innerHTML = statsHTML + '<div style="text-align:center;padding:60px;color:#90a4ae"><div style="font-size:48px;margin-bottom:12px">📋</div><div style="font-size:16px;font-weight:600">No hay reportes preventivos</div><div style="font-size:13px;margin-top:6px">Los reportes aparecerán aquí cuando se generen desde Mantenimientos.</div></div>';
+    // Pestañas de filtro
+    function tabStyle(tipo) {
+      var active = aproFiltro === tipo;
+      return 'display:inline-block;padding:7px 18px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:2px solid '+(active?'#1565c0':'#e0e0e0')+';background:'+(active?'#1565c0':'white')+';color:'+(active?'white':'#546e7a')+';margin-right:6px;transition:all .15s';
+    }
+    var tabsHTML = '<div style="margin-bottom:14px">'
+      + '<span style="'+tabStyle('todos')+'" onclick="setAproFiltro('todos')">Todos ('+total+')</span>'
+      + '<span style="'+tabStyle('preventivo')+'" onclick="setAproFiltro('preventivo')">🛡️ Preventivos ('+totalPrev+')</span>'
+      + '<span style="'+tabStyle('correctivo')+'" onclick="setAproFiltro('correctivo')">🔧 Correctivos ('+totalCorr+')</span>'
+      + '</div>';
+
+    if (filtered.length === 0) {
+      body.innerHTML = statsHTML + tabsHTML + '<div style="text-align:center;padding:40px;color:#90a4ae"><div style="font-size:40px;margin-bottom:10px">📋</div><div style="font-size:15px;font-weight:600">No hay reportes '+(aproFiltro==='todos'?'':'de tipo '+aproFiltro)+'</div><div style="font-size:12px;margin-top:5px">Los reportes aparecerán aquí cuando se generen desde Mantenimientos.</div></div>';
       return;
     }
 
-    var rows = aproState.records.map(function(r, i) {
+    var rows = filtered.map(function(r, i) {
+      // índice real en aproState.records para el modal
+      var realIdx = aproState.records.indexOf(r);
+      var tipoBadge = r.tipo === 'preventivo'
+        ? '<span style="display:inline-block;padding:2px 7px;border-radius:8px;font-size:9px;font-weight:700;background:#e3f2fd;color:#1565c0;margin-right:4px">🛡️ PREV</span>'
+        : '<span style="display:inline-block;padding:2px 7px;border-radius:8px;font-size:9px;font-weight:700;background:#ffebee;color:#c62828;margin-right:4px">🔧 CORR</span>';
       var estadoBadge = r.aprobado
         ? '<span style="display:inline-block;padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;background:#e8f5e9;color:#2e7d32">✅ Aprobado</span>'
         : '<span style="display:inline-block;padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;background:#fff3e0;color:#f57f17">⏳ Pendiente</span>';
-      var btnAprobar = r.aprobado
-        ? ''
-        : '<button onclick="openAprobarModal('+i+')" style="padding:6px 14px;background:#2e7d32;color:white;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">✅ Aprobar</button>';
+      var btnAprobar = r.aprobado ? ''
+        : '<button onclick="openAprobarModal('+realIdx+')" style="padding:6px 14px;background:#2e7d32;color:white;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">✅ Aprobar</button>';
       var sizeKB = r.size ? (r.size/1024).toFixed(0)+' KB' : '—';
+      var viewUrl = r.aprobado && r.urlAprobado ? r.urlAprobado : r.url;
+      var viewTitle = r.aprobado ? 'Ver PDF Aprobado' : 'Ver PDF Original';
       return '<tr style="border-bottom:1px solid #f0f0f0">'
-        + '<td style="padding:10px 12px;font-weight:700;font-size:12px;color:#263238">'+esc(r.equipo)+'<div style="font-size:10px;font-weight:400;color:#90a4ae">'+esc(r.placa)+'</div></td>'
+        + '<td style="padding:10px 12px;font-weight:700;font-size:12px;color:#263238">'+tipoBadge+esc(r.equipo)+'<div style="font-size:10px;font-weight:400;color:#90a4ae;margin-top:2px">'+esc(r.placa)+'</div></td>'
         + '<td style="padding:10px 8px;font-size:12px;color:#546e7a">'+esc(r.servicio)+'</td>'
         + '<td style="padding:10px 8px;font-size:12px;color:#546e7a;text-align:center">'+fmtDate(r.fecha)+'</td>'
-        + '<td style="padding:10px 8px;font-size:11px;color:#78909c;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc(r.filename)+'">'+esc(r.filename)+'</td>'
+        + '<td style="padding:10px 8px;font-size:11px;color:#78909c;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc(r.filename)+'">'+esc(r.filename)+'</td>'
         + '<td style="padding:10px 8px;font-size:11px;color:#90a4ae;text-align:center">'+sizeKB+'</td>'
         + '<td style="padding:10px 8px;text-align:center">'+estadoBadge+'</td>'
         + '<td style="padding:10px 8px;text-align:center;white-space:nowrap">'
-        + (function(){
-          var viewUrl = r.aprobado && r.urlAprobado ? r.urlAprobado : r.url;
-          var viewTitle = r.aprobado ? 'Ver PDF Aprobado' : 'Ver PDF Original';
-          return viewUrl ? '<a href="'+esc(viewUrl)+'" target="_blank" style="margin-right:6px;font-size:16px;text-decoration:none" title="'+viewTitle+'">📄</a>' : '';
-        }())
+        + (viewUrl ? '<a href="'+esc(viewUrl)+'" target="_blank" style="margin-right:6px;font-size:16px;text-decoration:none" title="'+viewTitle+'">📄</a>' : '')
         + btnAprobar
         + '</td></tr>';
     }).join('');
 
-    body.innerHTML = statsHTML
+    body.innerHTML = statsHTML + tabsHTML
       + '<div style="background:white;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,0.06);overflow:hidden;border:1px solid #e0e0e0">'
       + '<table style="width:100%;border-collapse:collapse"><thead><tr style="background:#eceff1">'
-      + '<th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;color:#37474f;text-transform:uppercase;letter-spacing:.5px">Equipo</th>'
+      + '<th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;color:#37474f;text-transform:uppercase;letter-spacing:.5px">Tipo / Equipo</th>'
       + '<th style="padding:10px 8px;text-align:left;font-size:10px;font-weight:700;color:#37474f;text-transform:uppercase;letter-spacing:.5px">Servicio</th>'
       + '<th style="padding:10px 8px;text-align:center;font-size:10px;font-weight:700;color:#37474f;text-transform:uppercase;letter-spacing:.5px">Fecha</th>'
       + '<th style="padding:10px 8px;text-align:left;font-size:10px;font-weight:700;color:#37474f;text-transform:uppercase;letter-spacing:.5px">Archivo</th>'
@@ -159,6 +191,11 @@
       + '<th style="padding:10px 8px;text-align:center;font-size:10px;font-weight:700;color:#37474f;text-transform:uppercase;letter-spacing:.5px">Acciones</th>'
       + '</tr></thead><tbody>'+rows+'</tbody></table></div>';
   }
+
+  window.setAproFiltro = function(tipo) {
+    aproFiltro = tipo;
+    renderAprobarList();
+  };
 
   // ══════════════════════════════════════════════════════════════════════
   // MODAL DE APROBACIÓN
@@ -316,7 +353,7 @@
       var aprobadoFilename = 'APROBADO_' + (r.attId || 'x') + '_' + r.filename;
       var uploadRes = await axios.post(BASE+'/upload-pdf', {
         recordId: r.equipoId,
-        fieldName: FIELD_APROBADO,
+        fieldName: r.fieldAprobado || FIELD_APROBADO,
         filename: aprobadoFilename,
         contentType: 'application/pdf',
         base64: base64,

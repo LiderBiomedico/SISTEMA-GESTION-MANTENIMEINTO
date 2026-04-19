@@ -98,6 +98,19 @@ exports.handler = async (event) => {
     };
   }
 
+  // Contadores de aprobados/pendientes
+  let prevAprobados = 0, corrAprobados = 0;
+
+  // Helper: mapa de IDs aprobados a partir del campo de aprobación
+  function buildAprobadosSet(list) {
+    const s = new Set();
+    (list || []).forEach(a => {
+      const m = String(a.filename || '').match(/^APROBADO_([^_]+)_/);
+      if (m) s.add(m[1]);
+    });
+    return s;
+  }
+
   inventario.forEach(rec => {
     const f    = rec.fields || {};
     const prev = Array.isArray(f['Mantenimientos preventivo'])  ? f['Mantenimientos preventivo']  : [];
@@ -110,6 +123,12 @@ exports.handler = async (event) => {
     totalCorrectivos += corr.length;
     totalTerceros    += prevTerceros.length;
     if (prev.length + corr.length > 0) equiposConManto.add(rec.id);
+
+    // Contar aprobados
+    const aprPrevSet = buildAprobadosSet(f['Mantenimiento Aprobado']);
+    const aprCorrSet = buildAprobadosSet(f['Mantenimiento Correctivo Aprobado']);
+    prevPropios.forEach(a => { if (a.id && aprPrevSet.has(a.id)) prevAprobados++; });
+    corr.forEach(a       => { if (a.id && aprCorrSet.has(a.id)) corrAprobados++; });
 
     const serv = f['Servicio'] || 'Sin servicio';
     if (!porServicio[serv]) porServicio[serv] = { equip: 0, prev: 0, corr: 0 };
@@ -153,6 +172,9 @@ exports.handler = async (event) => {
 
   console.log(`[KPI] equipos:${totalEquipos} prev:${totalPreventivos} corr:${totalCorrectivos} terc:${totalTerceros} cumpl:${cumplimiento}%`);
 
+  const prevPendientes = totalPreventivos - prevAprobados;
+  const corrPendientes = totalCorrectivos - corrAprobados;
+
   return json(200, {
     ok: true,
     equipos: { total: totalEquipos },
@@ -169,6 +191,11 @@ exports.handler = async (event) => {
     vencidos,
     pendientes7d,
     pendientes30d,
+    // KPIs de aprobación
+    prevAprobados,
+    prevPendientes,
+    corrAprobados,
+    corrPendientes,
     topServicios,
     distribucion: {
       preventivo: totalPreventivos,

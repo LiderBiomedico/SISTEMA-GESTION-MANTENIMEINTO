@@ -57,7 +57,7 @@ function switchModule(moduleName, evt) {
     reportes: '📝 Reportes e Informes',
     auditoria: '🔍 Auditoría y Trazabilidad',
     'hojas-vida': '📋 Hojas de Vida · SLV-GAT-GAB-12-F02',
-    aprobar: '✅ Aprobar Mantenimientos Preventivos'
+    aprobar: '✅ Aprobar Mantenimientos · Preventivos & Correctivos'
   };
   const t = document.getElementById('moduleTitle');
   if (t) t.textContent = titles[moduleName] || moduleName;
@@ -191,7 +191,8 @@ function initDashboard() {
   // Mostrar estado de carga en todas las tarjetas
   ['kpiEquipos','kpiCumplimiento','kpiPendientes','kpiTotalReportes',
    'kpiPreventivos','kpiCorrectivos','kpiTerceros','kpiEquiposManto',
-   'kpiVencidos','kpiPendientes30d'].forEach(function(id) {
+   'kpiVencidos','kpiPendientes30d',
+   'kpiPrevAprobados','kpiPrevPendientes','kpiCorrAprobados','kpiCorrPendientes'].forEach(function(id) {
     const el = document.getElementById(id);
     if (el) el.textContent = '⏳';
   });
@@ -275,6 +276,16 @@ async function fetchDashboardData() {
     setText('kpiEquiposManto',   data.equiposConManto ?? 0);
     setText('kpiVencidos',       data.vencidos ?? 0);
     setText('kpiPendientes30d',  data.pendientes30d ?? 0);
+
+    // KPIs de aprobados
+    const prevAprobados  = data.prevAprobados  ?? 0;
+    const prevPendientes = data.prevPendientes ?? 0;
+    const corrAprobados  = data.corrAprobados  ?? 0;
+    const corrPendientes = data.corrPendientes ?? 0;
+    setText('kpiPrevAprobados',  prevAprobados);
+    setText('kpiPrevPendientes', prevPendientes);
+    setText('kpiCorrAprobados',  corrAprobados);
+    setText('kpiCorrPendientes', corrPendientes);
 
     // Gráfica: distribución de tipos
     _updateDistribucionChart(data.distribucion || {});
