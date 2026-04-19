@@ -811,6 +811,7 @@
         console.log('[MANT] Selector de protocolo renderizado');
       } else {
         if (bodyEl) bodyEl.innerHTML = buildFormHTML(false);
+        setTimeout(function() { initSignaturePads(); }, 300);
         loadInvSelect();
         if (!mtState.invLoaded || mtState.inventario.length === 0) loadInventarioForForm();
       }
@@ -968,8 +969,17 @@
     + '<div class="mf-row"><div class="mf-group"><label class="mf-label">Causa Raíz</label><input type="text" id="mfCausaRaiz" class="mf-input" placeholder="Causa raíz identificada"></div><div class="mf-group"><label class="mf-label">Repuestos Cambiados</label><input type="text" id="mfRepuestos" class="mf-input" placeholder="Fusible 5A, tarjeta de control..."></div></div>'
     + '<div class="mf-row"><div class="mf-group mf-full"><label class="mf-label">Hallazgos / Condición del Equipo</label><textarea id="mfHallazgos" class="mf-textarea" rows="3" placeholder="Estado general del equipo..."></textarea></div></div>'
     + '<div class="mf-row"><div class="mf-group mf-full"><label class="mf-label">Observaciones y Recomendaciones</label><textarea id="mfObservaciones" class="mf-textarea" rows="3" placeholder="Recomendaciones para próximos mantenimientos..."></textarea></div></div>'
-    + '<div class="mf-section-title" style="background:'+color+'">✍️ FIRMA</div>'
-    + '<div class="mf-row"><div class="mf-group"><label class="mf-label">Responsable / Firma</label><input type="text" id="mfFirmaResponsable" class="mf-input" placeholder="Nombre completo y cargo"></div></div>'
+    + '<div class="mf-section-title" style="background:'+color+'">📸 REGISTRO FOTOGRÁFICO</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin:10px 0">'
+    + buildPhotoCaptureSectionHTML('inicio','📸 Foto inicial (antes)', '1️⃣')
+    + buildPhotoCaptureSectionHTML('mitad','📸 Durante la intervención', '2️⃣')
+    + buildPhotoCaptureSectionHTML('final','📸 Foto final (después)', '3️⃣')
+    + '</div>'
+    + '<div class="mf-section-title" style="background:'+color+'">✍️ FIRMAS</div>'
+    + '<div class="mf-firma-container">'
+    + '<div class="mf-firma-box"><div class="mf-firma-title">Elaboró / Ejecutó</div><canvas id="sigPadEjecuto" class="mf-signature-canvas" width="320" height="120"></canvas><button type="button" class="mf-firma-clear" onclick="clearSignature(\'sigPadEjecuto\')">Limpiar</button><input type="text" id="mfNombreEjecuto" class="mf-input" placeholder="Nombre completo" style="margin-top:6px;font-size:12px"><input type="text" id="mfCargoEjecuto" class="mf-input" placeholder="Cargo" style="margin-top:4px;font-size:12px"></div>'
+    + '<div class="mf-firma-box"><div class="mf-firma-title">Recibió / Verificó</div><canvas id="sigPadRecibio" class="mf-signature-canvas" width="320" height="120"></canvas><button type="button" class="mf-firma-clear" onclick="clearSignature(\'sigPadRecibio\')">Limpiar</button><input type="text" id="mfNombreRecibio" class="mf-input" placeholder="Nombre completo" style="margin-top:6px;font-size:12px"><input type="text" id="mfCargoRecibio" class="mf-input" placeholder="Cargo" style="margin-top:4px;font-size:12px"></div>'
+    + '</div>'
     + '<div style="background:#fce4ec;border:1.5px solid #ef9a9a;border-radius:10px;padding:12px 16px;margin-top:14px;font-size:13px;color:#b71c1c"><strong>💾 Al guardar</strong> se generará un PDF del reporte y se adjuntará automáticamente al equipo en Airtable en el campo <strong>"'+FIELD_CORR+'"</strong>.</div>';
   }
 
@@ -1417,6 +1427,17 @@
           fallaReportada:getVal('mfFallaReportada'), diagnostico:getVal('mfDiagnostico'),
           accionTomada:getVal('mfAccionTomada'), causaRaiz:getVal('mfCausaRaiz'),
           repuestos:getVal('mfRepuestos'),
+          // Firmas digitales
+          firmaEjecuto:getSignatureDataURL('sigPadEjecuto'),
+          nombreEjecuto:getVal('mfNombreEjecuto'),
+          cargoEjecuto:getVal('mfCargoEjecuto'),
+          firmaRecibio:getSignatureDataURL('sigPadRecibio'),
+          nombreRecibio:getVal('mfNombreRecibio'),
+          cargoRecibio:getVal('mfCargoRecibio'),
+          // Fotos
+          fotoInicio:(mtState.photos&&mtState.photos['inicio'])||null,
+          fotoMitad:(mtState.photos&&mtState.photos['mitad'])||null,
+          fotoFinal:(mtState.photos&&mtState.photos['final'])||null,
         };
         htmlReport = buildCorrectiveReportHTML(data);
       }
@@ -1729,7 +1750,15 @@
     + sec('📅 DATOS DE EJECUCIÓN', row('Fecha de Ejecución',fmt(d.fecha))+row('Técnico Responsable',d.tecnico)+row('Duración',d.duracion?d.duracion+' horas':'')+row('Costo',d.costo?'$ '+Number(d.costo).toLocaleString('es-CO'):'')+row('Estado',d.estado))
     + sec('🔧 ANÁLISIS CORRECTIVO', row('Falla Reportada',d.fallaReportada)+row('Diagnóstico Técnico',d.diagnostico)+row('Acción Tomada',d.accionTomada)+row('Causa Raíz',d.causaRaiz)+row('Repuestos Cambiados',d.repuestos)+row('Hallazgos',d.hallazgos))
     + sec('📝 OBSERVACIONES', row('Observaciones y Recomendaciones',d.observaciones))
-    + '<div class="firmas"><div class="firma"><div class="firma-line"></div>Técnico Responsable<div class="firma-name">'+esc(d.tecnico)+'</div></div><div class="firma"><div class="firma-line"></div>Supervisor / Jefe de Área</div><div class="firma"><div class="firma-line"></div>Ingeniero Biomédico<div class="firma-name">'+esc(d.firmaResponsable)+'</div></div></div>'
+    + (d.fotoInicio||d.fotoMitad||d.fotoFinal ? '<div class="sec"><span class="sec-icon">📸</span> REGISTRO FOTOGRÁFICO</div><div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:8px">'
+      + (d.fotoInicio ? '<div style="flex:1;min-width:180px"><div style="font-size:9px;font-weight:700;color:#455a64;text-transform:uppercase;margin-bottom:4px">1️⃣ Foto Inicial</div><img src="'+d.fotoInicio+'" style="width:100%;border-radius:6px;border:1px solid #cfd8dc;max-height:160px;object-fit:contain"></div>' : '')
+      + (d.fotoMitad  ? '<div style="flex:1;min-width:180px"><div style="font-size:9px;font-weight:700;color:#455a64;text-transform:uppercase;margin-bottom:4px">2️⃣ Durante la Intervención</div><img src="'+d.fotoMitad+'" style="width:100%;border-radius:6px;border:1px solid #cfd8dc;max-height:160px;object-fit:contain"></div>' : '')
+      + (d.fotoFinal  ? '<div style="flex:1;min-width:180px"><div style="font-size:9px;font-weight:700;color:#455a64;text-transform:uppercase;margin-bottom:4px">3️⃣ Foto Final</div><img src="'+d.fotoFinal+'" style="width:100%;border-radius:6px;border:1px solid #cfd8dc;max-height:160px;object-fit:contain"></div>' : '')
+      + '</div>' : '')
+    + '<div class="firmas">'
+    + '<div class="firma">'+(d.firmaEjecuto&&d.firmaEjecuto!=='data:,'?'<img src="'+d.firmaEjecuto+'" style="height:50px;max-width:180px;object-fit:contain">':'<div class="firma-line"></div>')+'<br>Elaboró / Ejecutó<div class="firma-name">'+esc(d.nombreEjecuto||d.tecnico)+'</div><div style="font-size:9px;color:#78909c">'+esc(d.cargoEjecuto||'')+'</div></div>'
+    + '<div class="firma">'+(d.firmaRecibio&&d.firmaRecibio!=='data:,'?'<img src="'+d.firmaRecibio+'" style="height:50px;max-width:180px;object-fit:contain">':'<div class="firma-line"></div>')+'<br>Recibió / Verificó<div class="firma-name">'+esc(d.nombreRecibio||'')+'</div><div style="font-size:9px;color:#78909c">'+esc(d.cargoRecibio||'')+'</div></div>'
+    + '</div>'
     + '<button id="btnPrint" class="btn-print">🖨️ Imprimir Reporte</button>'
     + '<div class="footer">HSLV · Sistema de Gestión de la Tecnología · SLV-GAT-MANT-CORR · '+esc(codigo)+' · Generado: '+new Date().toLocaleString('es-CO')+'</div>'
     + '<script>document.getElementById("btnPrint").addEventListener("click",function(){window.print();});<\/script>'
