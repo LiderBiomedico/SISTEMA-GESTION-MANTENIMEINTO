@@ -1001,10 +1001,7 @@
                     <span class="login-nexa">NEXA</span>
                     <span class="login-cmms">CMMS</span>
                 </div>
-                <p class="login-subtitle">Ingrese sus credenciales de acceso</p>
-                <div class="login-input-wrap" style="margin-bottom:12px;">
-                    <input type="text" id="loginUsername" placeholder="Usuario" autocomplete="off" style="padding-right:16px;" />
-                </div>
+                <p class="login-subtitle">Ingrese la clave de acceso</p>
                 <div class="login-input-wrap">
                     <input type="password" id="loginPassword" placeholder="Contraseña" autocomplete="off" />
                     <button id="loginTogglePass" type="button" title="Mostrar/ocultar">👁</button>
@@ -1099,35 +1096,30 @@
     <script>
     // --- LOGIN LOGIC ---
     (function() {
-        if (sessionStorage.getItem('NEXA_AUTH') === 'ok') {
-            var nombreGuardado  = sessionStorage.getItem('NEXA_NOMBRE') || '';
-            var usuarioGuardado = sessionStorage.getItem('NEXA_USUARIO') || '';
-            // Si el nombre guardado es igual al usuario, la sesión es vieja (sin nombre real).
-            // Limpiar y pedir login de nuevo para obtener el nombre correcto de Airtable.
-            if (!nombreGuardado || nombreGuardado === usuarioGuardado) {
-                sessionStorage.removeItem('NEXA_AUTH');
-                sessionStorage.removeItem('NEXA_USUARIO');
-                sessionStorage.removeItem('NEXA_NIVEL');
-                sessionStorage.removeItem('NEXA_NOMBRE');
-                sessionStorage.removeItem('NEXA_EMAIL');
-                // Continuar al flujo normal de login (no hacer return)
-            } else {
-                applyAccessControl(sessionStorage.getItem('NEXA_NIVEL') || 'inventario maestro');
-                return;
-            }
-        }
+        // Check if already authenticated this session
+        if (sessionStorage.getItem('NEXA_AUTH') === 'ok') return;
+
+        // Show login after splash finishes
         var checkSplash = setInterval(function() {
             var splash = document.getElementById('splashScreen');
             if (splash && (splash.style.display === 'none' || splash.classList.contains('hide'))) {
                 clearInterval(checkSplash);
                 document.getElementById('loginScreen').style.display = 'block';
                 document.querySelector('.container-app').style.display = 'none';
-                setTimeout(function() { document.getElementById('loginUsername').focus(); }, 400);
+                setTimeout(function() {
+                    document.getElementById('loginPassword').focus();
+                }, 400);
             }
         }, 200);
+
+        // Enter key handler
         document.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' && document.getElementById('loginScreen').style.display === 'block') { handleLogin(); }
+            if (e.key === 'Enter' && document.getElementById('loginScreen').style.display === 'block') {
+                handleLogin();
+            }
         });
+
+        // Toggle password visibility
         document.addEventListener('DOMContentLoaded', function() {
             var toggle = document.getElementById('loginTogglePass');
             if (toggle) {
@@ -1139,88 +1131,33 @@
         });
     })();
 
-    // Refresca el nombre del usuario desde Airtable sin pedir contraseña de nuevo
-    // Solo posible si conocemos el usuario — llama a un endpoint de perfil
-    // Como no tenemos la contraseña en sesión, usamos el endpoint de inventario
-    // para verificar que la sesión sigue activa y actualizamos el nombre leyéndolo
-    // de una tabla auxiliar. Dado que ya tenemos auth.js que devuelve nombre,
-    // la solución más simple es guardar el nombre al hacer login correctamente.
-    // Esta función actualiza el DOM con lo que ya está en sessionStorage.
-    function _refreshNombreFromSession() {
-        var nombre = sessionStorage.getItem('NEXA_NOMBRE') || sessionStorage.getItem('NEXA_USUARIO') || '';
-        var avatarEl = document.getElementById('headerUserAvatar');
-        var nameEl   = document.getElementById('headerUserName');
-        if (nombre && avatarEl && nameEl) {
-            var initials = nombre.split(' ').filter(Boolean).slice(0,2).map(function(w){return w[0].toUpperCase();}).join('');
-            avatarEl.textContent = initials;
-            nameEl.textContent   = nombre;
-        }
-    }
-
-    function applyAccessControl(nivel) {
-        var nivelNorm = (nivel || '').trim().toLowerCase();
-        var PERMISOS = {
-            'total': null,
-            'inventario maestro': ['dashboard', 'inventario', 'hojas-vida'],
-            'solo mantenimiento': ['dashboard', 'mantenimientos', 'metrologia', 'planificacion', 'documentos', 'hojas-vida'],
-            'aprobacion': ['dashboard', 'metrologia', 'planificacion', 'aprobar']
-        };
-        var permitidos = PERMISOS[nivelNorm];
-        if (permitidos === null) return;
-        document.querySelectorAll('.nav-item[onclick]').forEach(function(item) {
-            var onclick = item.getAttribute('onclick') || '';
-            var match = onclick.match(/switchModule\(['"]([^'"]+)['"]\)/);
-            if (!match) return;
-            var modulo = match[1];
-            if (permitidos.indexOf(modulo) === -1) {
-                item.style.opacity = '0.35';
-                item.style.cursor = 'not-allowed';
-                item.style.pointerEvents = 'none';
-                item.title = 'Sin acceso';
-            }
-        });
-        // Rellenar el perfil de usuario en el header con el nombre real de Airtable
-        var nombre = sessionStorage.getItem('NEXA_NOMBRE') || sessionStorage.getItem('NEXA_USUARIO') || '';
-        var avatarEl = document.getElementById('headerUserAvatar');
-        var nameEl   = document.getElementById('headerUserName');
-        if (nombre) {
-            var initials = nombre.split(' ').filter(Boolean).slice(0,2).map(function(w){return w[0].toUpperCase();}).join('');
-            if (avatarEl) avatarEl.textContent = initials;
-            if (nameEl)   nameEl.textContent   = nombre;
-        }
-    }
-
     function handleLogin() {
-        var usr = (document.getElementById('loginUsername').value || '').trim();
-        var pwd = (document.getElementById('loginPassword').value || '').trim();
+        var pwd = document.getElementById('loginPassword').value.trim();
         var errEl = document.getElementById('loginError');
         var btn = document.getElementById('loginBtn');
         var btnText = document.getElementById('loginBtnText');
         var spinner = document.getElementById('loginSpinner');
-        if (!usr) { errEl.textContent = 'Ingrese el usuario'; document.getElementById('loginUsername').focus(); return; }
-        if (!pwd) { errEl.textContent = 'Ingrese la contraseña'; document.getElementById('loginPassword').focus(); return; }
+
+        if (!pwd) { errEl.textContent = 'Ingrese la contraseña'; return; }
+
         errEl.textContent = '';
         btn.disabled = true;
         btnText.textContent = 'Verificando...';
         spinner.style.display = 'inline-block';
+
         fetch('/.netlify/functions/auth', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: usr, password: pwd })
+            body: JSON.stringify({ password: pwd })
         })
         .then(function(r) { return r.json(); })
         .then(function(data) {
             if (data.success) {
                 sessionStorage.setItem('NEXA_AUTH', 'ok');
-                sessionStorage.setItem('NEXA_USUARIO', data.usuario || usr);
-                sessionStorage.setItem('NEXA_NIVEL', data.nivel || 'inventario maestro');
-                sessionStorage.setItem('NEXA_NOMBRE', data.nombre || data.usuario || usr);
-                sessionStorage.setItem('NEXA_EMAIL', data.email || '');
                 document.getElementById('loginScreen').style.display = 'none';
                 document.querySelector('.container-app').style.display = 'flex';
-                applyAccessControl(data.nivel || 'inventario maestro');
             } else {
-                errEl.textContent = data.error || 'Usuario o contraseña incorrectos';
+                errEl.textContent = data.error || 'Contraseña incorrecta';
                 btn.disabled = false;
                 btnText.textContent = 'Ingresar';
                 spinner.style.display = 'none';
@@ -1234,31 +1171,6 @@
             spinner.style.display = 'none';
         });
     }
-
-    function cerrarSesion() {
-        if (!confirm('¿Desea cerrar la sesión?')) return;
-        sessionStorage.removeItem('NEXA_AUTH');
-        sessionStorage.removeItem('NEXA_USUARIO');
-        sessionStorage.removeItem('NEXA_NIVEL');
-        // Resetear nombre en header
-        var avatarEl = document.getElementById('headerUserAvatar');
-        var nameEl = document.getElementById('headerUserName');
-        if (avatarEl) avatarEl.textContent = '?';
-        if (nameEl) nameEl.textContent = '...';
-        document.querySelectorAll('.nav-item[onclick]').forEach(function(item) {
-            item.style.opacity = '';
-            item.style.cursor = '';
-            item.style.pointerEvents = '';
-            item.title = '';
-        });
-        document.getElementById('loginUsername').value = '';
-        document.getElementById('loginPassword').value = '';
-        document.getElementById('loginError').textContent = '';
-        document.querySelector('.container-app').style.display = 'none';
-        document.getElementById('loginScreen').style.display = 'block';
-        setTimeout(function() { document.getElementById('loginUsername').focus(); }, 200);
-    }
-    window.cerrarSesion = cerrarSesion;
     </script>
     <!-- FIN LOGIN SCREEN -->
 
@@ -1309,7 +1221,7 @@
                     <span class="nav-item-icon">📅</span>
                     <span>Cronograma Preventivo</span>
                 </div>
-                <div class="nav-item" onclick="switchModule('aprobar')">
+                <div class="nav-item" onclick="switchModule('aprobaciones');loadAprobarMantenimientos();">
                     <span class="nav-item-icon">✅</span>
                     <span>Aprobar Mantenimientos</span>
                 </div>
@@ -1357,10 +1269,9 @@
                     <button class="btn-icon" title="Notificaciones">🔔</button>
                     <button class="btn-icon" onclick="printModule()" title="Imprimir">🖨️</button>
                     <button class="btn-icon" onclick="exportData()" title="Exportar">💾</button>
-                    <button class="btn-icon" onclick="cerrarSesion()" title="Cerrar sesión" style="background:#c62828;color:white;font-size:13px;padding:6px 12px;border-radius:8px;font-weight:600;width:auto;">🚪 Salir</button>
-                    <div class="user-profile" id="headerUserProfile">
-                        <div class="avatar" id="headerUserAvatar">?</div>
-                        <span id="headerUserName" style="font-size: 12px; color: var(--neutral-dark);">...</span>
+                    <div class="user-profile">
+                        <div class="avatar">PM</div>
+                        <span style="font-size: 12px; color: var(--neutral-dark);">Ing. Paul Eduardo Muñoz Rodriguez</span>
                     </div>
                 </div>
             </div>
@@ -1369,81 +1280,81 @@
             <div class="content">
                 <!-- DASHBOARD MODULE -->
                 <div id="dashboard" class="module active">
+                    <div class="alert alert-success" id="dashboardAlert" style="display: none;">
+                        ✓ Sistema sincronizado - Últimas actualizaciones cargadas
+                    </div>
 
-                    <!-- Fila 1: KPIs principales -->
-                    <div class="kpi-grid" style="margin-bottom:16px;">
+                    <div class="kpi-grid">
                         <div class="kpi-card">
-                            <div class="kpi-label">Total Equipos</div>
-                            <div class="kpi-value" id="kpiEquipos">⏳</div>
-                            <div class="text-muted mt-3">Registros en inventario</div>
+                            <div class="kpi-label">Equipos Activos</div>
+                            <div class="kpi-value" id="kpiEquipos">1,182</div>
+                            <div class="kpi-change">+5.3% vs último mes</div>
+                            <div class="text-muted mt-3">Operativos en 28 áreas</div>
                         </div>
+
                         <div class="kpi-card success">
                             <div class="kpi-label">Cumplimiento Plan</div>
-                            <div class="kpi-value" id="kpiCumplimiento">⏳</div>
-                            <div class="text-muted mt-3">Equipos con mantenimiento ejecutado</div>
+                            <div class="kpi-value" id="kpiCumplimiento">94.2%</div>
+                            <div class="kpi-change">+2.1% vs trimestre anterior</div>
+                            <div class="text-muted mt-3">Mantenimientos ejecutados</div>
                         </div>
+
                         <div class="kpi-card warning">
-                            <div class="kpi-label">Pendientes / Vencidos</div>
-                            <div class="kpi-value" id="kpiPendientes">⏳</div>
+                            <div class="kpi-label">Mantenimientos Pendientes</div>
+                            <div class="kpi-value" id="kpiPendientes">23</div>
                             <div class="kpi-change negative">⚠️ Requieren atención</div>
-                            <div class="text-muted mt-3">Próximos 7 días + vencidos</div>
+                            <div class="text-muted mt-3">Próximos 7 días</div>
                         </div>
+
                         <div class="kpi-card">
-                            <div class="kpi-label">Total Reportes</div>
-                            <div class="kpi-value" id="kpiTotalReportes">⏳</div>
-                            <div class="text-muted mt-3">Preventivos + Correctivos + Terceros</div>
+                            <div class="kpi-label">MTBF Promedio</div>
+                            <div class="kpi-value" id="kpiMTBF">2,847h</div>
+                            <div class="kpi-change">+324h respecto a año anterior</div>
+                            <div class="text-muted mt-3">Horas entre fallos</div>
                         </div>
-                    </div>
 
-                    <!-- Fila 2: KPIs secundarios -->
-                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px;">
-                        <div style="background:white;border-radius:12px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,0.07);border-left:4px solid #1565c0;">
-                            <div style="font-size:11px;font-weight:700;color:#607d8b;text-transform:uppercase;letter-spacing:.5px;">🛡️ Preventivos</div>
-                            <div style="font-size:28px;font-weight:800;color:#1565c0;margin:6px 0;" id="kpiPreventivos">—</div>
-                            <div style="font-size:11px;color:#90a4ae;">Reportes propios</div>
+                        <div class="kpi-card">
+                            <div class="kpi-label">MTTR Promedio</div>
+                            <div class="kpi-value" id="kpiMTTR">4.2h</div>
+                            <div class="kpi-change">-0.8h mejora</div>
+                            <div class="text-muted mt-3">Horas promedio reparación</div>
                         </div>
-                        <div style="background:white;border-radius:12px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,0.07);border-left:4px solid #c62828;">
-                            <div style="font-size:11px;font-weight:700;color:#607d8b;text-transform:uppercase;letter-spacing:.5px;">🔧 Correctivos</div>
-                            <div style="font-size:28px;font-weight:800;color:#c62828;margin:6px 0;" id="kpiCorrectivos">—</div>
-                            <div style="font-size:11px;color:#90a4ae;">Intervenciones correctivas</div>
-                        </div>
-                        <div style="background:white;border-radius:12px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,0.07);border-left:4px solid #1b5e20;">
-                            <div style="font-size:11px;font-weight:700;color:#607d8b;text-transform:uppercase;letter-spacing:.5px;">🏢 Terceros</div>
-                            <div style="font-size:28px;font-weight:800;color:#1b5e20;margin:6px 0;" id="kpiTerceros">—</div>
-                            <div style="font-size:11px;color:#90a4ae;">Empresas externas</div>
-                        </div>
-                        <div style="background:white;border-radius:12px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,0.07);border-left:4px solid #f57f17;">
-                            <div style="font-size:11px;font-weight:700;color:#607d8b;text-transform:uppercase;letter-spacing:.5px;">📦 Con mantenimiento</div>
-                            <div style="font-size:28px;font-weight:800;color:#f57f17;margin:6px 0;" id="kpiEquiposManto">—</div>
-                            <div style="font-size:11px;color:#90a4ae;">Equipos con al menos 1 reporte</div>
-                        </div>
-                        <div style="background:white;border-radius:12px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,0.07);border-left:4px solid #c62828;">
-                            <div style="font-size:11px;font-weight:700;color:#607d8b;text-transform:uppercase;letter-spacing:.5px;">🔴 Vencidos</div>
-                            <div style="font-size:28px;font-weight:800;color:#c62828;margin:6px 0;" id="kpiVencidos">—</div>
-                            <div style="font-size:11px;color:#90a4ae;">Fecha programada pasada</div>
-                        </div>
-                        <div style="background:white;border-radius:12px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,0.07);border-left:4px solid #ff6f00;">
-                            <div style="font-size:11px;font-weight:700;color:#607d8b;text-transform:uppercase;letter-spacing:.5px;">📅 Próximos 30 días</div>
-                            <div style="font-size:28px;font-weight:800;color:#ff6f00;margin:6px 0;" id="kpiPendientes30d">—</div>
-                            <div style="font-size:11px;color:#90a4ae;">Mantenimientos programados</div>
-                        </div>
-                    </div>
 
-                    <!-- Gráficas -->
-                    <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px;">
-                        <div class="chart-container" style="margin:0;">
-                            <h3 style="margin:0 0 12px;font-size:14px;color:#37474f;">📊 Reportes por mes (últimos 6 meses)</h3>
-                            <canvas id="mtbfChart"></canvas>
+                        <div class="kpi-card danger">
+                            <div class="kpi-label">Costo Mantenimiento</div>
+                            <div class="kpi-value" id="kpiCosto">$847K</div>
+                            <div class="kpi-change negative">+12% vs presupuesto</div>
+                            <div class="text-muted mt-3">Período enero-diciembre</div>
                         </div>
-                        <div class="chart-container" style="margin:0;">
-                            <h3 style="margin:0 0 12px;font-size:14px;color:#37474f;">🍩 Tipos de mantenimiento</h3>
-                            <canvas id="maintenanceTypeChart"></canvas>
+
+                        <div class="kpi-card warning" onclick="switchModule('aprobaciones');loadAprobarMantenimientos();" style="cursor:pointer;" title="Ir a Aprobar Mantenimientos">
+                            <div class="kpi-label">Aprobaciones Pendientes</div>
+                            <div class="kpi-value" id="dashKpiAprobPendVal">—</div>
+                            <div class="kpi-change negative" id="dashKpiAprobPendDetalle">⏳ Prev + Correctivos</div>
+                            <div class="text-muted mt-3">Requieren revisión del jefe</div>
+                        </div>
+
+                        <div class="kpi-card success" onclick="switchModule('aprobaciones');loadAprobarMantenimientos();" style="cursor:pointer;" title="Ir a Aprobar Mantenimientos">
+                            <div class="kpi-label">Mantenimientos Aprobados</div>
+                            <div class="kpi-value" id="dashKpiAprobOkVal">—</div>
+                            <div class="kpi-change" id="dashKpiAprobOkDetalle">✅ Prev + Correctivos</div>
+                            <div class="text-muted mt-3">Aprobados este período</div>
                         </div>
                     </div>
 
                     <div class="chart-container">
-                        <h3 style="margin:0 0 12px;font-size:14px;color:#37474f;">🏥 Equipos y reportes por servicio</h3>
+                        <h3>Tendencia MTBF/MTTR (Últimos 12 meses)</h3>
+                        <canvas id="mtbfChart"></canvas>
+                    </div>
+
+                    <div class="chart-container">
+                        <h3>Cumplimiento Plan de Mantenimiento por Área</h3>
                         <canvas id="complianceChart"></canvas>
+                    </div>
+
+                    <div class="chart-container">
+                        <h3>Distribución de Tipos de Mantenimiento</h3>
+                        <canvas id="maintenanceTypeChart"></canvas>
                     </div>
                 </div>
 
@@ -1667,12 +1578,10 @@
                         <div class="mt-toolbar-left">
                             <button class="mt-new-btn mt-new-prev" onclick="openMantForm('prev')">🛡️ + Preventivo</button>
                             <button class="mt-new-btn mt-new-corr" onclick="openMantForm('corr')">🔧 + Correctivo</button>
-                            <button class="mt-new-btn mt-new-terc" onclick="openTercForm()">🏢 + Terceros</button>
                             <div class="mt-filter-group">
                                 <button class="mt-filter-btn active" data-tipo="TODOS" onclick="mtFilterTipo('TODOS')">Todos</button>
                                 <button class="mt-filter-btn" data-tipo="Preventivo" onclick="mtFilterTipo('Preventivo')">🛡️ Preventivo</button>
                                 <button class="mt-filter-btn" data-tipo="Correctivo" onclick="mtFilterTipo('Correctivo')">🔧 Correctivo</button>
-                                <button class="mt-filter-btn" data-tipo="Tercero" onclick="mtFilterTipo('Tercero')">🏢 Terceros</button>
                             </div>
                         </div>
                         <div class="mt-toolbar-right">
@@ -1860,17 +1769,6 @@
                                 <div class="cr-spinner"></div>
                                 <p>Haz clic en "Cronograma Preventivo" para cargar el cronograma.</p>
                             </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- APROBAR MANTENIMIENTOS MODULE -->
-                <div id="aprobar" class="module">
-                    <div id="aprobarBody" style="padding:4px 0">
-                        <div style="text-align:center;padding:60px;color:#90a4ae">
-                            <div style="font-size:48px;margin-bottom:12px">✅</div>
-                            <div style="font-size:16px;font-weight:600">Aprobar Mantenimientos</div>
-                            <div style="font-size:13px;margin-top:6px">Cargando reportes preventivos...</div>
                         </div>
                     </div>
                 </div>
@@ -2178,55 +2076,14 @@
 
                 <!-- REPORTES MODULE -->
                 <div id="reportes" class="module">
-
-                    <!-- Toolbar -->
-                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px;">
-                        <div style="display:flex;gap:10px;flex-wrap:wrap;">
-                            <button class="btn btn-primary" style="background:linear-gradient(135deg,#1565c0,#1976d2);" onclick="loadReporteCostos()">💰 Costos por Servicio</button>
-                            <button class="btn btn-secondary" onclick="exportReporteCostosCSV()">⬇️ Exportar CSV</button>
-                            <button class="btn btn-secondary" onclick="loadReporteCostos()">🔄 Actualizar</button>
-                        </div>
-                        <div style="font-size:13px;color:#78909c;" id="reporteCostosTotal"></div>
+                    <div class="mb-3">
+                        <button class="btn btn-primary">📑 Generar Reporte Desempeño</button>
+                        <button class="btn btn-secondary">📋 Reporte Cumplimiento</button>
+                        <button class="btn btn-secondary">💰 Reporte Costos</button>
+                        <button class="btn btn-secondary">🔍 Reporte Auditoría</button>
                     </div>
-
-                    <!-- KPI cards -->
-                    <div id="reporteCostosKpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:20px;"></div>
-
-                    <!-- Gráfica + Tabla side by side -->
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
-                        <div style="background:white;border-radius:14px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,0.07);">
-                            <div style="font-size:14px;font-weight:700;color:#37474f;margin-bottom:14px;">📊 Valor total por servicio</div>
-                            <canvas id="reporteCostosChart" height="300"></canvas>
-                        </div>
-                        <div style="background:white;border-radius:14px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,0.07);">
-                            <div style="font-size:14px;font-weight:700;color:#37474f;margin-bottom:14px;">🏥 Cantidad de equipos por servicio</div>
-                            <canvas id="reporteEquiposChart" height="300"></canvas>
-                        </div>
-                    </div>
-
-                    <!-- Tabla detallada -->
-                    <div style="background:white;border-radius:14px;box-shadow:0 2px 8px rgba(0,0,0,0.07);overflow:hidden;">
-                        <div style="padding:16px 20px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;justify-content:space-between;">
-                            <div style="font-size:14px;font-weight:700;color:#37474f;">📋 Detalle por servicio</div>
-                            <input id="reporteCostosSearch" type="text" placeholder="🔍 Filtrar servicio..." oninput="filterReporteTabla(this.value)"
-                                style="padding:7px 12px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:13px;font-family:Outfit,sans-serif;outline:none;width:220px;">
-                        </div>
-                        <div style="overflow-x:auto;">
-                            <table style="width:100%;border-collapse:collapse;" id="reporteCostosTabla">
-                                <thead>
-                                    <tr style="background:#f5f7fa;">
-                                        <th style="padding:11px 16px;text-align:left;font-size:12px;font-weight:700;color:#546e7a;text-transform:uppercase;letter-spacing:.4px;">Servicio</th>
-                                        <th style="padding:11px 16px;text-align:center;font-size:12px;font-weight:700;color:#546e7a;text-transform:uppercase;letter-spacing:.4px;">Equipos</th>
-                                        <th style="padding:11px 16px;text-align:right;font-size:12px;font-weight:700;color:#546e7a;text-transform:uppercase;letter-spacing:.4px;">Valor Total</th>
-                                        <th style="padding:11px 16px;text-align:right;font-size:12px;font-weight:700;color:#546e7a;text-transform:uppercase;letter-spacing:.4px;">Promedio/Equipo</th>
-                                        <th style="padding:11px 16px;text-align:right;font-size:12px;font-weight:700;color:#546e7a;text-transform:uppercase;letter-spacing:.4px;">% del Total</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="reporteCostosTbody">
-                                    <tr><td colspan="5" style="text-align:center;padding:40px;color:#90a4ae;">⏳ Haz clic en "Costos por Servicio" para cargar los datos</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
+                    <div style="background: white; padding: 20px; border-radius: 8px; color: var(--border); text-align: center;">
+                        Selecciona un tipo de reporte para generar
                     </div>
                 </div>
 
@@ -2255,6 +2112,127 @@
                         </table>
                     </div>
                 </div>
+
+                <!-- ═══════════════════════════════════════════════════════ -->
+                <!-- APROBAR MANTENIMIENTOS MODULE                          -->
+                <!-- ═══════════════════════════════════════════════════════ -->
+                <div id="aprobaciones" class="module">
+
+                  <!-- KPI Cards globales -->
+                  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:24px;">
+                    <div style="background:white;border-radius:14px;padding:18px 20px;box-shadow:0 2px 10px rgba(0,0,0,0.07);border-left:4px solid #0d47a1;">
+                      <div style="font-size:22px;margin-bottom:4px;">🛡️</div>
+                      <div style="font-size:26px;font-weight:800;color:#0d47a1;font-family:'Outfit',sans-serif;" id="aprobStatTotalPrev">—</div>
+                      <div style="font-size:11px;font-weight:600;color:#607d8b;text-transform:uppercase;letter-spacing:.5px;">Total Preventivos</div>
+                    </div>
+                    <div style="background:white;border-radius:14px;padding:18px 20px;box-shadow:0 2px 10px rgba(0,0,0,0.07);border-left:4px solid #f57f17;">
+                      <div style="font-size:22px;margin-bottom:4px;">⏳</div>
+                      <div style="font-size:26px;font-weight:800;color:#f57f17;font-family:'Outfit',sans-serif;" id="aprobStatPendPrev">—</div>
+                      <div style="font-size:11px;font-weight:600;color:#607d8b;text-transform:uppercase;letter-spacing:.5px;">Prev. Pendientes</div>
+                    </div>
+                    <div style="background:white;border-radius:14px;padding:18px 20px;box-shadow:0 2px 10px rgba(0,0,0,0.07);border-left:4px solid #2e7d32;">
+                      <div style="font-size:22px;margin-bottom:4px;">✅</div>
+                      <div style="font-size:26px;font-weight:800;color:#2e7d32;font-family:'Outfit',sans-serif;" id="aprobStatAprobPrev">—</div>
+                      <div style="font-size:11px;font-weight:600;color:#607d8b;text-transform:uppercase;letter-spacing:.5px;">Prev. Aprobados</div>
+                    </div>
+                    <div style="background:white;border-radius:14px;padding:18px 20px;box-shadow:0 2px 10px rgba(0,0,0,0.07);border-left:4px solid #c62828;">
+                      <div style="font-size:22px;margin-bottom:4px;">🔧</div>
+                      <div style="font-size:26px;font-weight:800;color:#c62828;font-family:'Outfit',sans-serif;" id="aprobStatTotalCorr">—</div>
+                      <div style="font-size:11px;font-weight:600;color:#607d8b;text-transform:uppercase;letter-spacing:.5px;">Total Correctivos</div>
+                    </div>
+                    <div style="background:white;border-radius:14px;padding:18px 20px;box-shadow:0 2px 10px rgba(0,0,0,0.07);border-left:4px solid #e65100;">
+                      <div style="font-size:22px;margin-bottom:4px;">⏳</div>
+                      <div style="font-size:26px;font-weight:800;color:#e65100;font-family:'Outfit',sans-serif;" id="aprobStatPendCorr">—</div>
+                      <div style="font-size:11px;font-weight:600;color:#607d8b;text-transform:uppercase;letter-spacing:.5px;">Corr. Pendientes</div>
+                    </div>
+                    <div style="background:white;border-radius:14px;padding:18px 20px;box-shadow:0 2px 10px rgba(0,0,0,0.07);border-left:4px solid #1b5e20;">
+                      <div style="font-size:22px;margin-bottom:4px;">✅</div>
+                      <div style="font-size:26px;font-weight:800;color:#1b5e20;font-family:'Outfit',sans-serif;" id="aprobStatAprobCorr">—</div>
+                      <div style="font-size:11px;font-weight:600;color:#607d8b;text-transform:uppercase;letter-spacing:.5px;">Corr. Aprobados</div>
+                    </div>
+                  </div>
+
+                  <!-- Tabs Preventivo / Correctivo -->
+                  <div style="display:flex;gap:8px;margin-bottom:0;border-bottom:2px solid #e0e0e0;padding-bottom:0;">
+                    <button class="aprob-tab-btn active" data-tab="prev" onclick="aprobSwitchTab('prev')"
+                      style="padding:10px 22px;border:none;background:none;font-size:14px;font-weight:700;color:#0d47a1;cursor:pointer;border-bottom:3px solid #0d47a1;margin-bottom:-2px;font-family:'Outfit',sans-serif;transition:all 0.2s;">
+                      🛡️ Preventivos
+                    </button>
+                    <button class="aprob-tab-btn" data-tab="corr" onclick="aprobSwitchTab('corr')"
+                      style="padding:10px 22px;border:none;background:none;font-size:14px;font-weight:700;color:#90a4ae;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;font-family:'Outfit',sans-serif;transition:all 0.2s;">
+                      🔧 Correctivos
+                    </button>
+                    <div style="flex:1;"></div>
+                    <button onclick="loadAprobarMantenimientos(true)"
+                      style="padding:8px 16px;background:#eceff1;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:#37474f;font-family:'Outfit',sans-serif;align-self:center;">
+                      🔄 Actualizar
+                    </button>
+                  </div>
+
+                  <!-- Filtros de estado -->
+                  <div style="display:flex;gap:8px;flex-wrap:wrap;padding:14px 0 12px;">
+                    <button class="aprob-filter-chip active" data-estado="TODOS" onclick="aprobFiltrarEstado('TODOS')"
+                      style="padding:5px 14px;border-radius:20px;border:1.5px solid #90a4ae;background:#eceff1;color:#37474f;font-size:12px;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;transition:all 0.15s;">
+                      Todos
+                    </button>
+                    <button class="aprob-filter-chip" data-estado="Pendiente" onclick="aprobFiltrarEstado('Pendiente')"
+                      style="padding:5px 14px;border-radius:20px;border:1.5px solid #ffcc80;background:#fff3e0;color:#e65100;font-size:12px;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;transition:all 0.15s;">
+                      ⏳ Pendientes
+                    </button>
+                    <button class="aprob-filter-chip" data-estado="Aprobado" onclick="aprobFiltrarEstado('Aprobado')"
+                      style="padding:5px 14px;border-radius:20px;border:1.5px solid #a5d6a7;background:#e8f5e9;color:#2e7d32;font-size:12px;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;transition:all 0.15s;">
+                      ✅ Aprobados
+                    </button>
+                    <button class="aprob-filter-chip" data-estado="Rechazado" onclick="aprobFiltrarEstado('Rechazado')"
+                      style="padding:5px 14px;border-radius:20px;border:1.5px solid #ef9a9a;background:#ffebee;color:#c62828;font-size:12px;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;transition:all 0.15s;">
+                      ❌ Rechazados
+                    </button>
+                    <span id="aprobCount" style="margin-left:auto;font-size:12px;color:#90a4ae;font-weight:600;align-self:center;"></span>
+                  </div>
+
+                  <!-- Loading overlay -->
+                  <div id="aprobLoadingOverlay" style="display:none;justify-content:center;align-items:center;padding:60px;flex-direction:column;gap:14px;">
+                    <div style="width:36px;height:36px;border:4px solid #e3f2fd;border-top-color:#0d47a1;border-radius:50%;animation:crSpin 0.8s linear infinite;"></div>
+                    <div style="font-size:14px;color:#607d8b;font-weight:600;font-family:'Outfit',sans-serif;">Cargando aprobaciones...</div>
+                  </div>
+
+                  <!-- Tabla -->
+                  <div style="background:white;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,0.07);overflow:hidden;">
+                    <table style="width:100%;border-collapse:collapse;font-family:'Outfit',sans-serif;">
+                      <thead>
+                        <tr style="background:linear-gradient(135deg,#0d47a1,#1565c0);">
+                          <th style="padding:12px 14px;text-align:left;color:white;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Tipo</th>
+                          <th style="padding:12px 14px;text-align:left;color:white;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Equipo</th>
+                          <th style="padding:12px 14px;text-align:left;color:white;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Placa</th>
+                          <th style="padding:12px 14px;text-align:left;color:white;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Servicio</th>
+                          <th style="padding:12px 14px;text-align:left;color:white;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Técnico</th>
+                          <th style="padding:12px 14px;text-align:left;color:white;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Fecha</th>
+                          <th style="padding:12px 14px;text-align:left;color:white;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Estado</th>
+                          <th style="padding:12px 14px;text-align:left;color:white;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody id="aprobTbody">
+                        <tr>
+                          <td colspan="8" style="text-align:center;padding:60px;color:#90a4ae;">
+                            <div style="font-size:40px;margin-bottom:12px;">✅</div>
+                            <div style="font-weight:600;font-size:15px;color:#607d8b;">Haz clic en "Aprobar Mantenimientos" para cargar</div>
+                            <div style="font-size:13px;margin-top:6px;">Los reportes aparecerán aquí cuando se generen desde Mantenimientos.</div>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <!-- Estilos tabs y chips -->
+                  <style>
+                    .aprob-tab-btn.active { color:#0d47a1!important; border-bottom:3px solid #0d47a1!important; }
+                    .aprob-tab-btn:not(.active) { color:#90a4ae!important; border-bottom:3px solid transparent!important; }
+                    .aprob-tab-btn:hover:not(.active) { color:#546e7a!important; background:#f5f7fa!important; }
+                    .aprob-filter-chip.active { box-shadow:0 2px 8px rgba(0,0,0,0.12); transform:translateY(-1px); }
+                  </style>
+
+                </div>
+                <!-- FIN APROBAR MANTENIMIENTOS MODULE -->
             </div>
         </div>
     </div>
@@ -2737,7 +2715,7 @@
     </div>
 
 
-    <script src="js/app.js?v=2"></script>
+    <script src="js/app.js"></script>
 
 
     <!-- MODAL: Formulario de Inventario Completo -->
@@ -3501,8 +3479,6 @@
     .mt-new-prev:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(21,101,192,0.35); }
     .mt-new-corr { background:linear-gradient(135deg,#b71c1c,#c62828); color:white; }
     .mt-new-corr:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(183,28,28,0.35); }
-    .mt-new-terc { background:linear-gradient(135deg,#1b5e20,#2e7d32); color:white; }
-    .mt-new-terc:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(27,94,32,0.35); }
     .mt-filter-group { display:flex; gap:6px; }
     .mt-filter-btn { padding:7px 14px; border:1.5px solid #cfd8dc; border-radius:20px; background:white; color:#546e7a; font-size:12px; font-weight:600; cursor:pointer; font-family:'Outfit',sans-serif; transition:all 0.2s; }
     .mt-filter-btn.active { background:#0d47a1; border-color:#0d47a1; color:white; }
@@ -3645,7 +3621,6 @@
     </script>
     <script src="js/documentos.js"></script>
     <script src="js/mantenimientos.js?v=3"></script>
-    <script src="js/aprobar-mantenimientos.js?v=1"></script>
     <script src="js/metrologia.js"></script>
     <script src="js/cronograma.js"></script>
 
@@ -3684,478 +3659,41 @@
 
     <script src="js/hojas-de-vida.js"></script>
     <script src="js/hv-personal.js"></script>
-
-<!-- ══════════════ MODAL REPORTE TERCEROS ══════════════ -->
-<div id="tercModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;align-items:center;justify-content:center;">
-  <div style="background:white;border-radius:16px;width:100%;max-width:520px;margin:20px;box-shadow:0 20px 60px rgba(0,0,0,0.3);overflow:hidden;">
-    <div style="background:linear-gradient(135deg,#1b5e20,#2e7d32);padding:20px 24px;display:flex;align-items:center;justify-content:space-between;">
-      <div>
-        <div style="font-size:18px;font-weight:800;color:white;font-family:'Montserrat',sans-serif;">🏢 Reporte de Tercero</div>
-        <div style="font-size:12px;color:rgba(255,255,255,0.75);margin-top:3px;">Mantenimiento realizado por empresa externa</div>
-      </div>
-      <button onclick="closeTercForm()" style="background:rgba(255,255,255,0.2);border:none;color:white;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:18px;">✕</button>
-    </div>
-    <div style="padding:24px;display:flex;flex-direction:column;gap:14px;">
-      <div>
-        <label style="font-size:12px;font-weight:700;color:#455a64;text-transform:uppercase;letter-spacing:.5px;">Empresa / Tercero *</label>
-        <input id="tercEmpresa" type="text" placeholder="Nombre de la empresa o técnico externo" style="width:100%;margin-top:5px;padding:10px 12px;border:1.5px solid #cfd8dc;border-radius:8px;font-size:14px;font-family:'Outfit',sans-serif;box-sizing:border-box;outline:none;">
-      </div>
-      <div>
-        <label style="font-size:12px;font-weight:700;color:#455a64;text-transform:uppercase;letter-spacing:.5px;">Equipo *</label>
-        <input type="hidden" id="tercEquipoId">
-        <div id="tercEquipoSearchWrap" style="background:#f0f7ff;border:1.5px solid #90caf9;border-radius:12px;padding:14px;margin-top:6px;">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
-            <div>
-              <label style="font-size:11px;font-weight:700;color:#1565c0;text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px;">📋 Nombre / Equipo</label>
-              <input id="tercSrchNombre" type="text" placeholder="Ej: Monitor, Desfibrilador..." oninput="onTercSearchMulti()" autocomplete="off" style="width:100%;padding:9px 11px;border:1.5px solid #cfd8dc;border-radius:8px;font-size:13px;font-family:'Outfit',sans-serif;box-sizing:border-box;outline:none;background:white;">
-            </div>
-            <div>
-              <label style="font-size:11px;font-weight:700;color:#1565c0;text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px;">🏷️ Marca</label>
-              <input id="tercSrchMarca" type="text" placeholder="Ej: Nihon Kohden, Mindray..." oninput="onTercSearchMulti()" autocomplete="off" style="width:100%;padding:9px 11px;border:1.5px solid #cfd8dc;border-radius:8px;font-size:13px;font-family:'Outfit',sans-serif;box-sizing:border-box;outline:none;background:white;">
-            </div>
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
-            <div>
-              <label style="font-size:11px;font-weight:700;color:#1565c0;text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px;">⚙️ Modelo</label>
-              <input id="tercSrchModelo" type="text" placeholder="Ej: CSM-1501, BeneHeart D6..." oninput="onTercSearchMulti()" autocomplete="off" style="width:100%;padding:9px 11px;border:1.5px solid #cfd8dc;border-radius:8px;font-size:13px;font-family:'Outfit',sans-serif;box-sizing:border-box;outline:none;background:white;">
-            </div>
-            <div>
-              <label style="font-size:11px;font-weight:700;color:#1565c0;text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px;">🔢 Número de Serie</label>
-              <input id="tercSrchSerie" type="text" placeholder="Número de serie..." oninput="onTercSearchMulti()" autocomplete="off" style="width:100%;padding:9px 11px;border:1.5px solid #cfd8dc;border-radius:8px;font-size:13px;font-family:'Outfit',sans-serif;box-sizing:border-box;outline:none;background:white;">
-            </div>
-          </div>
-          <div id="tercEquipoDropdown" style="display:none;background:white;border:1.5px solid #90caf9;border-radius:10px;max-height:220px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.12);"></div>
-          <div id="tercEquipoSelected" style="display:none;background:#e8f5e9;border:1.5px solid #81c784;border-radius:8px;padding:10px 14px;margin-top:8px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;">
-              <div id="tercEquipoSelectedLabel" style="font-size:13px;font-weight:700;color:#1b5e20;"></div>
-              <button type="button" onclick="clearTercEquipo()" style="background:none;border:none;color:#c62828;cursor:pointer;font-size:16px;font-weight:700;padding:0 4px;" title="Quitar selección">✕</button>
-            </div>
-            <div id="tercEquipoSelectedSub" style="font-size:11px;color:#388e3c;margin-top:3px;"></div>
-          </div>
-        </div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-        <div>
-          <label style="font-size:12px;font-weight:700;color:#455a64;text-transform:uppercase;letter-spacing:.5px;">Fecha del servicio *</label>
-          <input id="tercFecha" type="date" style="width:100%;margin-top:5px;padding:10px 12px;border:1.5px solid #cfd8dc;border-radius:8px;font-size:14px;font-family:'Outfit',sans-serif;box-sizing:border-box;outline:none;">
-        </div>
-        <div>
-          <label style="font-size:12px;font-weight:700;color:#455a64;text-transform:uppercase;letter-spacing:.5px;">Tipo de servicio</label>
-          <select id="tercTipo" style="width:100%;margin-top:5px;padding:10px 12px;border:1.5px solid #cfd8dc;border-radius:8px;font-size:14px;font-family:'Outfit',sans-serif;box-sizing:border-box;background:white;outline:none;">
-            <option value="Preventivo">Preventivo</option>
-            <option value="Correctivo">Correctivo</option>
-            <option value="Calibracion">Calibración</option>
-          </select>
-        </div>
-      </div>
-      <div>
-        <label style="font-size:12px;font-weight:700;color:#455a64;text-transform:uppercase;letter-spacing:.5px;">PDF del reporte *</label>
-        <div id="tercDropZone" onclick="document.getElementById('tercPdfInput').click()" style="margin-top:5px;border:2px dashed #81c784;border-radius:10px;padding:24px;text-align:center;cursor:pointer;background:#f1f8e9;transition:all 0.2s;">
-          <div style="font-size:28px;">📄</div>
-          <div style="font-size:13px;font-weight:700;color:#2e7d32;margin-top:6px;">Haz clic para seleccionar el PDF</div>
-          <div style="font-size:11px;color:#78909c;margin-top:3px;">Máximo 10 MB</div>
-          <input id="tercPdfInput" type="file" accept="application/pdf" style="display:none;" onchange="onTercPdfSelected(this)">
-        </div>
-        <div id="tercPdfName" style="margin-top:6px;font-size:12px;color:#2e7d32;font-weight:600;display:none;"></div>
-      </div>
-      <div id="tercError" style="color:#c62828;font-size:13px;font-weight:600;display:none;"></div>
-    </div>
-    <div style="padding:16px 24px;background:#f5f5f5;border-top:1px solid #eceff1;display:flex;justify-content:flex-end;gap:10px;">
-      <button onclick="closeTercForm()" style="padding:10px 20px;border:1.5px solid #cfd8dc;background:white;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;">Cancelar</button>
-      <button id="tercSaveBtn" onclick="saveTercReport()" style="padding:10px 24px;background:linear-gradient(135deg,#1b5e20,#2e7d32);color:white;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;">💾 Guardar en Airtable</button>
-    </div>
-  </div>
-</div>
-
-<script>
-(function() {
-  var _tercEquipos = [];
-  window.openTercForm = function() {
-    var hoy = new Date();
-    document.getElementById('tercFecha').value = hoy.getFullYear()+'-'+String(hoy.getMonth()+1).padStart(2,'0')+'-'+String(hoy.getDate()).padStart(2,'0');
-    document.getElementById('tercEmpresa').value = '';
-    document.getElementById('tercError').style.display = 'none';
-    document.getElementById('tercPdfName').style.display = 'none';
-    document.getElementById('tercPdfInput').value = '';
-    document.getElementById('tercDropZone').style.borderColor = '#81c784';
-    document.getElementById('tercDropZone').style.background = '#f1f8e9';
-    var modal = document.getElementById('tercModal');
-    modal.style.display = 'flex';
-    _loadTercEquipos();
-    setTimeout(function(){ if(typeof _resetTercSearch==='function') _resetTercSearch(); }, 50);
-  };
-  window.closeTercForm = function() { document.getElementById('tercModal').style.display = 'none'; };
-  document.getElementById('tercModal').addEventListener('click', function(e) { if (e.target === this) closeTercForm(); });
-  window.onTercPdfSelected = function(input) {
-    var file = input.files && input.files[0];
-    if (!file) return;
-    if (file.size > 10*1024*1024) { document.getElementById('tercError').textContent='El PDF supera los 10 MB.'; document.getElementById('tercError').style.display='block'; input.value=''; return; }
-    document.getElementById('tercError').style.display = 'none';
-    document.getElementById('tercPdfName').textContent = '✅ '+file.name+' ('+Math.round(file.size/1024)+' KB)';
-    document.getElementById('tercPdfName').style.display = 'block';
-    document.getElementById('tercDropZone').style.borderColor = '#2e7d32';
-    document.getElementById('tercDropZone').style.background = '#e8f5e9';
-  };
-  function _loadTercEquipos() {
-    if (window.__HSLV_MT_STATE && window.__HSLV_MT_STATE.inventario && window.__HSLV_MT_STATE.inventario.length > 0) {
-      _tercEquipos = window.__HSLV_MT_STATE.inventario.map(function(r){
-        var f=r.fields||{};
-        return { id:r.id, nm:f['Equipo']||f['EQUIPO']||'', pl:f['Numero de Placa']||f['PLACA']||'',
-          marca:f['Marca']||f['MARCA']||'', modelo:f['Modelo']||f['MODELO']||'',
-          serie:f['Serie']||f['SERIE']||'', servicio:f['Servicio']||f['SERVICIO']||'' };
-      });
-      return;
+    <script src="js/aprobar-mantenimientos.js"></script>
+    <script>
+    /* ── KPIs dashboard: aprobaciones ── */
+    async function loadDashboardAprobar() {
+      if (typeof getAprobarStats === 'function') {
+        const s = getAprobarStats();
+        const pendEl  = document.getElementById('dashKpiAprobPendVal');
+        const pendDet = document.getElementById('dashKpiAprobPendDetalle');
+        const aprobEl  = document.getElementById('dashKpiAprobOkVal');
+        const aprobDet = document.getElementById('dashKpiAprobOkDetalle');
+        if (pendEl)  pendEl.textContent  = s.pendPrev + s.pendCorr;
+        if (pendDet) pendDet.textContent = '⏳ ' + s.pendPrev + ' prev · ' + s.pendCorr + ' corr';
+        if (aprobEl)  aprobEl.textContent  = s.aprobPrev + s.aprobCorr;
+        if (aprobDet) aprobDet.textContent = '✅ ' + s.aprobPrev + ' prev · ' + s.aprobCorr + ' corr';
+        return;
+      }
+      try {
+        const res = await axios.get('/.netlify/functions/get-aprobaciones');
+        const prev = res.data.preventivos || [];
+        const corr = res.data.correctivos || [];
+        const ce = (arr, e) => arr.filter(r => (r.fields['Estado de aprobación'] || 'Pendiente') === e).length;
+        const pendPrev = ce(prev,'Pendiente'), pendCorr = ce(corr,'Pendiente');
+        const aprobPrev = ce(prev,'Aprobado'),  aprobCorr = ce(corr,'Aprobado');
+        const s = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
+        s('dashKpiAprobPendVal',  pendPrev + pendCorr);
+        s('dashKpiAprobPendDetalle', '⏳ ' + pendPrev + ' prev · ' + pendCorr + ' corr');
+        s('dashKpiAprobOkVal',   aprobPrev + aprobCorr);
+        s('dashKpiAprobOkDetalle', '✅ ' + aprobPrev + ' prev · ' + aprobCorr + ' corr');
+      } catch(e) { console.warn('KPI aprobaciones:', e.message); }
     }
-    var headers = typeof getAuthHeader === 'function' ? getAuthHeader() : {};
-    fetch('/.netlify/functions/inventario?pageSize=200', { headers: headers })
-      .then(function(r){ return r.json(); })
-      .then(function(d){
-        var inv = d.records || d.data || [];
-        _tercEquipos = inv.map(function(r){
-          var f=r.fields||{};
-          return { id:r.id, nm:f['Equipo']||f['EQUIPO']||'', pl:f['Numero de Placa']||f['PLACA']||'',
-            marca:f['Marca']||f['MARCA']||'', modelo:f['Modelo']||f['MODELO']||'',
-            serie:f['Serie']||f['SERIE']||'', servicio:f['Servicio']||f['SERVICIO']||'' };
-        });
-      })
-      .catch(function(){ console.error('Error cargando inventario para terceros'); });
-  }
 
-  window.onTercSearchMulti = function() {
-    var qNombre = (document.getElementById('tercSrchNombre').value||'').toLowerCase().trim();
-    var qMarca  = (document.getElementById('tercSrchMarca').value||'').toLowerCase().trim();
-    var qModelo = (document.getElementById('tercSrchModelo').value||'').toLowerCase().trim();
-    var qSerie  = (document.getElementById('tercSrchSerie').value||'').toLowerCase().trim();
-    // Limpiar selección previa
-    document.getElementById('tercEquipoId').value = '';
-    document.getElementById('tercEquipoSelected').style.display = 'none';
-    var list = document.getElementById('tercEquipoDropdown');
-    if (!qNombre && !qMarca && !qModelo && !qSerie) { list.style.display='none'; return; }
-    var filtered = _tercEquipos.filter(function(eq) {
-      if (qNombre && !eq.nm.toLowerCase().includes(qNombre)) return false;
-      if (qMarca  && !eq.marca.toLowerCase().includes(qMarca))  return false;
-      if (qModelo && !eq.modelo.toLowerCase().includes(qModelo)) return false;
-      if (qSerie  && !eq.serie.toLowerCase().includes(qSerie))  return false;
-      return true;
+    /* ── Llamar al dashboard al cargar ── */
+    window.addEventListener('load', function() {
+      setTimeout(loadDashboardAprobar, 3000);
     });
-    if (!filtered.length) {
-      list.innerHTML = '<div style="padding:12px 14px;color:#90a4ae;font-size:13px;">Sin resultados</div>';
-      list.style.display = 'block'; return;
-    }
-    list.innerHTML = filtered.slice(0,50).map(function(eq) {
-      var label = '<strong>' + eq.nm + '</strong>';
-      if (eq.marca||eq.modelo) label += ' <span style="color:#78909c;font-size:11px;">' + [eq.marca,eq.modelo].filter(Boolean).join(' ') + '</span>';
-      var sub = [];
-      if (eq.serie) sub.push('S/N: '+eq.serie);
-      if (eq.pl)    sub.push('Placa: '+eq.pl);
-      if (eq.servicio) sub.push(eq.servicio);
-      return '<div class="terc-eq-item" data-eqid="'+eq.id+'" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #f0f0f0;">'
-        + '<div style="font-size:13px;">'+label+'</div>'
-        + (sub.length ? '<div style="font-size:11px;color:#90a4ae;margin-top:2px;">'+sub.join(' · ')+'</div>' : '')
-        + '</div>';
-    }).join('');
-    list.querySelectorAll('.terc-eq-item').forEach(function(item) {
-      item.addEventListener('mouseenter', function(){ this.style.background='#e3f2fd'; });
-      item.addEventListener('mouseleave', function(){ this.style.background=''; });
-      item.addEventListener('click', function(){ selectTercEquipo(this.dataset.eqid); });
-    });
-    list.style.display = 'block';
-  };
-
-  window.selectTercEquipo = function(id) {
-    var eq = _tercEquipos.find(function(e){ return e.id===id; });
-    if (!eq) return;
-    document.getElementById('tercEquipoId').value = id;
-    var label = document.getElementById('tercEquipoSelectedLabel');
-    var sub   = document.getElementById('tercEquipoSelectedSub');
-    var panel = document.getElementById('tercEquipoSelected');
-    if (label) label.textContent = '✅ ' + eq.nm + (eq.marca||eq.modelo ? ' — '+[eq.marca,eq.modelo].filter(Boolean).join(' ') : '');
-    if (sub) { var parts=[]; if(eq.serie) parts.push('S/N: '+eq.serie); if(eq.pl) parts.push('Placa: '+eq.pl); if(eq.servicio) parts.push(eq.servicio); sub.textContent=parts.join(' · '); }
-    if (panel) panel.style.display = 'block';
-    document.getElementById('tercEquipoDropdown').style.display = 'none';
-  };
-
-  window.clearTercEquipo = function() {
-    document.getElementById('tercEquipoId').value = '';
-    document.getElementById('tercEquipoSelected').style.display = 'none';
-    document.getElementById('tercEquipoDropdown').style.display = 'none';
-    ['tercSrchNombre','tercSrchMarca','tercSrchModelo','tercSrchSerie'].forEach(function(id){
-      var el=document.getElementById(id); if(el) el.value='';
-    });
-  };
-
-  // Reset búsqueda al abrir el modal
-  function _resetTercSearch() {
-    clearTercEquipo();
-  }
-
-  window.saveTercReport = async function() {
-    var empresa=(document.getElementById('tercEmpresa').value||'').trim();
-    var equipoId=document.getElementById('tercEquipoId').value;
-    var fecha=document.getElementById('tercFecha').value;
-    var tipo=document.getElementById('tercTipo').value;
-    var pdfInput=document.getElementById('tercPdfInput');
-    var file=pdfInput&&pdfInput.files&&pdfInput.files[0];
-    var errEl=document.getElementById('tercError');
-    errEl.style.display='none';
-    if(!empresa){errEl.textContent='Ingrese el nombre de la empresa.';errEl.style.display='block';return;}
-    if(!equipoId){errEl.textContent='Seleccione el equipo.';errEl.style.display='block';return;}
-    if(!fecha){errEl.textContent='Seleccione la fecha del servicio.';errEl.style.display='block';return;}
-    if(!file){errEl.textContent='Seleccione el archivo PDF del reporte.';errEl.style.display='block';return;}
-    var btn=document.getElementById('tercSaveBtn');
-    btn.disabled=true; btn.textContent='⏳ Subiendo...';
-    try {
-      var equipoRec=_tercEquipos.find(function(r){return r.id===equipoId;});
-      var equipoNombre=equipoRec?(equipoRec.nm||equipoRec.fields&&(equipoRec.fields['Equipo']||equipoRec.fields['EQUIPO'])||''):'';
-      var cleanEmpresa=empresa.replace(/[^a-zA-Z0-9]/g,'_').toUpperCase();
-      var cleanEquipo=equipoNombre.replace(/[^a-zA-Z0-9]/g,'_').toUpperCase();
-      var filename='TERC_'+cleanEmpresa+'_'+cleanEquipo+'_'+fecha+'_'+tipo+'.pdf';
-      var b64=await new Promise(function(resolve,reject){
-        var reader=new FileReader();
-        reader.onerror=function(){reject(new Error('No se pudo leer el archivo'));};
-        reader.onload=function(){var res=String(reader.result||'');var comma=res.indexOf(',');resolve(comma>=0?res.slice(comma+1):res);};
-        reader.readAsDataURL(file);
-      });
-      var fieldName=tipo==='Correctivo'?'Mantenimientos correctivos':'Mantenimientos preventivo';
-      var headers=typeof getAuthHeader==='function'?getAuthHeader():{};
-      var res=await axios.post('/.netlify/functions/upload-pdf',{recordId:equipoId,fieldName:fieldName,filename:filename,contentType:'application/pdf',base64:b64,tableName:'Inventario'},{headers:Object.assign({},headers,{'Content-Type':'application/json'})});
-      if(res.data&&res.data.ok===false) throw new Error(res.data.error||'Error al subir');
-      closeTercForm();
-      if(typeof window.loadMantenimientosModule==='function') window.loadMantenimientosModule(true);
-      alert('✅ Reporte de tercero guardado correctamente.');
-    } catch(err) {
-      errEl.textContent='Error: '+(err.message||'No se pudo guardar');
-      errEl.style.display='block';
-    } finally { btn.disabled=false; btn.textContent='💾 Guardar en Airtable'; }
-  };
-})();
-</script>
-
-
-<script>
-// ══════════════════════════════════════════════════════
-// REPORTE DE COSTOS POR SERVICIO
-// ══════════════════════════════════════════════════════
-(function() {
-
-  var _costosData = []; // [{servicio, equipos, total, promedio, pct}]
-  var _costosRaw  = []; // registros crudos para export
-
-  function fmtPesos(n) {
-    if (!n || isNaN(n)) return '$0';
-    return '$' + Math.round(n).toLocaleString('es-CO');
-  }
-
-  window.loadReporteCostos = async function() {
-    var tbody = document.getElementById('reporteCostosTbody');
-    var kpis  = document.getElementById('reporteCostosKpis');
-    var total = document.getElementById('reporteCostosTotal');
-    if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:40px;color:#90a4ae;">⏳ Cargando datos desde Airtable...</td></tr>';
-    if (kpis)  kpis.innerHTML  = '';
-    if (total) total.textContent = '';
-
-    try {
-      var headers = typeof getAuthHeader === 'function' ? getAuthHeader() : {};
-      // Cargar todo el inventario paginado
-      var records = [];
-      var offset  = null;
-      do {
-        var url = '/.netlify/functions/inventario?pageSize=100' + (offset ? '&offset='+encodeURIComponent(offset) : '');
-        var res = await fetch(url, { headers: headers });
-        var data = await res.json();
-        (data.records || data.data || []).forEach(function(r){ records.push(r); });
-        offset = data.offset || null;
-      } while (offset);
-
-      _costosRaw = records;
-
-      // Agrupar por servicio
-      var grupos = {};
-      var totalGeneral = 0;
-
-      records.forEach(function(rec) {
-        var f = rec.fields || {};
-        var servicio = f['Servicio'] || f['SERVICIO'] || 'Sin servicio';
-        // Valor en Pesos — puede ser número o string
-        var valorRaw = f['Valor en Pesos'] || f['VALOR EN PESOS'] || 0;
-        var valor = typeof valorRaw === 'number' ? valorRaw : parseFloat(String(valorRaw).replace(/[^0-9.,]/g,'').replace(',','.')) || 0;
-
-        if (!grupos[servicio]) grupos[servicio] = { equipos: 0, total: 0, items: [] };
-        grupos[servicio].equipos++;
-        grupos[servicio].total += valor;
-        grupos[servicio].items.push({ nombre: f['Equipo']||f['EQUIPO']||'', valor: valor });
-        totalGeneral += valor;
-      });
-
-      // Convertir a array y ordenar por valor desc
-      _costosData = Object.entries(grupos)
-        .map(function(entry) {
-          return {
-            servicio: entry[0],
-            equipos:  entry[1].equipos,
-            total:    entry[1].total,
-            promedio: entry[1].equipos > 0 ? entry[1].total / entry[1].equipos : 0,
-            pct:      totalGeneral > 0 ? (entry[1].total / totalGeneral * 100) : 0
-          };
-        })
-        .sort(function(a,b){ return b.total - a.total; });
-
-      // ── KPI cards ──────────────────────────────────────────────────
-      var top1 = _costosData[0] || {};
-      var serviciosConValor = _costosData.filter(function(d){ return d.total > 0; }).length;
-      var kpiHtml = [
-        { label:'💰 Valor Total Inventario', value: fmtPesos(totalGeneral), color:'#1565c0' },
-        { label:'🏥 Total Servicios',        value: _costosData.length,     color:'#2e7d32' },
-        { label:'📦 Total Equipos',          value: records.length,         color:'#f57f17' },
-        { label:'🏆 Servicio Mayor Valor',   value: top1.servicio || '—',   color:'#6a1b9a', small: true },
-      ].map(function(k) {
-        return '<div style="background:white;border-radius:12px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,0.07);border-left:4px solid '+k.color+';">'
-          + '<div style="font-size:11px;font-weight:700;color:#607d8b;text-transform:uppercase;letter-spacing:.4px;">'+k.label+'</div>'
-          + '<div style="font-size:'+(k.small?'16px':'26px')+';font-weight:800;color:'+k.color+';margin:6px 0 2px;">'+k.value+'</div>'
-          + '</div>';
-      }).join('');
-      if (kpis) kpis.innerHTML = kpiHtml;
-      if (total) total.textContent = records.length + ' equipos · ' + _costosData.length + ' servicios';
-
-      // ── Tabla ──────────────────────────────────────────────────────
-      _renderReporteTabla(_costosData);
-
-      // ── Gráficas ───────────────────────────────────────────────────
-      _renderCostosCharts(_costosData, totalGeneral);
-
-    } catch(err) {
-      console.error('[REPORTE] Error:', err);
-      if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;color:#c62828;">⚠️ Error cargando datos: '+err.message+'</td></tr>';
-    }
-  };
-
-  function _renderReporteTabla(data) {
-    var tbody = document.getElementById('reporteCostosTbody');
-    if (!tbody) return;
-    if (!data.length) {
-      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;color:#90a4ae;">Sin datos</td></tr>';
-      return;
-    }
-    tbody.innerHTML = data.map(function(d, i) {
-      var rowBg = i % 2 === 0 ? '#fafafa' : 'white';
-      var pctBar = '<div style="display:flex;align-items:center;gap:8px;justify-content:flex-end;">'
-        + '<div style="width:60px;height:6px;background:#e0e0e0;border-radius:3px;overflow:hidden;">'
-        + '<div style="width:'+Math.min(d.pct,100)+'%;height:100%;background:#1565c0;border-radius:3px;"></div></div>'
-        + '<span>'+d.pct.toFixed(1)+'%</span></div>';
-      return '<tr style="background:'+rowBg+';border-bottom:1px solid #f0f0f0;" class="reporte-fila" data-servicio="'+d.servicio.toLowerCase()+'">'
-        + '<td style="padding:12px 16px;font-size:13px;font-weight:600;color:#263238;">'+d.servicio+'</td>'
-        + '<td style="padding:12px 16px;text-align:center;font-size:13px;color:#546e7a;">'+d.equipos+'</td>'
-        + '<td style="padding:12px 16px;text-align:right;font-size:13px;font-weight:700;color:#1565c0;">'+fmtPesos(d.total)+'</td>'
-        + '<td style="padding:12px 16px;text-align:right;font-size:13px;color:#546e7a;">'+fmtPesos(d.promedio)+'</td>'
-        + '<td style="padding:12px 16px;text-align:right;font-size:13px;color:#546e7a;">'+pctBar+'</td>'
-        + '</tr>';
-    }).join('');
-  }
-
-  window.filterReporteTabla = function(q) {
-    var term = (q||'').toLowerCase().trim();
-    document.querySelectorAll('.reporte-fila').forEach(function(row) {
-      var serv = row.dataset.servicio || '';
-      row.style.display = (!term || serv.includes(term)) ? '' : 'none';
-    });
-  };
-
-  function _renderCostosCharts(data, totalGeneral) {
-    if (typeof Chart === 'undefined') return;
-    var top10 = data.slice(0, 10);
-    var labels = top10.map(function(d){ return d.servicio.length > 22 ? d.servicio.slice(0,20)+'…' : d.servicio; });
-    var colors = ['#1565c0','#1976d2','#1e88e5','#2196f3','#42a5f5','#64b5f6','#1b5e20','#2e7d32','#388e3c','#43a047'];
-
-    // Gráfica de costos (barras horizontales)
-    var ctx1 = document.getElementById('reporteCostosChart');
-    if (ctx1) {
-      if (ctx1._chartInstance) ctx1._chartInstance.destroy();
-      ctx1._chartInstance = new Chart(ctx1, {
-        type: 'bar',
-        data: {
-          labels: labels,
-          datasets: [{
-            label: 'Valor en Pesos',
-            data: top10.map(function(d){ return d.total; }),
-            backgroundColor: colors,
-            borderRadius: 6,
-          }]
-        },
-        options: {
-          indexAxis: 'y',
-          responsive: true,
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              callbacks: {
-                label: function(ctx) { return ' ' + fmtPesos(ctx.raw); }
-              }
-            }
-          },
-          scales: {
-            x: {
-              beginAtZero: true,
-              ticks: {
-                callback: function(v) {
-                  if (v >= 1000000000) return '$'+(v/1000000000).toFixed(1)+'B';
-                  if (v >= 1000000) return '$'+(v/1000000).toFixed(0)+'M';
-                  if (v >= 1000) return '$'+(v/1000).toFixed(0)+'K';
-                  return '$'+v;
-                }
-              }
-            }
-          }
-        }
-      });
-    }
-
-    // Gráfica de equipos (dona)
-    var ctx2 = document.getElementById('reporteEquiposChart');
-    if (ctx2) {
-      if (ctx2._chartInstance) ctx2._chartInstance.destroy();
-      ctx2._chartInstance = new Chart(ctx2, {
-        type: 'doughnut',
-        data: {
-          labels: labels,
-          datasets: [{
-            data: top10.map(function(d){ return d.equipos; }),
-            backgroundColor: colors,
-            borderWidth: 2,
-            borderColor: '#fff'
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: { position: 'right', labels: { font: { size: 11 }, boxWidth: 14 } },
-            tooltip: {
-              callbacks: {
-                label: function(ctx) {
-                  return ' '+ctx.label+': '+ctx.raw+' equipo'+(ctx.raw!==1?'s':'');
-                }
-              }
-            }
-          }
-        }
-      });
-    }
-  }
-
-  window.exportReporteCostosCSV = function() {
-    if (!_costosData.length) { alert('Primero carga los datos con el botón "Costos por Servicio"'); return; }
-    var rows = [['Servicio','Equipos','Valor Total COP','Promedio por Equipo','% del Total']];
-    _costosData.forEach(function(d) {
-      rows.push([d.servicio, d.equipos, Math.round(d.total), Math.round(d.promedio), d.pct.toFixed(2)+'%']);
-    });
-    var csv = rows.map(function(r){ return r.map(function(c){ return '"'+String(c).replace(/"/g,'""')+'"'; }).join(','); }).join('\n');
-    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    var a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'reporte_costos_'+new Date().toISOString().slice(0,10)+'.csv';
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  };
-
-})();
-</script>
+    </script>
 </body>
 </html>
