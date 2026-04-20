@@ -205,258 +205,151 @@
   }
 
   // ── Descargar PDF ────────────────────────────────────────────────────────────
-  async function _descargarPDF() {
+  function _descargarPDF() {
     if (!_equiposActuales.length) { alert('No hay equipos para exportar.'); return; }
 
     var btn = document.getElementById('is-btn-pdf');
     if (btn) { btn.disabled = true; btn.innerHTML = '\u23f3 Generando\u2026'; }
 
-    try {
-      var jsPDFCtor = await _obtenerJsPDF();
-      if (!jsPDFCtor) throw new Error('No se pudo cargar el motor PDF');
+    var ahora = new Date();
+    var mes   = ahora.toLocaleDateString('es-CO', {year:'numeric', month:'long', day:'numeric'});
+    var hora  = ahora.toLocaleTimeString('es-CO', {hour:'2-digit', minute:'2-digit'});
+    var arch  = 'Inventario_' + _servicioActual.replace(/\s+/g, '_') +
+                '_' + ahora.getFullYear() +
+                String(ahora.getMonth()+1).padStart(2,'0') +
+                String(ahora.getDate()).padStart(2,'0') + '.pdf';
 
-      var ahora = new Date();
-      var fechaLarga = ahora.toLocaleDateString('es-CO', { year:'numeric', month:'long', day:'numeric' });
-      var hora = ahora.toLocaleTimeString('es-CO', { hour:'2-digit', minute:'2-digit' });
-      var archivo = 'Inventario_' + _normalizarNombreArchivo(_servicioActual || 'Servicio') + '_' +
-                    ahora.getFullYear() +
-                    String(ahora.getMonth() + 1).padStart(2, '0') +
-                    String(ahora.getDate()).padStart(2, '0') + '.pdf';
+    // Logo: URL relativa al dominio (no base64 para evitar problemas de memoria/parsing)
+    var logoUrl = window.location.origin + '/logoNEXA.jpg';
 
-      var pdf = new jsPDFCtor({ orientation: 'landscape', unit: 'mm', format: 'a4', compress: true });
-      var pageW = pdf.internal.pageSize.getWidth();
-      var pageH = pdf.internal.pageSize.getHeight();
-      var margin = 10;
-      var usableW = pageW - margin * 2;
-      var y = margin;
-      var page = 1;
-
-      var cols = [12, 78, 42, 34, 40, 71]; // total 277 mm aprox. dentro del A4 horizontal
-      var headers = ['#', 'NOMBRE DEL EQUIPO', 'MARCA', 'MODELO', 'N° DE SERIE', 'SEDE'];
-      var rows = _equiposActuales.map(function(eq, i) {
-        return [
-          String(i + 1),
-          String(eq.equipo || ''),
-          String(eq.marca || ''),
-          String(eq.modelo || ''),
-          String(eq.serie || ''),
-          String(eq.sede || '')
-        ];
-      });
-
-      var logoDataUrl = await _imagenADataURL(window.location.origin + '/logoNEXA.jpg').catch(function() { return null; });
-
-      function addHeader() {
-        y = margin;
-
-        if (logoDataUrl) {
-          try {
-            pdf.addImage(logoDataUrl, 'JPEG', margin, y, 58, 24, undefined, 'FAST');
-          } catch (e) {
-            console.warn('[inventario-servicio] No se pudo insertar logo:', e);
-          }
-        }
-
-        pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(20);
-        pdf.setTextColor(33, 37, 41);
-        pdf.text('Hospital Susana López de Valencia E.S.E.', margin, y + 34);
-
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(10);
-        pdf.setTextColor(80, 80, 80);
-        pdf.text('Sistema de Gestión de Tecnología Biomédica · NEXA/HSLV', margin, y + 40);
-
-        pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(14);
-        pdf.setTextColor(0, 82, 204);
-        pdf.text('Inventario por Servicio', pageW - margin, y + 12, { align: 'right' });
-
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(10);
-        pdf.setTextColor(90, 90, 90);
-        pdf.text(fechaLarga + ' · ' + hora, pageW - margin, y + 18, { align: 'right' });
-
-        pdf.setDrawColor(0, 82, 204);
-        pdf.setLineWidth(0.6);
-        pdf.line(margin, y + 45, pageW - margin, y + 45);
-
-        pdf.setFillColor(232, 238, 248);
-        pdf.roundedRect(margin, y + 49, usableW, 15, 2, 2, 'F');
-
-        pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(8);
-        pdf.setTextColor(0, 82, 204);
-        pdf.text('SERVICIO', margin + 4, y + 55);
-        pdf.text('TOTAL EQUIPOS', margin + 110, y + 55);
-        pdf.text('FECHA', margin + 165, y + 55);
-
-        pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(11);
-        pdf.setTextColor(33, 37, 41);
-        pdf.text(String(_servicioActual || ''), margin + 4, y + 61);
-        pdf.text(String(_equiposActuales.length), margin + 110, y + 61);
-        pdf.text(fechaLarga, margin + 165, y + 61);
-
-        y = y + 70;
-        drawTableHeader();
-      }
-
-      function drawTableHeader() {
-        pdf.setFillColor(46, 81, 196);
-        pdf.rect(margin, y, usableW, 9, 'F');
-        pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(8.5);
-        pdf.setTextColor(255, 255, 255);
-        var x = margin;
-        for (var i = 0; i < headers.length; i++) {
-          pdf.text(headers[i], x + 2, y + 5.8);
-          x += cols[i];
-        }
-        y += 9;
-      }
-
-      function drawFooter() {
-        pdf.setDrawColor(220, 220, 220);
-        pdf.setLineWidth(0.2);
-        pdf.line(margin, pageH - 10, pageW - margin, pageH - 10);
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(8);
-        pdf.setTextColor(120, 120, 120);
-        pdf.text('Hospital Susana López de Valencia E.S.E. — Gestión de Tecnología Biomédica', margin, pageH - 6.2);
-        pdf.text('Página ' + page, pageW - margin, pageH - 6.2, { align: 'right' });
-      }
-
-      function addNewPage() {
-        drawFooter();
-        pdf.addPage();
-        page += 1;
-        addHeader();
-      }
-
-      function drawRow(cells, rowIndex) {
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(8.5);
-        pdf.setTextColor(50, 50, 50);
-
-        var paddingX = 2;
-        var lineH = 4.2;
-        var maxLines = 1;
-        var prepared = [];
-
-        for (var i = 0; i < cells.length; i++) {
-          var lines = pdf.splitTextToSize(String(cells[i] || ''), cols[i] - paddingX * 2);
-          if (!Array.isArray(lines)) lines = [String(lines || '')];
-          if (lines.length > maxLines) maxLines = lines.length;
-          prepared.push(lines);
-        }
-
-        var rowH = Math.max(7.5, maxLines * lineH + 2.5);
-        if (y + rowH > pageH - 14) addNewPage();
-
-        if (rowIndex % 2 === 1) {
-          pdf.setFillColor(245, 247, 250);
-          pdf.rect(margin, y, usableW, rowH, 'F');
-        }
-
-        pdf.setDrawColor(222, 226, 230);
-        pdf.setLineWidth(0.2);
-        pdf.line(margin, y + rowH, pageW - margin, y + rowH);
-
-        var x = margin;
-        for (var c = 0; c < prepared.length; c++) {
-          var textY = y + 4.8;
-          var text = prepared[c];
-
-          if (c === 0) {
-            pdf.setTextColor(96, 125, 139);
-          } else if (c === 1) {
-            pdf.setTextColor(33, 37, 41);
-            pdf.setFont('helvetica', 'bold');
-          } else if (c === 4) {
-            pdf.setTextColor(0, 82, 204);
-            pdf.setFont('courier', 'normal');
-          } else {
-            pdf.setTextColor(60, 60, 60);
-            pdf.setFont('helvetica', 'normal');
-          }
-
-          for (var li = 0; li < text.length; li++) {
-            pdf.text(String(text[li]), x + paddingX, textY + (li * lineH));
-          }
-          x += cols[c];
-        }
-
-        y += rowH;
-      }
-
-      addHeader();
-      rows.forEach(function(row, idx) { drawRow(row, idx); });
-      drawFooter();
-      pdf.save(archivo);
-    } catch (err) {
-      console.error('[inventario-servicio] Error generando PDF:', err);
-      alert('No fue posible generar el PDF completo. ' + (err && err.message ? err.message : ''));
-    } finally {
-      if (btn) { btn.disabled = false; btn.innerHTML = '\u2b07\ufe0f Descargar PDF'; }
+    // Construir filas
+    var filas = '';
+    for (var i = 0; i < _equiposActuales.length; i++) {
+      var eq = _equiposActuales[i];
+      var bg = i % 2 === 0 ? '#ffffff' : '#f5f7fa';
+      filas += '<tr style="background:' + bg + '">' +
+        '<td style="text-align:center;color:#607D8B;padding:5px 7px;border-bottom:1px solid #dee2e6;font-size:9px">' + (i+1) + '</td>' +
+        '<td style="font-weight:700;padding:5px 7px;border-bottom:1px solid #dee2e6;font-size:9px">' + _esc(eq.equipo) + '</td>' +
+        '<td style="padding:5px 7px;border-bottom:1px solid #dee2e6;font-size:9px">' + _esc(eq.marca) + '</td>' +
+        '<td style="padding:5px 7px;border-bottom:1px solid #dee2e6;font-size:9px">' + _esc(eq.modelo) + '</td>' +
+        '<td style="font-family:monospace;color:#0052CC;padding:5px 7px;border-bottom:1px solid #dee2e6;font-size:9px">' + _esc(eq.serie) + '</td>' +
+        '<td style="padding:5px 7px;border-bottom:1px solid #dee2e6;font-size:9px">' + _esc(eq.sede) + '</td>' +
+        '</tr>';
     }
-  }
 
-  async function _obtenerJsPDF() {
-    if (window.jspdf && window.jspdf.jsPDF) return window.jspdf.jsPDF;
-    await _cargarScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
-    if (window.jspdf && window.jspdf.jsPDF) return window.jspdf.jsPDF;
-    return null;
-  }
+    var htmlPDF = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">' +
+      '<title>' + arch + '</title>' +
+      '<style>' +
+        '*{margin:0;padding:0;box-sizing:border-box}' +
+        'body{font-family:Arial,Helvetica,sans-serif;font-size:10px;color:#212529;background:#ffffff;padding:12mm}' +
+        '.hdr{display:flex;align-items:center;gap:12px;border-bottom:2px solid #0052CC;padding-bottom:10px;margin-bottom:10px}' +
+        '.logo{width:50px;height:50px;object-fit:contain}' +
+        '.hc{flex:1}' +
+        '.hc h1{font-size:12px;color:#0052CC;font-weight:700;margin:0 0 2px 0}' +
+        '.hc p{font-size:9px;color:#555;margin:0}' +
+        '.hr{text-align:right;font-size:9px;color:#555}' +
+        '.hr b{display:block;color:#0052CC;font-size:11px;margin-bottom:2px}' +
+        '.meta{display:flex;gap:20px;background:#e8eef8;border-radius:4px;padding:7px 12px;margin-bottom:10px}' +
+        '.ml label{font-size:8px;text-transform:uppercase;color:#0052CC;font-weight:700;display:block;letter-spacing:.5px}' +
+        '.ml span{font-size:10px;font-weight:600}' +
+        'table{width:100%;border-collapse:collapse;border:1px solid #dee2e6}' +
+        'th{background:#0052CC;color:#fff;font-size:9px;text-transform:uppercase;padding:6px 7px;text-align:left;letter-spacing:.3px}' +
+        'td{vertical-align:middle}' +
+        '.footer{margin-top:14px;text-align:center;font-size:8px;color:#888;border-top:1px solid #ddd;padding-top:6px}' +
+      '</style>' +
+      '</head><body>' +
+        '<div class="hdr">' +
+          '<img class="logo" src="' + logoUrl + '" alt="Logo" crossorigin="anonymous">' +
+          '<div class="hc">' +
+            '<h1>Hospital Susana L\u00f3pez de Valencia E.S.E.</h1>' +
+            '<p>Sistema de Gesti\u00f3n de Tecnolog\u00eda Biom\u00e9dica \u00b7 NEXA/HSLV</p>' +
+          '</div>' +
+          '<div class="hr"><b>Inventario por Servicio</b>' + mes + ' \u00b7 ' + hora + '</div>' +
+        '</div>' +
+        '<div class="meta">' +
+          '<div class="ml"><label>Servicio</label><span>' + _esc(_servicioActual) + '</span></div>' +
+          '<div class="ml"><label>Total Equipos</label><span>' + _equiposActuales.length + '</span></div>' +
+          '<div class="ml"><label>Fecha</label><span>' + mes + '</span></div>' +
+        '</div>' +
+        '<table>' +
+          '<thead><tr>' +
+            '<th style="width:26px">#</th>' +
+            '<th>Nombre del Equipo</th>' +
+            '<th>Marca</th>' +
+            '<th>Modelo</th>' +
+            '<th>N\u00ba de Serie</th>' +
+            '<th>Sede</th>' +
+          '</tr></thead>' +
+          '<tbody>' + filas + '</tbody>' +
+        '</table>' +
+        '<div class="footer">Hospital Susana L\u00f3pez de Valencia E.S.E. \u2014 \u00c1rea de Gesti\u00f3n de Tecnolog\u00eda Biom\u00e9dica e Infraestructura</div>' +
+      '</body></html>';
 
-  function _cargarScript(src) {
-    return new Promise(function(resolve, reject) {
-      var existente = document.querySelector('script[data-pdf-src="' + src + '"]');
-      if (existente) {
-        if (existente.dataset.loaded === 'true') return resolve();
-        existente.addEventListener('load', function onload() {
-          existente.removeEventListener('load', onload);
-          resolve();
-        });
-        existente.addEventListener('error', function onerror() {
-          existente.removeEventListener('error', onerror);
-          reject(new Error('No se pudo cargar ' + src));
-        });
-        return;
-      }
+    // ── Usar el mismo patr\u00f3n probado de mantenimientos.js ──
+    var iframe = document.createElement('iframe');
+    iframe.style.cssText = 'position:fixed;left:0;top:0;width:1190px;height:842px;opacity:0;pointer-events:none;z-index:-1;border:none;';
+    document.body.appendChild(iframe);
 
-      var s = document.createElement('script');
-      s.src = src;
-      s.async = true;
-      s.dataset.pdfSrc = src;
-      s.onload = function() { s.dataset.loaded = 'true'; resolve(); };
-      s.onerror = function() { reject(new Error('No se pudo cargar ' + src)); };
-      document.head.appendChild(s);
-    });
-  }
+    var iDoc = iframe.contentDocument || iframe.contentWindow.document;
+    iDoc.open();
+    iDoc.write(htmlPDF);
+    iDoc.close();
 
-  function _imagenADataURL(url) {
-    return fetch(url, { cache: 'no-store' })
-      .then(function(res) {
-        if (!res.ok) throw new Error('No se pudo cargar imagen');
-        return res.blob();
-      })
-      .then(function(blob) {
-        return new Promise(function(resolve, reject) {
-          var reader = new FileReader();
-          reader.onloadend = function() { resolve(reader.result); };
-          reader.onerror = reject;
-          reader.readAsDataURL(blob);
+    setTimeout(function() {
+      var imgs = iDoc.querySelectorAll('img');
+      var imgPromises = Array.from(imgs).map(function(img) {
+        if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+        return new Promise(function(res) {
+          img.onload = res;
+          img.onerror = res; // Si el logo no carga, continuar igual
+          setTimeout(res, 5000);
         });
       });
-  }
 
-  function _normalizarNombreArchivo(txt) {
-    return String(txt || 'Servicio')
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-zA-Z0-9_-]+/g, '_')
-      .replace(/_+/g, '_')
-      .replace(/^_|_$/g, '');
+      Promise.all(imgPromises).then(function() {
+        setTimeout(function() {
+          // Cargar html2pdf DENTRO del iframe (patr\u00f3n de mantenimientos.js)
+          var script = iDoc.createElement('script');
+          script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js';
+          script.onload = function() {
+            var h2p = iframe.contentWindow.html2pdf;
+            h2p().set({
+              margin: 10,
+              filename: arch,
+              image: { type: 'jpeg', quality: 0.95 },
+              html2canvas: {
+                scale: 2,
+                useCORS: true,
+                logging: false,
+                letterRendering: true,
+                allowTaint: true,
+                backgroundColor: '#ffffff'
+              },
+              jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
+              pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+            }).from(iDoc.body).save()
+              .then(function() {
+                document.body.removeChild(iframe);
+                if (btn) { btn.disabled = false; btn.innerHTML = '\u2b07\ufe0f Descargar PDF'; }
+              })
+              .catch(function(err) {
+                console.error('[PDF iframe] error:', err);
+                document.body.removeChild(iframe);
+                if (btn) { btn.disabled = false; btn.innerHTML = '\u2b07\ufe0f Descargar PDF'; }
+                // Fallback: ventana de impresi\u00f3n
+                _abrirVentana(htmlPDF);
+              });
+          };
+          script.onerror = function() {
+            console.warn('[PDF] CDN no disponible, usando ventana de impresi\u00f3n');
+            document.body.removeChild(iframe);
+            if (btn) { btn.disabled = false; btn.innerHTML = '\u2b07\ufe0f Descargar PDF'; }
+            _abrirVentana(htmlPDF);
+          };
+          iDoc.head.appendChild(script);
+        }, 1000);
+      });
+    }, 800);
   }
 
   function _abrirVentana(htmlPDF) {
