@@ -13,10 +13,16 @@
 
   // ── Entrada principal ────────────────────────────────────────────────────────
   window.loadInventarioServicio = async function (force) {
-    const cont = document.getElementById('inv-serv-content');
-    if (!cont) return;
+    // Pequeño delay para asegurar que el módulo ya es visible en el DOM
+    await new Promise(r => setTimeout(r, 50));
 
-    // Si ya se cargaron los servicios y no se pide forzar, no re-fetch
+    const cont = document.getElementById('inv-serv-content');
+    if (!cont) {
+      console.error('[inventario-servicio] No se encontró #inv-serv-content');
+      return;
+    }
+
+    // Si ya se cargaron los servicios y no se pide forzar, solo re-renderiza
     if (_serviciosCache.length && !force) {
       _renderServicios(_serviciosCache);
       return;
