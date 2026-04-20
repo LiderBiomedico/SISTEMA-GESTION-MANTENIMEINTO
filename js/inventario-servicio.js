@@ -285,7 +285,7 @@
         '<div class="footer">Hospital Susana L\u00f3pez de Valencia E.S.E. \u2014 \u00c1rea de Gesti\u00f3n de Tecnolog\u00eda Biom\u00e9dica e Infraestructura</div>' +
       '</body></html>';
 
-    // ── Usar el mismo patr\u00f3n probado de mantenimientos.js ──
+    // ── Generar PDF de forma robusta y forzar descarga real ──
     var iframe = document.createElement('iframe');
     iframe.style.cssText = 'position:fixed;left:0;top:0;width:1190px;height:842px;opacity:0;pointer-events:none;z-index:-1;border:none;';
     document.body.appendChild(iframe);
@@ -301,19 +301,34 @@
         if (img.complete && img.naturalWidth > 0) return Promise.resolve();
         return new Promise(function(res) {
           img.onload = res;
-          img.onerror = res; // Si el logo no carga, continuar igual
+          img.onerror = res; // si el logo no carga, continuar igual
           setTimeout(res, 5000);
         });
       });
 
       Promise.all(imgPromises).then(function() {
         setTimeout(function() {
-          // Cargar html2pdf DENTRO del iframe (patr\u00f3n de mantenimientos.js)
-          var script = iDoc.createElement('script');
-          script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js';
-          script.onload = function() {
-            var h2p = iframe.contentWindow.html2pdf;
-            h2p().set({
+          function liberar() {
+            try { document.body.removeChild(iframe); } catch(e) {}
+            if (btn) { btn.disabled = false; btn.innerHTML = '⬇️ Descargar PDF'; }
+          }
+
+          function descargarBlob(blob) {
+            var blobUrl = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = blobUrl;
+            a.download = arch;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(function() {
+              URL.revokeObjectURL(blobUrl);
+            }, 30000);
+          }
+
+          function generarCon(h2p) {
+            if (!h2p) throw new Error('html2pdf no disponible');
+            return h2p().set({
               margin: 10,
               filename: arch,
               image: { type: 'jpeg', quality: 0.95 },
@@ -327,29 +342,47 @@
               },
               jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
               pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-            }).from(iDoc.body).save()
-              .then(function() {
-                document.body.removeChild(iframe);
-                if (btn) { btn.disabled = false; btn.innerHTML = '\u2b07\ufe0f Descargar PDF'; }
-              })
-              .catch(function(err) {
-                console.error('[PDF iframe] error:', err);
-                document.body.removeChild(iframe);
-                if (btn) { btn.disabled = false; btn.innerHTML = '\u2b07\ufe0f Descargar PDF'; }
-                // Fallback: ventana de impresi\u00f3n
+            }).from(iDoc.body).outputPdf('blob');
+          }
+
+          Promise.resolve()
+            .then(function() {
+              if (typeof window.html2pdf !== 'function') {
+                throw new Error('html2pdf principal no disponible');
+              }
+              return generarCon(window.html2pdf);
+            })
+            .then(function(blob) {
+              descargarBlob(blob);
+              liberar();
+            })
+            .catch(function(errPrincipal) {
+              console.warn('[PDF] fallback principal falló:', errPrincipal);
+
+              var script = iDoc.createElement('script');
+              script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js';
+              script.onload = function() {
+                generarCon(iframe.contentWindow.html2pdf)
+                  .then(function(blob) {
+                    descargarBlob(blob);
+                    liberar();
+                  })
+                  .catch(function(err) {
+                    console.error('[PDF iframe] error:', err);
+                    liberar();
+                    _abrirVentana(htmlPDF);
+                  });
+              };
+              script.onerror = function() {
+                console.warn('[PDF] CDN no disponible, usando ventana de impresión');
+                liberar();
                 _abrirVentana(htmlPDF);
-              });
-          };
-          script.onerror = function() {
-            console.warn('[PDF] CDN no disponible, usando ventana de impresi\u00f3n');
-            document.body.removeChild(iframe);
-            if (btn) { btn.disabled = false; btn.innerHTML = '\u2b07\ufe0f Descargar PDF'; }
-            _abrirVentana(htmlPDF);
-          };
-          iDoc.head.appendChild(script);
-        }, 1000);
+              };
+              iDoc.head.appendChild(script);
+            });
+        }, 700);
       });
-    }, 800);
+    }, 500);
   }
 
   function _abrirVentana(htmlPDF) {
