@@ -255,6 +255,10 @@
         'table{width:100%;border-collapse:collapse;border:1px solid #dee2e6}' +
         'th{background:#0052CC;color:#fff;font-size:9px;text-transform:uppercase;padding:6px 7px;text-align:left;letter-spacing:.3px}' +
         'td{vertical-align:middle}' +
+        'thead{display:table-header-group}' +
+        'tfoot{display:table-footer-group}' +
+        'tr,td,th{page-break-inside:avoid;break-inside:avoid}' +
+        'table{page-break-inside:auto}' +
         '.footer{margin-top:14px;text-align:center;font-size:8px;color:#888;border-top:1px solid #ddd;padding-top:6px}' +
       '</style>' +
       '</head><body>' +
@@ -341,7 +345,7 @@
                 backgroundColor: '#ffffff'
               },
               jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
-              pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+              pagebreak: { mode: ['css', 'legacy'] }
             }).from(iDoc.body).outputPdf('blob');
           }
 
