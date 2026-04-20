@@ -57,7 +57,8 @@ function switchModule(moduleName, evt) {
     reportes: '📝 Reportes e Informes',
     auditoria: '🔍 Auditoría y Trazabilidad',
     'hojas-vida': '📋 Hojas de Vida · SLV-GAT-GAB-12-F02',
-    aprobar: '✅ Aprobar Mantenimientos · Preventivos & Correctivos'
+    aprobar: '✅ Aprobar Mantenimientos · Preventivos & Correctivos',
+    'inventario-servicio': '🏥 Inventario por Servicio'
   };
   const t = document.getElementById('moduleTitle');
   if (t) t.textContent = titles[moduleName] || moduleName;
@@ -106,6 +107,9 @@ function loadModuleData(moduleName) {
       break;
     case 'aprobar':
       if (typeof loadAprobarModule === 'function') loadAprobarModule(false);
+      break;
+    case 'inventario-servicio':
+      if (typeof loadInventarioServicio === 'function') loadInventarioServicio(false);
       break;
   }
 }
