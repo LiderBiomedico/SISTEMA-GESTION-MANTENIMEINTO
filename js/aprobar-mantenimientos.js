@@ -397,7 +397,7 @@
          { id:'selloInfraCard', img:SELLO_REC_INFRA, label:'Líder Infraestructura', color:'#e65100', val:'infraestructura' }];
 
     var sellosHTML = sellos.map(function(s) {
-      return '<div id="'+s.id+'" onclick="selectSello(\'+s.val+\')" style="cursor:pointer;border:3px solid #e0e0e0;border-radius:12px;padding:16px;text-align:center;transition:all 0.2s;background:white">'
+      return '<div id="'+s.id+'" data-sello="'+s.val+'" style="cursor:pointer;border:3px solid #e0e0e0;border-radius:12px;padding:16px;text-align:center;transition:all 0.2s;background:white">'
         + '<img src="'+s.img+'" style="max-width:140px;max-height:140px;margin:0 auto;display:block">'
         + '<div style="margin-top:8px;font-size:11px;font-weight:700;color:'+s.color+'">'+s.label+'</div></div>';
     }).join('');
@@ -432,6 +432,12 @@
 
     document.body.appendChild(modal);
     modal.addEventListener('click', function(e){ if(e.target===modal) closeAprobarModal(); });
+    Array.prototype.slice.call(modal.querySelectorAll('[data-sello]')).forEach(function(card) {
+      card.addEventListener('click', function() {
+        var tipo = card.getAttribute('data-sello') || '';
+        if (tipo) selectSello(tipo);
+      });
+    });
   };
 
   window.closeAprobarModal = function() { var m=document.getElementById('aprobarModal'); if(m) m.remove(); };
