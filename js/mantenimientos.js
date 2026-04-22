@@ -983,8 +983,6 @@
         'Cambio de batería LR44',
         'Verificación comparativa con patrón calibrado',
         'Revisión de sensor interno y/o sonda externa',
-        'Ajuste o reinstalación del dispositivo en su punto de uso',
-        'Sustitución del dispositivo por falla de lectura o visualización',
       ],
     },
   };
