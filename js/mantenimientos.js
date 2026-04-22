@@ -1145,8 +1145,6 @@
         'Verificación funcional de pantalla táctil / consola',
         'Verificación de colimador luminoso y ajuste de campo',
         'Verificación de batería, cargador y estado de alimentación',
-        'Registro de observaciones por ausencia de equipo patrón para pruebas metrológicas',
-        'Remisión a mantenimiento especializado o proveedor'
       ]
     },
   };
