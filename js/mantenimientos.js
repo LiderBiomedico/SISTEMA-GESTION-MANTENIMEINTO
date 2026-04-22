@@ -926,16 +926,10 @@
       ],
       pruebasFuncionales: [
         { id: 'h2pf1',  prueba: 'Temperatura interna — Comparación con patrón calibrado en ambiente estable (≥ 15 min de estabilización)', valorEsperado: 'Diferencia ≤ ± 1 °C respecto al patrón (especificación HTC-2: ± 1 °C en rango -10 °C a 50 °C)', resultado: ['Pasa', 'Falla'] },
+
         { id: 'h2pf2',  prueba: 'Temperatura en escala °F — Convertir lectura del patrón a °F y comparar con display del HTC-2 en modo °F', valorEsperado: 'Diferencia ≤ ± 1.8 °F respecto al valor convertido del patrón', resultado: ['Pasa', 'Falla'] },
+
         { id: 'h2pf3',  prueba: 'Humedad relativa interna — Comparación con patrón calibrado en ambiente estable (≥ 15 min de estabilización)', valorEsperado: 'Diferencia ≤ ± 5% HR respecto al patrón (especificación HTC-2: ± 5% HR en rango 10–99% HR)', resultado: ['Pasa', 'Falla'] },
-        { id: 'h2pf4',  prueba: 'Estabilidad de temperatura — 3 lecturas consecutivas en 15 min en ambiente sin perturbaciones', valorEsperado: 'Variación entre lecturas ≤ ± 0.5 °C', resultado: ['Pasa', 'Falla'] },
-        { id: 'h2pf5',  prueba: 'Estabilidad de humedad relativa — 3 lecturas consecutivas en 15 min en ambiente sin perturbaciones', valorEsperado: 'Variación entre lecturas ≤ ± 3% HR', resultado: ['Pasa', 'Falla'] },
-        { id: 'h2pf6',  prueba: 'Temperatura sensor externo (si aplica) — Comparación con patrón calibrado junto a la sonda remota', valorEsperado: 'Diferencia ≤ ± 1 °C respecto al patrón en la misma ubicación', resultado: ['Pasa', 'Falla', 'N/A'] },
-        { id: 'h2pf7',  prueba: 'Respuesta al cambio de temperatura — Acercar mano a 5 cm del sensor y retirar; observar respuesta en pantalla', valorEsperado: 'Lectura varía en la dirección correcta en ≤ 60 s y retorna al valor base al retirar la fuente', resultado: ['Pasa', 'Falla'] },
-        { id: 'h2pf8',  prueba: 'Respuesta al cambio de humedad — Exhalar suavemente sobre el sensor desde 10 cm durante 5 s; observar respuesta', valorEsperado: 'Lectura de HR sube perceptiblemente en ≤ 60 s y retorna al valor base tras cesar el estímulo', resultado: ['Pasa', 'Falla'] },
-        { id: 'h2pf9',  prueba: 'Función MAX/MIN — Monitorear 15 min y verificar que los valores almacenados coinciden con los extremos observados', valorEsperado: 'MAX y MIN coinciden con los valores extremos observados durante el período de monitoreo', resultado: ['Pasa', 'Falla'] },
-        { id: 'h2pf10', prueba: 'Estado de baterías — Medir voltaje de cada celda instalada con multímetro; contrastar con indicador de pantalla', valorEsperado: '≥ 1.2 V por celda (recargables) o ≥ 1.4 V (alcalinas); indicador en pantalla coherente con voltaje medido', resultado: ['Pasa', 'Falla'] },
-        { id: 'h2pf11', prueba: 'Índice de confort — Verificar que el ícono cambia según la HR: SECO < 40% / CONFORT 40–70% / HÚMEDO > 70%', valorEsperado: 'Ícono correcto según la HR medida; coherente con las zonas definidas por el fabricante HTC-2', resultado: ['Pasa', 'Falla'] },
       ],
       estadoFinal: ['Apto para uso', 'Apto con observaciones', 'No apto / retirar de servicio'],
       accionesRealizadas: [
