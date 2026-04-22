@@ -884,7 +884,6 @@
         'Sustitución de hoja deteriorada o con fibra óptica dañada',
         'Verificación de iluminación con luxómetro',
         'Verificación de encaje y mecanismo mango–hoja',
-        'Remisión a mantenimiento especializado o proveedor',
       ],
     },
 
@@ -940,7 +939,6 @@
         'Comparación y verificación con patrón calibrado (temperatura y humedad)',
         'Verificación de funciones MAX/MIN y cambio de unidades',
         'Sustitución del dispositivo por falla en sensor o pantalla',
-        'Remisión a mantenimiento especializado o proveedor',
       ],
     },
   };
