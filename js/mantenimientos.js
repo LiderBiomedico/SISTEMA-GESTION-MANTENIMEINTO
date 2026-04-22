@@ -877,18 +877,12 @@
         { id: 'lrvb6', item: 'Todas las hojas encajan firmemente en el mango sin juego lateral ni desprendimiento espontáneo durante el uso simulado' },
       ],
       pruebasFuncionales: [
-        { id: 'lrpf1',  prueba: 'Iluminación Hoja Macintosh No. 1 — Desplegar hoja, medir intensidad lumínica con luxómetro a 10 cm de la ventana óptica', valorEsperado: '≥ 1.000 lux a 10 cm (referencia clínica para visión adecuada en cavidad oral)', resultado: ['Pasa', 'Falla'] },
-        { id: 'lrpf2',  prueba: 'Iluminación Hoja Macintosh No. 2 — Igual procedimiento que prueba anterior', valorEsperado: '≥ 1.000 lux a 10 cm', resultado: ['Pasa', 'Falla'] },
-        { id: 'lrpf3',  prueba: 'Iluminación Hoja Macintosh No. 3 — Igual procedimiento que prueba anterior', valorEsperado: '≥ 1.000 lux a 10 cm', resultado: ['Pasa', 'Falla'] },
-        { id: 'lrpf4',  prueba: 'Iluminación Hoja Macintosh No. 4 — Igual procedimiento que prueba anterior', valorEsperado: '≥ 1.000 lux a 10 cm', resultado: ['Pasa', 'Falla'] },
-        { id: 'lrpf5',  prueba: 'Iluminación Hojas Miller (si aplica) — Igual procedimiento', valorEsperado: '≥ 1.000 lux a 10 cm', resultado: ['Pasa', 'Falla', 'N/A'] },
-        { id: 'lrpf6',  prueba: 'Uniformidad de haz de fibra óptica — Observar la ventana óptica de cada hoja desplegada a contraluz', valorEsperado: 'Haz homogéneo sin puntos oscuros (fibras rotas < 5% del área total del haz)', resultado: ['Pasa', 'Falla'] },
-        { id: 'lrpf7',  prueba: 'Estabilidad de iluminación — Mantener hoja desplegada 3 minutos continuos; observar variación de luz', valorEsperado: 'Luz constante sin parpadeos, atenuaciones ni apagones durante los 3 minutos', resultado: ['Pasa', 'Falla'] },
-        { id: 'lrpf8',  prueba: 'Prueba de encendido/apagado cíclico — Desplegar y plegar hoja 10 veces consecutivas', valorEsperado: 'Luz enciende y apaga correctamente en los 10 ciclos; sin falla intermitente', resultado: ['Pasa', 'Falla'] },
-        { id: 'lrpf9',  prueba: 'Encaje mecánico bajo carga — Con hoja desplegada a 90°, aplicar presión lateral suave simulando uso clínico', valorEsperado: 'La hoja permanece firme en el mango sin desprendimiento ni variación de ángulo', resultado: ['Pasa', 'Falla'] },
-        { id: 'lrpf10', prueba: 'Temperatura del mango durante uso — Medir temperatura exterior del mango tras 5 minutos de operación continua', valorEsperado: 'Temperatura ≤ 40 °C al tacto en carcasa exterior (sin riesgo de quemadura)', resultado: ['Pasa', 'Falla'] },
-        { id: 'lrpf11', prueba: 'Verificación de integridad de la curva de hoja — Inspección visual y táctil de la curvatura de cada hoja Macintosh', valorEsperado: 'Curvatura uniforme según talla; sin deformaciones, aplastamientos ni zonas rectas no originales', resultado: ['Pasa', 'Falla'] },
-        { id: 'lrpf12', prueba: 'Prueba de duración de baterías — Operación continua con baterías nuevas instaladas durante 30 minutos', valorEsperado: 'Intensidad lumínica sin caída perceptible al final de los 30 minutos', resultado: ['Pasa', 'Falla'] },
+        { id: 'lrpf1',  prueba: 'Estabilidad de iluminación — Mantener hoja desplegada 3 minutos continuos; observar variación de luz', valorEsperado: 'Luz constante sin parpadeos, atenuaciones ni apagones durante los 3 minutos', resultado: ['Pasa', 'Falla'] },
+        { id: 'lrpf2',  prueba: 'Prueba de encendido/apagado cíclico — Desplegar y plegar hoja 10 veces consecutivas', valorEsperado: 'Luz enciende y apaga correctamente en los 10 ciclos; sin falla intermitente', resultado: ['Pasa', 'Falla'] },
+        { id: 'lrpf3',  prueba: 'Encaje mecánico bajo carga — Con hoja desplegada a 90°, aplicar presión lateral suave simulando uso clínico', valorEsperado: 'La hoja permanece firme en el mango sin desprendimiento ni variación de ángulo', resultado: ['Pasa', 'Falla'] },
+        { id: 'lrpf4', prueba: 'Temperatura del mango durante uso — Medir temperatura exterior del mango tras 5 minutos de operación continua', valorEsperado: 'Temperatura ≤ 40 °C al tacto en carcasa exterior (sin riesgo de quemadura)', resultado: ['Pasa', 'Falla'] },
+        { id: 'lrpf5', prueba: 'Verificación de integridad de la curva de hoja — Inspección visual y táctil de la curvatura de cada hoja Macintosh', valorEsperado: 'Curvatura uniforme según talla; sin deformaciones, aplastamientos ni zonas rectas no originales', resultado: ['Pasa', 'Falla'] },
+        { id: 'lrpf6', prueba: 'Prueba de duración de baterías — Operación continua con baterías nuevas instaladas durante 30 minutos', valorEsperado: 'Intensidad lumínica sin caída perceptible al final de los 30 minutos', resultado: ['Pasa', 'Falla'] },
       ],
       estadoFinal: ['Apto para uso', 'Apto con observaciones', 'No apto / retirar de servicio'],
       accionesRealizadas: [
@@ -1213,9 +1207,10 @@
         + '<div class="mf-table-container"><table class="mf-protocol-table"><thead><tr><th style="width:40px">No.</th><th>Actividad / criterio</th><th style="width:100px">Cumple</th><th style="width:180px">Observaciones</th></tr></thead><tbody>'+vbRows+'</tbody></table></div>';
     }()) : '')
 
-    + '<div class="mf-section-title" style="background:'+color+'">📐 EQUIPO DE VERIFICACIÓN</div>'
+    + (protocolKey === 'laringoscopio_convencional_fibra_optica' ? '' :
+       '<div class="mf-section-title" style="background:'+color+'">📐 EQUIPO DE VERIFICACIÓN</div>'
     + '<div class="mf-row"><div class="mf-group"><label class="mf-label">Equipo utilizado</label><select id="mfEquipoVerificacion" class="mf-select"><option value="Simulador multiparámetro">Simulador multiparámetro</option><option value="Analizador de desfibrilador">Analizador de desfibrilador</option><option value="Vacuómetro patrón">Vacuómetro patrón</option><option value="Analizador de vacío">Analizador de vacío</option><option value="Termohigrómetro Fluke 971">Termohigrómetro Fluke 971</option><option value="Otro">Otro</option></select></div><div class="mf-group"><label class="mf-label">Marca / Modelo del patrón</label><input type="text" id="mfMarcaPatron" class="mf-input" placeholder="Marca y modelo"></div></div>'
-    + '<div class="mf-row"><div class="mf-group"><label class="mf-label">No. Serie del patrón</label><input type="text" id="mfSeriePatron" class="mf-input" placeholder="Número de serie"></div><div class="mf-group"><label class="mf-label">Certificado vigente hasta</label><input type="date" id="mfCertificadoVigente" class="mf-input"></div><div class="mf-group"><label class="mf-label">Tolerancia definida (mmHg/kPa)</label><input type="text" id="mfTolerancia" class="mf-input" placeholder="± ____ mmHg / kPa"></div></div>'
+    + '<div class="mf-row"><div class="mf-group"><label class="mf-label">No. Serie del patrón</label><input type="text" id="mfSeriePatron" class="mf-input" placeholder="Número de serie"></div><div class="mf-group"><label class="mf-label">Certificado vigente hasta</label><input type="date" id="mfCertificadoVigente" class="mf-input"></div><div class="mf-group"><label class="mf-label">Tolerancia definida (mmHg/kPa)</label><input type="text" id="mfTolerancia" class="mf-input" placeholder="± ____ mmHg / kPa"></div></div>')
 
     + '<div class="mf-section-title" style="background:'+color+'">⚡ PRUEBAS FUNCIONALES</div>'
     + buildPhotoCaptureSectionHTML('mitad', '📸 Foto durante el procedimiento (verificación)', '2️⃣')
@@ -1967,7 +1962,7 @@
     + '<div class="sec sec-blue"><span class="sec-icon">🔍</span> INSPECCIÓN VISUAL Y LIMPIEZA</div>'
     + (d.fotoInicio ? '<div class="foto-wrap"><div class="foto-label">📸 Foto inicial del equipo</div><div class="foto-frame"><img src="'+d.fotoInicio+'" alt="Foto inicial"></div></div>' : '')
     + '<table class="tbl"><tr><th style="width:40px">NO.</th><th>ÍTEM A VERIFICAR</th><th style="width:70px">CUMPLE</th><th style="width:160px">OBSERVACIONES</th></tr>'+inspeccionRows+'</table>'
-    + '<div class="sec sec-blue"><span class="sec-icon">📐</span> EQUIPO DE VERIFICACIÓN UTILIZADO</div><table class="tbl"><tr><td class="lb">Equipo utilizado</td><td class="vl">'+esc(d.equipoVerificacion)+'</td><td class="lb">Marca / Modelo</td><td class="vl">'+esc(d.marcaPatron)+'</td></tr><tr><td class="lb">No. Serie patrón</td><td class="vl">'+esc(d.seriePatron)+'</td><td class="lb">Certificado hasta</td><td class="vl">'+fmt(d.certificadoVigente)+'</td></tr><tr><td class="lb">Tolerancia</td><td class="vl" colspan="3">'+esc(d.tolerancia)+'</td></tr></table>'
+    + (proto.codigo === 'SLV-GAT-BIO-LR' ? '' : '<div class="sec sec-blue"><span class="sec-icon">📐</span> EQUIPO DE VERIFICACIÓN UTILIZADO</div><table class="tbl"><tr><td class="lb">Equipo utilizado</td><td class="vl">'+esc(d.equipoVerificacion)+'</td><td class="lb">Marca / Modelo</td><td class="vl">'+esc(d.marcaPatron)+'</td></tr><tr><td class="lb">No. Serie patrón</td><td class="vl">'+esc(d.seriePatron)+'</td><td class="lb">Certificado hasta</td><td class="vl">'+fmt(d.certificadoVigente)+'</td></tr><tr><td class="lb">Tolerancia</td><td class="vl" colspan="3">'+esc(d.tolerancia)+'</td></tr></table>')
     + (d.verificacionBasica && d.verificacionBasica.length ? (function() {
       var vbRows = d.verificacionBasica.map(function(item, i) {
         var bgCumple = item.cumple === 'Si' ? '#e8f5e9' : item.cumple === 'No' ? '#ffebee' : '#f5f5f5';
