@@ -1037,7 +1037,6 @@
         'Verificación funcional de modos de temperatura',
         'Prueba de flujo de aire y calentamiento',
         'Verificación de alarmas e indicadores en pantalla',
-        'Remisión a mantenimiento especializado o proveedor',
       ],
     },
     'gramera_seca_856': {
