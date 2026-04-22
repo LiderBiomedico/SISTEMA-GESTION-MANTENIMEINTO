@@ -1035,7 +1035,6 @@
         'Verificación de nivelación y estabilidad de apoyo',
         'Verificación metrológica con masas patrón',
         'Prueba funcional de TARE/HOLD',
-        'Remisión a mantenimiento especializado o proveedor',
       ],
     },
 
