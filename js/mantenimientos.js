@@ -941,6 +941,57 @@
         'Sustitución del dispositivo por falla en sensor o pantalla',
       ],
     },
+
+    'termometro_digital_witpoce': {
+      nombre: 'Termómetro Digital WITPOCE',
+      categoria: 'Biomédico',
+      codigo: 'SLV-GAT-BIO-TDW',
+      frecuencia: ['Semestral', 'Anual'],
+      condicionesPrevias: [
+        'Verifique que el dispositivo esté operativo, con pantalla LCD visible y batería LR44 instalada antes de iniciar el procedimiento.',
+        'Confirme disponibilidad de un termómetro patrón calibrado o simulador/cámara térmica de referencia con vigencia de calibración activa.',
+        'Realice la verificación en ambiente estable, sin corrientes de aire directas, radiación solar ni fuentes de calor cercanas al sensor.',
+        'Permita estabilización mínima de 15 minutos entre el equipo y el patrón antes de registrar lecturas comparativas.',
+        'No sumerja el dispositivo en líquidos ni exponga la pantalla o el compartimento de batería a humedad directa.',
+        'Si el equipo presenta pantalla en blanco, segmentos incompletos, lecturas erráticas persistentes o falla de alimentación, retire de servicio antes de continuar.',
+      ],
+      inspeccion: [
+        { id: 'wti1', item: 'Carcasa exterior íntegra, sin grietas, deformaciones, golpes ni daño físico visible' },
+        { id: 'wti2', item: 'Pantalla LCD clara, legible y sin pérdida de segmentos' },
+        { id: 'wti3', item: 'Botón(es) de función operativos, sin atascamiento ni daño mecánico' },
+        { id: 'wti4', item: 'Sensor interno y/o sonda externa (si aplica) íntegros, sin cortes, fisuras ni obstrucciones' },
+        { id: 'wti5', item: 'Compartimento de batería limpio; contactos sin corrosión, sulfatación ni deformación' },
+        { id: 'wti6', item: 'Batería LR44 instalada sin signos de fuga, hinchazón o agotamiento evidente' },
+        { id: 'wti7', item: 'Soporte, clip o sistema de fijación en buen estado (si aplica)' },
+        { id: 'wti8', item: 'Etiqueta de identificación o número de serie legible y coincidente con inventario (si aplica)' },
+        { id: 'wti9', item: 'Limpieza externa realizada con paño suave seco o ligeramente humedecido con alcohol isopropílico 70%' },
+      ],
+      verificacionBasica: [
+        { id: 'wtvb1', item: 'La pantalla enciende correctamente y muestra lectura estable de temperatura' },
+        { id: 'wtvb2', item: 'La lectura se actualiza progresivamente ante cambios moderados de temperatura' },
+        { id: 'wtvb3', item: 'La unidad de medición mostrada en pantalla es coherente con la configuración del equipo (°C / °F si aplica)' },
+        { id: 'wtvb4', item: 'No se evidencian reinicios espontáneos, parpadeos anormales ni pérdida de visualización' },
+        { id: 'wtvb5', item: 'El equipo mantiene lectura continua con alimentación por batería LR44 de 1.5 V' },
+      ],
+      pruebasFuncionales: [
+        { id: 'wtpf1', prueba: 'Temperatura ambiente — Comparación con patrón calibrado en ambiente estable (≥ 15 min de estabilización)', valorEsperado: 'Diferencia ≤ ± 1 °C respecto al patrón', resultado: ['Pasa', 'Falla'] },
+        { id: 'wtpf2', prueba: 'Respuesta a incremento moderado de temperatura — Acercar el sensor a una fuente térmica controlada sin exceder el rango del fabricante', valorEsperado: 'La lectura aumenta de forma progresiva y sin saltos erráticos', resultado: ['Pasa', 'Falla'] },
+        { id: 'wtpf3', prueba: 'Respuesta a descenso moderado de temperatura — Ubicar el sensor en ambiente más frío controlado sin exceder el rango del fabricante', valorEsperado: 'La lectura disminuye de forma progresiva y sin congelamiento de pantalla', resultado: ['Pasa', 'Falla'] },
+        { id: 'wtpf4', prueba: 'Estabilidad de lectura — Registrar 3 lecturas consecutivas en 15 min en ambiente estable', valorEsperado: 'Variación entre lecturas ≤ ± 1 °C', resultado: ['Pasa', 'Falla'] },
+        { id: 'wtpf5', prueba: 'Verificación de rango bajo — Comprobación en punto dentro del rango de medición especificado', valorEsperado: 'Lectura válida dentro del rango -10 °C a +50 °C para sensor interno / hasta -50 °C a +70 °C para salida externa si aplica', resultado: ['Pasa', 'Falla'] },
+        { id: 'wtpf6', prueba: 'Consistencia visual y funcional de pantalla — Verificar visualización continua durante 5 min de operación', valorEsperado: 'Pantalla LCD legible, sin pérdida de segmentos ni apagado inesperado', resultado: ['Pasa', 'Falla'] },
+      ],
+      estadoFinal: ['Apto para uso', 'Apto con observaciones', 'No apto / retirar de servicio'],
+      accionesRealizadas: [
+        'Limpieza externa de carcasa y pantalla',
+        'Limpieza de contactos de batería',
+        'Cambio de batería LR44',
+        'Verificación comparativa con patrón calibrado',
+        'Revisión de sensor interno y/o sonda externa',
+        'Ajuste o reinstalación del dispositivo en su punto de uso',
+        'Sustitución del dispositivo por falla de lectura o visualización',
+      ],
+    },
   };
 
   // ── INIT ──────────────────────────────────────────────────────────────
