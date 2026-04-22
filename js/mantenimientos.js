@@ -1092,6 +1092,63 @@
       ],
     },
 
+'rayos_x_portatil_carestream_motion_mobile': {
+      nombre: 'Equipo de Rayos X (Portátil) Carestream Motion Mobile',
+      categoria: 'Biomédico',
+      codigo: 'SLV-GAT-BIO-RXP',
+      frecuencia: ['Semestral', 'Anual'],
+      condicionesPrevias: [
+        'Verifique que el equipo esté fuera de exposición clínica y ubicado en un área segura antes de iniciar la inspección.',
+        'Confirme que el mantenimiento funcional se realizará sin emisión de radiación al paciente y sin exposiciones de prueba, ya que no se dispone de equipo patrón para verificación metrológica del haz.',
+        'Asegúrese de que la batería del equipo tenga carga suficiente o que el sistema se encuentre conectado según las recomendaciones del fabricante.',
+        'Inspeccione el área de trabajo y garantice que no existan obstáculos para el desplazamiento, extensión del brazo ni posicionamiento del cabezal.',
+        'Verifique disponibilidad del dosímetro personal, elementos de protección radiológica institucionales y acceso a los autochequeos internos del sistema.',
+        'No abra cubiertas, generador, colimador ni cabezal de rayos X. Cualquier intervención interna debe ser realizada por servicio técnico autorizado.',
+        'Si el equipo presenta mensajes de error, daño mecánico, sobrecalentamiento, olor anormal, fallo de frenos o anomalías eléctricas, retire de servicio antes de continuar.'
+      ],
+      inspeccion: [
+        { id: 'mmi1', item: 'Carro/base del equipo íntegro, sin golpes estructurales, deformaciones ni corrosión visible' },
+        { id: 'mmi2', item: 'Ruedas, sistema de desplazamiento, frenos y manijas funcionales; sin holguras ni bloqueo anormal' },
+        { id: 'mmi3', item: 'Columna, brazo articulado y cabezal del tubo con movimiento controlado y fijación estable' },
+        { id: 'mmi4', item: 'Carcasa del generador, panel de control y monitor/touchscreen sin grietas ni daño visible' },
+        { id: 'mmi5', item: 'Cableado externo, conectores, cargador y clavija de alimentación en buen estado' },
+        { id: 'mmi6', item: 'Colimador luminoso íntegro; perillas, mandos y centrado de campo sin atascamiento' },
+        { id: 'mmi7', item: 'Indicadores, luces de estado y mandos de preparación/exposición con protección y rotulación legible' },
+        { id: 'mmi8', item: 'Compartimentos, soportes de detector/accesorios y seguros mecánicos en buen estado' },
+        { id: 'mmi9', item: 'Etiquetas de identificación, activo fijo, advertencias radiológicas y número de serie legibles' },
+        { id: 'mmi10', item: 'Limpieza externa realizada; superficies libres de polvo y suciedad, sin ingreso de líquidos al sistema' }
+      ],
+      verificacionBasica: [
+        { id: 'mmvb1', item: 'El sistema enciende correctamente y completa autoverificación sin mensajes críticos de falla' },
+        { id: 'mmvb2', item: 'La interfaz táctil/panel permite navegación normal, selección de paciente o técnica y acceso a menús' },
+        { id: 'mmvb3', item: 'La batería muestra nivel de carga y el equipo responde correctamente al modo de carga/conexión eléctrica' },
+        { id: 'mmvb4', item: 'El brazo y cabezal se posicionan con estabilidad y mantienen la posición sin deriva evidente' },
+        { id: 'mmvb5', item: 'La luz del colimador enciende y el ajuste manual del campo funciona correctamente' },
+        { id: 'mmvb6', item: 'No se evidencian ruidos anormales, sobrecalentamiento, bloqueos de movilidad ni alarmas activas durante la revisión funcional' }
+      ],
+      pruebasFuncionales: [
+        { id: 'mmpf1', prueba: 'Encendido y autodiagnóstico del sistema', valorEsperado: 'Inicio completo sin fallas críticas ni bloqueo operativo', resultado: ['Pasa', 'Falla'] },
+        { id: 'mmpf2', prueba: 'Pantalla táctil / consola de operación', valorEsperado: 'Respuesta normal al tacto y navegación fluida entre menús', resultado: ['Pasa', 'Falla'] },
+        { id: 'mmpf3', prueba: 'Movilidad del carro y frenos', valorEsperado: 'Desplazamiento controlado, frenado efectivo y maniobrabilidad segura', resultado: ['Pasa', 'Falla'] },
+        { id: 'mmpf4', prueba: 'Posicionamiento de columna, brazo y cabezal', valorEsperado: 'Permite extensión/rotación normales y conserva la posición seleccionada', resultado: ['Pasa', 'Falla'] },
+        { id: 'mmpf5', prueba: 'Colimador luminoso y ajuste de campo', valorEsperado: 'Luz visible y ajuste manual del campo sin atascamientos', resultado: ['Pasa', 'Falla'] },
+        { id: 'mmpf6', prueba: 'Selección de técnica radiográfica (APR/manual) sin disparo', valorEsperado: 'Permite configurar parámetros y protocolos disponibles sin error', resultado: ['Pasa', 'Falla'] },
+        { id: 'mmpf7', prueba: 'Estado de batería / carga', valorEsperado: 'Indica nivel de batería y estado de carga de forma coherente', resultado: ['Pasa', 'Falla'] },
+        { id: 'mmpf8', prueba: 'Mensajes de sistema y alarmas', valorEsperado: 'Sin alarmas activas ni códigos de falla durante la revisión funcional', resultado: ['Pasa', 'Falla'] },
+        { id: 'mmpf9', prueba: 'Verificación funcional adaptada sin equipo patrón', valorEsperado: 'Se documenta revisión operativa básica; no se realiza verificación metrológica del haz, kV, mAs, tiempo ni dosis', resultado: ['Pasa', 'Falla'] }
+      ],
+      estadoFinal: ['Apto para uso', 'Apto con observaciones', 'No apto / retirar de servicio'],
+      accionesRealizadas: [
+        'Limpieza externa de carcasa, monitor y panel de control',
+        'Verificación de ruedas, frenos y maniobrabilidad',
+        'Verificación de brazo articulado, columna y cabezal',
+        'Verificación funcional de pantalla táctil / consola',
+        'Verificación de colimador luminoso y ajuste de campo',
+        'Verificación de batería, cargador y estado de alimentación',
+        'Registro de observaciones por ausencia de equipo patrón para pruebas metrológicas',
+        'Remisión a mantenimiento especializado o proveedor'
+      ]
+    },
   };
 
   // ── INIT ──────────────────────────────────────────────────────────────
