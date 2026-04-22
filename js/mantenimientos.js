@@ -657,15 +657,10 @@
       ],
       estadoFinal: ['Apto para uso', 'Apto con observaciones', 'No apto / retirar de servicio'],
       accionesRealizadas: [
-        'Descontaminación y limpieza del frasco colector y tuberías',
         'Limpieza externa de carcasa',
         'Reemplazo de filtro bacteriano / filtro hidrofóbico',
         'Reemplazo de tuberías o mangueras deterioradas',
-        'Reemplazo de sello hermético de tapa del frasco',
-        'Verificación y ajuste de flotador de seguridad',
-        'Lubricación de compresor/motor (si indica el manual)',
         'Verificación de vacío con vacuómetro patrón',
-        'Remisión a servicio técnico autorizado SMAF',
       ],
     },
 
