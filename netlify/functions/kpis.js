@@ -26,47 +26,24 @@ exports.handler = async (event) => {
   try {
     const inventarioHandler = require('./inventario');
     
-    // Simular el evento GET con pageSize=200
-    const fakeEvent = {
-      httpMethod: 'GET',
-      queryStringParameters: { pageSize: '100' },
-      headers: event.headers || {},
-      body: null,
-    };
-
-    // Primera página
-    const resp1 = await inventarioHandler.handler(fakeEvent);
-    const data1 = JSON.parse(resp1.body || '{}');
-    console.log('[KPI] Página 1:', (data1.records||[]).length, 'registros | offset:', data1.offset||'none');
-    inventario = [...(data1.records || [])];
-
-    // Paginar si hay más
-    if (data1.offset) {
-      const fakeEvent2 = {
+    // Paginación automática sin límite de páginas
+    let currentOffset = null;
+    let pageNum = 0;
+    do {
+      pageNum++;
+      const pageEvent = {
         httpMethod: 'GET',
-        queryStringParameters: { pageSize: '100', offset: data1.offset },
+        queryStringParameters: { pageSize: '100', ...(currentOffset ? { offset: currentOffset } : {}) },
         headers: event.headers || {},
         body: null,
       };
-      const resp2 = await inventarioHandler.handler(fakeEvent2);
-      const data2 = JSON.parse(resp2.body || '{}');
-      console.log('[KPI] Página 2:', (data2.records||[]).length, 'registros');
-      inventario = [...inventario, ...(data2.records || [])];
-      
-      // Página 3 si hay
-      if (data2.offset) {
-        const fakeEvent3 = {
-          httpMethod: 'GET',
-          queryStringParameters: { pageSize: '100', offset: data2.offset },
-          headers: event.headers || {},
-          body: null,
-        };
-        const resp3 = await inventarioHandler.handler(fakeEvent3);
-        const data3 = JSON.parse(resp3.body || '{}');
-        console.log('[KPI] Página 3:', (data3.records||[]).length, 'registros');
-        inventario = [...inventario, ...(data3.records || [])];
-      }
-    }
+      const resp = await inventarioHandler.handler(pageEvent);
+      const data = JSON.parse(resp.body || '{}');
+      const pageRecords = data.records || [];
+      console.log(`[KPI] Página ${pageNum}:`, pageRecords.length, 'registros | offset:', data.offset || 'none');
+      inventario = [...inventario, ...pageRecords];
+      currentOffset = data.offset || null;
+    } while (currentOffset);
 
     console.log('[KPI] Total equipos cargados:', inventario.length);
 
