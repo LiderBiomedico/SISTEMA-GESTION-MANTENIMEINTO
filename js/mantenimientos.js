@@ -1455,6 +1455,76 @@
       ]
     },
 
+    'balanza_seca_874': {
+      nombre: 'Balanza SECA 874',
+      categoria: 'Biomédico / Antropometría',
+      codigo: 'SLV-GAT-BIO-BAL-SECA874',
+      frecuencia: ['Semestral', 'Anual'],
+      condicionesPrevias: [
+        'Verifique que la balanza se encuentre fuera de uso asistencial, limpia, seca y ubicada sobre una superficie plana, estable, rígida y nivelada.',
+        'Confirme disponibilidad de masas patrón calibradas o pesas certificadas dentro del rango de verificación institucional, preferiblemente con puntos de carga baja, media y alta.',
+        'Revise que el equipo corresponda al activo institucional, con placa, serial y etiquetas legibles antes de iniciar el mantenimiento preventivo.',
+        'Retire objetos, líquidos o elementos que puedan interferir con la plataforma de pesaje. No arrastre la balanza ni la someta a golpes durante la revisión.',
+        'Utilice baterías del tipo recomendado por el fabricante; no mezcle baterías nuevas y usadas ni baterías de diferente tipo.',
+        'No abra la carcasa, no manipule celdas de carga, tarjetas electrónicas, sellos metrológicos ni parámetros internos durante el mantenimiento preventivo rutinario.',
+        'La calibración interna, ajuste metrológico, reparación de celdas de carga o intervención electrónica debe ser realizada por personal autorizado o proveedor especializado.',
+        'Si se evidencia lectura inestable, error de cero, desviación fuera de tolerancia, daño estructural, humedad interna o mensajes de error persistentes, retire el equipo de servicio y genere mantenimiento correctivo.'
+      ],
+      inspeccion: [
+        { id: 'seca874i1', item: 'Plataforma de pesaje íntegra, estable, limpia, sin grietas, deformaciones, corrosión, superficies cortantes ni daño visible' },
+        { id: 'seca874i2', item: 'Cubierta antideslizante o superficie superior en buen estado, sin desprendimientos, desgaste excesivo, humedad o residuos que alteren la medición' },
+        { id: 'seca874i3', item: 'Base inferior y puntos de apoyo sin fisuras, desnivel, piezas sueltas, tornillería faltante ni contacto irregular con el piso' },
+        { id: 'seca874i4', item: 'Display doble/indicador visible para usuario y paciente, sin segmentos apagados, manchas, humedad interna ni daño en mica protectora' },
+        { id: 'seca874i5', item: 'Teclas ON/OFF, HOLD, 2 in 1/TARE o funciones disponibles: legibles, firmes y sin atascamiento' },
+        { id: 'seca874i6', item: 'Compartimento de baterías limpio, seco, sin sulfatación, corrosión, resortes flojos, tapas quebradas ni contacto eléctrico deficiente' },
+        { id: 'seca874i7', item: 'Baterías instaladas en buen estado, sin fuga, deformación, calentamiento ni fecha de vencimiento superada' },
+        { id: 'seca874i8', item: 'Etiqueta de identificación institucional, número de serie, placa nominal, capacidad máxima y advertencias de seguridad legibles' },
+        { id: 'seca874i9', item: 'Celdas de carga y zona inferior sin golpes, humedad, polvo excesivo, cuerpos extraños o signos de manipulación no autorizada' },
+        { id: 'seca874i10', item: 'Pies de apoyo o apoyos antideslizantes completos, nivelados, sin desgaste excesivo y con contacto uniforme con el piso' },
+        { id: 'seca874i11', item: 'Limpieza externa realizada con paño suave ligeramente humedecido y desinfectante compatible; sin ingreso de líquido al display o compartimento de baterías' },
+        { id: 'seca874i12', item: 'Condiciones del área de uso: superficie firme, sin vibraciones, humedad excesiva, inclinación o interferencias que afecten la lectura' }
+      ],
+      verificacionBasica: [
+        { id: 'seca874vb1', item: 'La balanza enciende correctamente y realiza prueba de segmentos/display sin códigos de error persistentes' },
+        { id: 'seca874vb2', item: 'Con la plataforma libre de carga, la lectura retorna a 0.0 kg o cero estable después del encendido' },
+        { id: 'seca874vb3', item: 'El indicador de batería no muestra batería baja durante la verificación; reemplazar baterías si aparece advertencia' },
+        { id: 'seca874vb4', item: 'La lectura se estabiliza en menos de 5 segundos con una masa de prueba colocada al centro de la plataforma' },
+        { id: 'seca874vb5', item: 'La función HOLD mantiene el resultado visible de forma estable hasta la siguiente operación o apagado, según diseño del equipo' },
+        { id: 'seca874vb6', item: 'La función 2 in 1/TARE descuenta correctamente el peso inicial del adulto u objeto patrón y muestra NET/0.0 según corresponda' },
+        { id: 'seca874vb7', item: 'El apagado automático o manual funciona sin bloqueo de teclas ni reinicios inesperados' },
+        { id: 'seca874vb8', item: 'No se presentan lecturas fluctuantes, deriva de cero, saltos abruptos o mensajes de sobrecarga durante la prueba básica' }
+      ],
+      pruebasFuncionales: [
+        { id: 'seca874pf1', prueba: 'Prueba de cero inicial — Plataforma sin carga después del encendido', valorEsperado: 'Lectura 0.0 kg estable, sin deriva ni error de inicialización', resultado: ['Pasa', 'Falla'] },
+        { id: 'seca874pf2', prueba: 'Prueba de repetibilidad — Colocar masa patrón de 20 kg en el centro, retirar y repetir 3 veces', valorEsperado: 'Lecturas repetibles dentro de la tolerancia institucional/metrológica definida', resultado: ['Pasa', 'Falla'] },
+        { id: 'seca874pf3', prueba: 'Prueba de excentricidad — Colocar masa patrón de 20 kg en cuatro esquinas y centro', valorEsperado: 'Diferencias entre posiciones dentro de la tolerancia definida; sin lectura inestable', resultado: ['Pasa', 'Falla'] },
+        { id: 'seca874pf4', prueba: 'Verificación punto bajo — Masa patrón 10 kg o equivalente disponible', valorEsperado: 'Lectura conforme a masa aplicada dentro de tolerancia institucional', resultado: ['Pasa', 'Falla', 'N/A'] },
+        { id: 'seca874pf5', prueba: 'Verificación punto medio — Masa patrón 50 kg o combinación equivalente', valorEsperado: 'Lectura conforme a masa aplicada dentro de tolerancia institucional', resultado: ['Pasa', 'Falla', 'N/A'] },
+        { id: 'seca874pf6', prueba: 'Verificación punto alto — Masa patrón 100 kg o combinación equivalente sin exceder capacidad', valorEsperado: 'Lectura conforme a masa aplicada dentro de tolerancia institucional', resultado: ['Pasa', 'Falla', 'N/A'] },
+        { id: 'seca874pf7', prueba: 'Linealidad ascendente — Aplicar cargas sucesivas baja/media/alta registrando cada lectura', valorEsperado: 'Comportamiento progresivo y coherente, sin saltos, bloqueo o error de lectura', resultado: ['Pasa', 'Falla'] },
+        { id: 'seca874pf8', prueba: 'Linealidad descendente — Retirar cargas sucesivamente hasta cero', valorEsperado: 'Lecturas disminuyen de forma coherente y retornan a 0.0 kg estable al finalizar', resultado: ['Pasa', 'Falla'] },
+        { id: 'seca874pf9', prueba: 'Función HOLD — Aplicar masa estable y activar HOLD', valorEsperado: 'El valor queda retenido en pantalla sin variación no justificada', resultado: ['Pasa', 'Falla'] },
+        { id: 'seca874pf10', prueba: 'Función 2 in 1/TARE — Registrar peso inicial y aplicar peso adicional conocido', valorEsperado: 'Muestra peso neto/adicional de forma coherente con la masa añadida', resultado: ['Pasa', 'Falla', 'N/A'] },
+        { id: 'seca874pf11', prueba: 'Prueba de estabilidad — Mantener masa patrón al centro durante 60 segundos', valorEsperado: 'Lectura estable, sin deriva progresiva ni fluctuación anormal', resultado: ['Pasa', 'Falla'] },
+        { id: 'seca874pf12', prueba: 'Prueba de sobrecarga operativa segura — Verificar respuesta sin exceder capacidad máxima indicada en placa', valorEsperado: 'No se generan errores bajo carga permitida; nunca exceder capacidad máxima del fabricante', resultado: ['Pasa', 'Falla', 'N/A'] },
+        { id: 'seca874pf13', prueba: 'Apagado automático o manual posterior a la medición', valorEsperado: 'Equipo apaga correctamente y conserva funcionamiento normal al volver a encender', resultado: ['Pasa', 'Falla'] },
+        { id: 'seca874pf14', prueba: 'Verificación posterior a limpieza/desinfección', valorEsperado: 'Equipo seco, sin residuos químicos, sin humedad en display, teclas o compartimento de baterías', resultado: ['Pasa', 'Falla'] }
+      ],
+      estadoFinal: ['Apto para uso', 'Apto con observaciones', 'No apto / retirar de servicio'],
+      accionesRealizadas: [
+        'Limpieza externa de plataforma, display, base y puntos de apoyo',
+        'Desinfección superficial con producto compatible según protocolo institucional',
+        'Verificación de compartimento de baterías y contactos eléctricos',
+        'Cambio de baterías',
+        'Verificación de cero, repetibilidad, excentricidad, linealidad y estabilidad con masas patrón',
+        'Verificación de funciones HOLD y 2 in 1/TARE',
+        'Revisión de etiquetas, placa nominal, serial y activo fijo',
+        'Registro de desviaciones metrológicas y recomendación de calibración externa si aplica',
+        'Recomendación de retiro de servicio por daño físico, lectura inestable o desviación fuera de tolerancia',
+        'Remisión a servicio técnico autorizado SECA o proveedor metrológico especializado'
+      ]
+    },
+
     'rayos_x_portatil_carestream_motion_mobile': {
       nombre: 'Equipo de Rayos X (Portátil) Carestream Motion Mobile',
       categoria: 'Biomédico',
