@@ -1375,6 +1375,86 @@
       ]
     },
 
+
+    'mesa_quirurgica_mindray_hybase3000': {
+      nombre: 'Mesa Quirúrgica Mindray HyBase 3000',
+      categoria: 'Biomédico',
+      codigo: 'SLV-GAT-BIO-MQ-HB3000',
+      frecuencia: ['Semestral', 'Anual'],
+      condicionesPrevias: [
+        'Verifique que la mesa quirúrgica se encuentre fuera de uso clínico, sin paciente, limpia, seca y ubicada sobre superficie nivelada antes de iniciar el mantenimiento preventivo.',
+        'Confirme disponibilidad de equipos de verificación según alcance institucional: multímetro o analizador de seguridad eléctrica, nivel digital/inclinómetro, cinta métrica, cronómetro y elementos de limpieza compatibles.',
+        'Desconecte la alimentación de red antes de inspecciones físicas externas; para pruebas funcionales conecte únicamente cuando sea necesario y siguiendo las medidas de seguridad eléctrica.',
+        'No realice mantenimiento ni servicio con paciente sobre la mesa. No abra cubiertas internas, unidad hidráulica, tarjetas electrónicas, fuente, batería ni actuadores durante el preventivo rutinario.',
+        'Antes de movilizar o probar movimientos, retire objetos de la cubierta, libere el área perimetral y asegure que no existan obstáculos que puedan generar atrapamiento, colisión o caída de accesorios.',
+        'Utilice únicamente accesorios compatibles Mindray o accesorios institucionales autorizados; verifique que la carga total paciente/accesorios no exceda la capacidad permitida por el fabricante.',
+        'No utilice agentes de limpieza o desinfección no compatibles con superficies, cojines o componentes eléctricos. Evite ingreso de líquidos a paneles, conectores, columna, base y mando.',
+        'Si se evidencian fugas hidráulicas, falla de frenos, deriva de movimientos, alarmas, daño estructural, falla de batería o comportamiento no controlado, retire la mesa de servicio y genere mantenimiento correctivo especializado.'
+      ],
+      inspeccion: [
+        { id: 'hb3000i1', item: 'Base, columna central y estructura metálica sin golpes severos, deformaciones, fisuras, corrosión, holguras anormales ni piezas sueltas' },
+        { id: 'hb3000i2', item: 'Tablero superior, secciones de cabeza, espalda, asiento y piernas alineadas, estables y sin daño mecánico visible' },
+        { id: 'hb3000i3', item: 'Colchonetas/cojines SFC o equivalentes íntegros, sin rasgaduras, perforaciones, pérdida de impermeabilidad, manchas persistentes ni deformación excesiva' },
+        { id: 'hb3000i4', item: 'Rieles laterales para accesorios rectos, firmes, sin deformación, corrosión, bordes cortantes ni tornillería faltante' },
+        { id: 'hb3000i5', item: 'Placa de cabeza: mecanismo de retiro/instalación, articulación y bloqueo funcionales, sin juego mecánico inseguro' },
+        { id: 'hb3000i6', item: 'Placas de piernas: articulación, separación, retiro/instalación y seguros mecánicos funcionales' },
+        { id: 'hb3000i7', item: 'Mando de control cableado: carcasa, botones, cable, conector, alivio de tensión e indicadores en buen estado' },
+        { id: 'hb3000i8', item: 'Panel de control de respaldo en la base/columna: botones, indicadores y cubierta íntegros, legibles y sin humedad' },
+        { id: 'hb3000i9', item: 'Cable de alimentación, clavija, punto de tierra y entrada eléctrica sin cortes, empalmes, sulfatación, calentamiento ni aislamiento expuesto' },
+        { id: 'hb3000i10', item: 'Ruedas/castores y pedal o sistema de freno sin obstrucciones, desgaste excesivo, bloqueo irregular ni daño visible' },
+        { id: 'hb3000i11', item: 'Sistema hidráulico externo sin evidencia de fuga de aceite, manchas, goteo, ruido anormal o descenso espontáneo' },
+        { id: 'hb3000i12', item: 'Batería interna/indicadores de carga sin mensajes de falla, deformación, fuga, calentamiento o sulfatación visible' },
+        { id: 'hb3000i13', item: 'Etiquetas de identificación, placa nominal, advertencias de seguridad, activo fijo y número de serie legibles y coincidentes con inventario' },
+        { id: 'hb3000i14', item: 'Accesorios disponibles: soportes, apoyabrazos, cinturones, perneras, extensiones o abrazaderas en buen estado, si aplican al servicio' },
+        { id: 'hb3000i15', item: 'Limpieza externa realizada en superficies, rieles, base, mando y cojines con método compatible, sin ingreso de líquido a componentes eléctricos' }
+      ],
+      verificacionBasica: [
+        { id: 'hb3000vb1', item: 'La mesa enciende correctamente conectada a red eléctrica y no presenta alarmas, códigos de error ni movimientos inesperados' },
+        { id: 'hb3000vb2', item: 'El indicador de batería/carga se visualiza correctamente; la mesa cambia a modo batería sin apagarse al desconectar AC' },
+        { id: 'hb3000vb3', item: 'El mando cableado ejecuta comandos de forma individual, sin botones pegados, doble activación ni respuesta retardada anormal' },
+        { id: 'hb3000vb4', item: 'El panel de control de respaldo opera funciones básicas si el mando cableado no se utiliza' },
+        { id: 'hb3000vb5', item: 'El botón/parada de emergencia o función de detención detiene el movimiento de forma inmediata y segura según configuración del equipo' },
+        { id: 'hb3000vb6', item: 'Los frenos/castores bloquean la mesa firmemente y permiten liberación controlada para desplazamiento cuando corresponde' },
+        { id: 'hb3000vb7', item: 'La mesa retorna a posición cero o posición horizontal/central según función disponible, sin desviaciones evidentes' },
+        { id: 'hb3000vb8', item: 'No se observan fugas hidráulicas, descenso espontáneo, deriva de inclinación ni pérdida de posición durante la revisión estática' },
+        { id: 'hb3000vb9', item: 'Las secciones de cabeza y piernas se instalan, retiran y bloquean correctamente; no se liberan accidentalmente durante la manipulación' },
+        { id: 'hb3000vb10', item: 'Los movimientos se realizan sin ruidos anormales, vibración excesiva, tirones, bloqueos o golpes de fin de carrera' }
+      ],
+      pruebasFuncionales: [
+        { id: 'hb3000pf1', prueba: 'Encendido general y autoverificación inicial conectada a red eléctrica', valorEsperado: 'Inicio normal, indicadores activos y sin alarma/código de falla persistente', resultado: ['Pasa', 'Falla'] },
+        { id: 'hb3000pf2', prueba: 'Elevación y descenso de la mesa desde el mando cableado', valorEsperado: 'Movimiento uniforme, controlado, sin ruidos anormales, sin atasco y con detención al soltar el comando', resultado: ['Pasa', 'Falla'] },
+        { id: 'hb3000pf3', prueba: 'Trendelenburg y Trendelenburg inverso con nivel/inclinómetro', valorEsperado: 'Inclinación progresiva y estable; conserva posición sin deriva evidente durante mínimo 60 s', resultado: ['Pasa', 'Falla'] },
+        { id: 'hb3000pf4', prueba: 'Inclinación lateral izquierda y derecha con nivel/inclinómetro', valorEsperado: 'Movimiento simétrico, estable y sin pérdida de posición; retorna a horizontal sin error', resultado: ['Pasa', 'Falla'] },
+        { id: 'hb3000pf5', prueba: 'Movimiento de placa de espalda arriba/abajo', valorEsperado: 'Articulación suave, sin bloqueo mecánico, sin caída espontánea y con bloqueo estable', resultado: ['Pasa', 'Falla'] },
+        { id: 'hb3000pf6', prueba: 'Movimiento de placa de piernas arriba/abajo y separación/retiro si aplica', valorEsperado: 'Permite posicionamiento normal y seguros mecánicos mantienen fijación', resultado: ['Pasa', 'Falla'] },
+        { id: 'hb3000pf7', prueba: 'Movimiento/ajuste de placa de cabeza', valorEsperado: 'Permite ajuste, instalación/retiro y bloqueo seguro sin juego excesivo', resultado: ['Pasa', 'Falla'] },
+        { id: 'hb3000pf8', prueba: 'Desplazamiento longitudinal del tablero, si el modelo instalado dispone de esta función', valorEsperado: 'Desplazamiento controlado, sin atasco, con retorno a posición central y bloqueo estable', resultado: ['Pasa', 'Falla', 'N/A'] },
+        { id: 'hb3000pf9', prueba: 'Función de posición cero / nivelación automática, si aplica', valorEsperado: 'La mesa retorna a posición horizontal/central sin error y con alineación visual aceptable', resultado: ['Pasa', 'Falla', 'N/A'] },
+        { id: 'hb3000pf10', prueba: 'Prueba de frenos/castors sobre superficie nivelada', valorEsperado: 'Bloqueo firme sin desplazamiento no deseado; liberación permite movilidad controlada', resultado: ['Pasa', 'Falla'] },
+        { id: 'hb3000pf11', prueba: 'Prueba de panel de control de respaldo', valorEsperado: 'Ejecuta funciones básicas disponibles cuando se opera desde la base/columna', resultado: ['Pasa', 'Falla'] },
+        { id: 'hb3000pf12', prueba: 'Prueba de parada/detención de emergencia durante movimiento lento controlado', valorEsperado: 'El movimiento se detiene inmediatamente sin continuar desplazamiento', resultado: ['Pasa', 'Falla'] },
+        { id: 'hb3000pf13', prueba: 'Funcionamiento en modo batería con movimientos básicos', valorEsperado: 'Opera al menos elevación/descenso e inclinación breve sin apagado ni alarma crítica inmediata', resultado: ['Pasa', 'Falla'] },
+        { id: 'hb3000pf14', prueba: 'Verificación de carga de batería al conectar red eléctrica', valorEsperado: 'Indicador de carga activo y coherente; no aparece falla de batería/cargador', resultado: ['Pasa', 'Falla'] },
+        { id: 'hb3000pf15', prueba: 'Estabilidad estática en posición horizontal y en inclinación moderada sin carga clínica', valorEsperado: 'Mantiene posición mínimo 2 minutos sin descenso, deriva o vibración anormal', resultado: ['Pasa', 'Falla'] },
+        { id: 'hb3000pf16', prueba: 'Revisión de accesorios instalados en riel lateral', valorEsperado: 'Accesorios fijan correctamente, sin deslizamiento ni liberación accidental', resultado: ['Pasa', 'Falla', 'N/A'] },
+        { id: 'hb3000pf17', prueba: 'Prueba de seguridad eléctrica externa con analizador, si está disponible dentro del alcance institucional', valorEsperado: 'Resistencia de tierra, fuga y polaridad dentro de límites institucionales/norma aplicable; registrar valores', resultado: ['Pasa', 'Falla', 'N/A'] },
+        { id: 'hb3000pf18', prueba: 'Verificación posterior a limpieza/desinfección', valorEsperado: 'Superficies secas, sin residuos químicos, sin humedad en mando, conectores, base o columna', resultado: ['Pasa', 'Falla'] }
+      ],
+      estadoFinal: ['Apto para uso', 'Apto con observaciones', 'No apto / retirar de servicio'],
+      accionesRealizadas: [
+        'Limpieza externa de base, columna, tablero, rieles, mando y accesorios',
+        'Desinfección de superficies y cojines compatibles con política institucional',
+        'Verificación de estructura, rieles, seguros mecánicos y accesorios',
+        'Verificación funcional de movimientos electrohidráulicos',
+        'Verificación de frenos/castors y estabilidad de posición',
+        'Verificación de mando cableado y panel de respaldo',
+        'Verificación de batería, cargador y operación en modo batería',
+        'Prueba de seguridad eléctrica externa si se dispone del analizador',
+        'Recomendación de cambio de accesorios/cojines deteriorados',
+        'Recomendación de mantenimiento correctivo especializado o retiro de servicio'
+      ]
+    },
+
     'rayos_x_portatil_carestream_motion_mobile': {
       nombre: 'Equipo de Rayos X (Portátil) Carestream Motion Mobile',
       categoria: 'Biomédico',
