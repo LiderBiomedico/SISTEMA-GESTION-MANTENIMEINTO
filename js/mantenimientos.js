@@ -1525,6 +1525,90 @@
       ]
     },
 
+
+    'electrocardiografo_edan_se1201': {
+      nombre: 'Electrocardiógrafo (ECG) EDAN SE-1201',
+      categoria: 'Biomédico',
+      codigo: 'SLV-GAT-BIO-ECG-EDAN-SE1201',
+      frecuencia: ['Semestral', 'Anual'],
+      condicionesPrevias: [
+        'Verifique que el electrocardiógrafo se encuentre fuera de uso clínico, limpio, desconectado del paciente y ubicado sobre superficie estable antes de iniciar el mantenimiento preventivo.',
+        'Confirme disponibilidad de simulador de ECG calibrado de 12 derivaciones o simulador multiparámetro equivalente para verificación de frecuencia cardíaca, amplitud y trazado.',
+        'Utilice papel térmico compatible con EDAN SE-1201, cable paciente, electrodos y cable de alimentación en buen estado.',
+        'Antes de las pruebas funcionales, conecte el equipo a red eléctrica y permita la inicialización completa; verifique fecha, hora, filtros y configuración básica de impresión.',
+        'No abra la carcasa, fuente de alimentación, batería interna, impresora, tarjetas electrónicas ni módulos internos durante el mantenimiento preventivo rutinario.',
+        'La calibración interna, reparación electrónica, actualización de software o cambio de componentes internos debe ser realizada por personal autorizado o servicio técnico especializado.',
+        'No conecte el equipo a pacientes durante las pruebas con simulador; no realice pruebas en presencia de líquidos, gases inflamables o accesorios húmedos.',
+        'Si se presentan mensajes de error persistentes, falla de impresión, desviación de señal, batería defectuosa, cable paciente deteriorado o interrupciones eléctricas, retire el equipo de servicio y genere mantenimiento correctivo.'
+      ],
+      inspeccion: [
+        { id: 'edan1201i1', item: 'Carcasa superior, inferior y laterales sin grietas, golpes, deformaciones, corrosión ni piezas sueltas' },
+        { id: 'edan1201i2', item: 'Pantalla LCD/visualizador limpio, sin manchas, pixeles muertos, pérdida de contraste ni daño físico visible' },
+        { id: 'edan1201i3', item: 'Teclado, teclas de función, selector/menús y botones START/STOP/PRINT con respuesta adecuada y sin atascamiento' },
+        { id: 'edan1201i4', item: 'Impresora térmica, tapa, rodillo y mecanismo de arrastre sin obstrucciones, residuos de papel, desgaste o daño visible' },
+        { id: 'edan1201i5', item: 'Papel térmico instalado correctamente, compatible, sin humedad, arrugas, decoloración o atasco en el recorrido' },
+        { id: 'edan1201i6', item: 'Cable de alimentación AC, clavija, conector y alivio de tensión sin cortes, peladuras, corrosión o calentamiento anormal' },
+        { id: 'edan1201i7', item: 'Batería interna sin signos de deformación, fuga, sobrecalentamiento o alarma de batería persistente; indicador de carga visible' },
+        { id: 'edan1201i8', item: 'Cable paciente de 10 hilos/12 derivaciones íntegro, sin cortes, dobleces severos, pines flojos, conectores sulfatados o aislamiento deteriorado' },
+        { id: 'edan1201i9', item: 'Pinzas, chupones, electrodos reutilizables o adaptadores limpios, completos, sin corrosión y con contacto firme' },
+        { id: 'edan1201i10', item: 'Puerto del cable paciente y conectores auxiliares sin pines doblados, cuerpos extraños, humedad o daño mecánico' },
+        { id: 'edan1201i11', item: 'Puertos USB/Ethernet/SD o interfaces disponibles sin daño, suciedad, obstrucción ni holgura anormal' },
+        { id: 'edan1201i12', item: 'Etiquetas de seguridad, placa nominal, número de serie, activo fijo y advertencias legibles y coincidentes con inventario' },
+        { id: 'edan1201i13', item: 'Pies de apoyo, base y cubierta inferior estables, completos, antideslizantes y sin vibración durante la impresión' },
+        { id: 'edan1201i14', item: 'Limpieza externa realizada con paño suave y desinfectante compatible; sin ingreso de líquido por teclado, impresora o conectores' },
+        { id: 'edan1201i15', item: 'Accesorios almacenados ordenadamente, secos y protegidos para evitar tracción, dobleces o contaminación cruzada' }
+      ],
+      verificacionBasica: [
+        { id: 'edan1201vb1', item: 'El equipo enciende correctamente en alimentación AC y completa autoverificación sin mensajes de error persistentes' },
+        { id: 'edan1201vb2', item: 'El equipo opera en modo batería al desconectar AC, sin apagado súbito ni reinicio inesperado' },
+        { id: 'edan1201vb3', item: 'Indicador de carga/batería funciona y no muestra advertencia de batería baja con carga adecuada' },
+        { id: 'edan1201vb4', item: 'Fecha, hora, idioma, velocidad de papel, ganancia, filtros y formato de reporte se encuentran configurados correctamente' },
+        { id: 'edan1201vb5', item: 'El teclado permite navegar menús, ingresar datos de paciente, seleccionar modo de trabajo e iniciar/detener impresión' },
+        { id: 'edan1201vb6', item: 'El sistema detecta derivación desconectada al retirar un electrodo o conector del simulador' },
+        { id: 'edan1201vb7', item: 'La impresora alimenta el papel de forma uniforme, sin arrastre irregular, ruido excesivo o atasco' },
+        { id: 'edan1201vb8', item: 'La impresión térmica es legible, uniforme, sin líneas perdidas, zonas blancas, manchas o baja densidad' },
+        { id: 'edan1201vb9', item: 'Memoria/gestor de archivos permite guardar, visualizar e imprimir un registro de prueba, si la configuración institucional lo utiliza' },
+        { id: 'edan1201vb10', item: 'Conectividad USB/Ethernet o exportación de reportes funciona si aplica al servicio; verificar sin comprometer datos de pacientes reales' }
+      ],
+      pruebasFuncionales: [
+        { id: 'edan1201pf1', prueba: 'ECG 12 derivaciones — Conectar simulador ECG a cable paciente completo', valorEsperado: 'Las 12 derivaciones se muestran/registran sin ruido excesivo ni derivaciones ausentes', resultado: ['Pasa', 'Falla'] },
+        { id: 'edan1201pf2', prueba: 'Frecuencia cardíaca — Simular ritmo sinusal 60 lpm', valorEsperado: 'Lectura de FC 60 lpm ± 1 lpm y trazado estable', resultado: ['Pasa', 'Falla'] },
+        { id: 'edan1201pf3', prueba: 'Frecuencia cardíaca — Simular ritmo sinusal 80 lpm', valorEsperado: 'Lectura de FC 80 lpm ± 1 lpm y trazado estable', resultado: ['Pasa', 'Falla'] },
+        { id: 'edan1201pf4', prueba: 'Frecuencia cardíaca — Simular taquicardia 120 lpm', valorEsperado: 'Lectura de FC 120 lpm ± 2 lpm y reporte coherente', resultado: ['Pasa', 'Falla'] },
+        { id: 'edan1201pf5', prueba: 'Amplitud ECG — Señal patrón 1 mV en derivación II', valorEsperado: 'Amplitud impresa/visualizada 10 mm a ganancia 10 mm/mV ± tolerancia institucional', resultado: ['Pasa', 'Falla'] },
+        { id: 'edan1201pf6', prueba: 'Ganancia — Cambiar 5, 10 y 20 mm/mV con simulador estable', valorEsperado: 'El trazado cambia proporcionalmente y el valor aparece correctamente en el reporte', resultado: ['Pasa', 'Falla'] },
+        { id: 'edan1201pf7', prueba: 'Velocidad de papel — Imprimir a 25 mm/s', valorEsperado: 'Impresión con escala temporal correcta y velocidad indicada en reporte', resultado: ['Pasa', 'Falla'] },
+        { id: 'edan1201pf8', prueba: 'Velocidad de papel — Imprimir a 50 mm/s', valorEsperado: 'Impresión con escala temporal correcta y velocidad indicada en reporte', resultado: ['Pasa', 'Falla'] },
+        { id: 'edan1201pf9', prueba: 'Modo Auto — Registro automático de 12 derivaciones', valorEsperado: 'Genera reporte completo con datos, mediciones y trazos según configuración seleccionada', resultado: ['Pasa', 'Falla'] },
+        { id: 'edan1201pf10', prueba: 'Modo Manual — Registro manual de derivaciones', valorEsperado: 'Permite iniciar/detener impresión manual sin bloqueo ni pérdida de señal', resultado: ['Pasa', 'Falla'] },
+        { id: 'edan1201pf11', prueba: 'Modo Rhythm/Ritmo — Registro prolongado de derivación seleccionada', valorEsperado: 'Imprime ritmo continuo estable durante el intervalo definido', resultado: ['Pasa', 'Falla'] },
+        { id: 'edan1201pf12', prueba: 'Modo R-R Analysis — Activar análisis R-R con simulador estable', valorEsperado: 'Inicia adquisición/análisis y genera reporte sin errores, si la función está habilitada', resultado: ['Pasa', 'Falla', 'N/A'] },
+        { id: 'edan1201pf13', prueba: 'Filtro de línea AC — Activar/desactivar filtro 50/60 Hz según red local', valorEsperado: 'Reduce interferencia de línea sin deformar de forma anormal el complejo QRS', resultado: ['Pasa', 'Falla'] },
+        { id: 'edan1201pf14', prueba: 'Filtro muscular / pasa bajo — Verificar efecto sobre señal simulada con ruido', valorEsperado: 'Disminuye ruido de alta frecuencia manteniendo trazado clínicamente legible', resultado: ['Pasa', 'Falla', 'N/A'] },
+        { id: 'edan1201pf15', prueba: 'Detección de derivación desconectada — Retirar RA/LA/LL y una precordial', valorEsperado: 'Mensaje o indicador de lead off correspondiente, sin lectura falsa como normal', resultado: ['Pasa', 'Falla'] },
+        { id: 'edan1201pf16', prueba: 'Detección de marcapasos — Simular señal con pulso de marcapasos si el simulador lo permite', valorEsperado: 'Reporte/trazado reconoce o representa pulsos de marcapasos según configuración del equipo', resultado: ['Pasa', 'Falla', 'N/A'] },
+        { id: 'edan1201pf17', prueba: 'Impresión de reporte guardado — Guardar ECG de prueba y reimprimir desde gestor de archivos', valorEsperado: 'Archivo se recupera e imprime completo sin corrupción de datos', resultado: ['Pasa', 'Falla', 'N/A'] },
+        { id: 'edan1201pf18', prueba: 'Exportación/transferencia — Enviar o copiar reporte PDF/SCP/XML si el servicio usa esta función', valorEsperado: 'Transferencia exitosa sin errores y archivo legible en estación destino', resultado: ['Pasa', 'Falla', 'N/A'] },
+        { id: 'edan1201pf19', prueba: 'Prueba de batería operativa — Desconectar AC durante adquisición o impresión corta', valorEsperado: 'Equipo mantiene operación sin reinicio; registra estado de batería adecuado', resultado: ['Pasa', 'Falla'] },
+        { id: 'edan1201pf20', prueba: 'Seguridad eléctrica externa — Medición con analizador de seguridad eléctrica si está disponible', valorEsperado: 'Corriente de fuga, tierra y aislamiento dentro de límites IEC 60601/institucionales', resultado: ['Pasa', 'Falla', 'N/A'] }
+      ],
+      estadoFinal: ['Apto para uso', 'Apto con observaciones', 'No apto / retirar de servicio'],
+      accionesRealizadas: [
+        'Limpieza externa de carcasa, pantalla, teclado y superficies de apoyo',
+        'Limpieza de impresora térmica, rodillo y compartimento de papel',
+        'Verificación de cable paciente, pinzas, chupones, electrodos y conectores',
+        'Cambio o reposición de papel térmico compatible',
+        'Verificación de encendido, batería, cargador y cable de alimentación',
+        'Verificación funcional con simulador ECG de 12 derivaciones',
+        'Pruebas de frecuencia cardíaca, amplitud, ganancia, velocidad e impresión',
+        'Verificación de modos Auto, Manual, Ritmo y R-R si aplica',
+        'Verificación de filtros, detección de derivación desconectada y calidad de trazado',
+        'Verificación de memoria, reimpresión y transferencia de reportes si aplica',
+        'Recomendación de cambio de cable paciente/accesorios por deterioro',
+        'Remisión a servicio técnico autorizado EDAN o proveedor especializado'
+      ]
+    },
+
     'rayos_x_portatil_carestream_motion_mobile': {
       nombre: 'Equipo de Rayos X (Portátil) Carestream Motion Mobile',
       categoria: 'Biomédico',
