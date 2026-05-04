@@ -1092,7 +1092,68 @@
       ],
     },
 
-'rayos_x_portatil_carestream_motion_mobile': {
+'aspirador_smaf_yx980d': {
+      nombre: 'Aspirador SMAF YX980D',
+      categoria: 'Biomédico',
+      codigo: 'SLV-GAT-BIO-ASP-YX980D',
+      frecuencia: ['Semestral', 'Anual'],
+      condicionesPrevias: [
+        'Verifique que el aspirador se encuentre fuera de uso clínico, desconectado de la red eléctrica y con los frascos colectores vacíos antes de iniciar la inspección.',
+        'Realice limpieza y desinfección previa de frascos, tapas, mangueras y superficies externas de acuerdo con el protocolo institucional de bioseguridad.',
+        'Confirme disponibilidad de vacuómetro patrón o analizador de vacío calibrado, filtro bacteriano/hidrofóbico, mangueras y recipiente de prueba.',
+        'Revise que el filtro de aire y el sistema de protección contra sobreflujo estén correctamente instalados antes de encender el equipo.',
+        'No opere el equipo en presencia de gases inflamables, sustancias corrosivas o explosivas, ni lo utilice para aplicaciones no clínicas.',
+        'No abra la bomba, motor, tablero eléctrico ni cubiertas internas durante el mantenimiento preventivo rutinario; las intervenciones internas deben ser realizadas por servicio técnico autorizado.',
+        'Si se evidencia ingreso de líquido a la bomba, daño eléctrico, fuga importante, sobrecalentamiento, ruido anormal o falla del flotador, retire de servicio y reporte para mantenimiento correctivo.'
+      ],
+      inspeccion: [
+        { id: 'asp980i1', item: 'Carcasa, estructura móvil y base sin golpes, grietas, deformaciones, corrosión ni partes sueltas' },
+        { id: 'asp980i2', item: 'Ruedas, soportes, manijas y elementos de transporte firmes y funcionales' },
+        { id: 'asp980i3', item: 'Cable de alimentación, clavija, interruptor y fusible accesible en buen estado, sin cortes ni sulfatación' },
+        { id: 'asp980i4', item: 'Manómetro de vacío legible, con aguja en cero cuando el equipo está apagado y sin fisuras en el visor' },
+        { id: 'asp980i5', item: 'Regulador de presión/vacío con giro uniforme y sin atascamientos' },
+        { id: 'asp980i6', item: 'Frascos colectores de policarbonato íntegros, limpios, sin fisuras, opacidad crítica ni deformaciones' },
+        { id: 'asp980i7', item: 'Tapas, empaques, conexiones y válvulas de cierre hermético sin fuga visible ni deterioro' },
+        { id: 'asp980i8', item: 'Dispositivo de protección contra sobreflujo/flotador limpio, libre y con movimiento adecuado' },
+        { id: 'asp980i9', item: 'Filtro bacteriano/hidrofóbico instalado en la orientación correcta, seco, limpio y sin obstrucción' },
+        { id: 'asp980i10', item: 'Mangueras de succión y conexión sin dobleces, grietas, endurecimiento, obstrucciones ni contaminación visible' },
+        { id: 'asp980i11', item: 'Pedal o interruptor de mano funcional, con cable y conector en buen estado, si aplica al equipo' },
+        { id: 'asp980i12', item: 'Etiquetas de identificación, activo fijo, advertencias y número de serie legibles y coincidentes con inventario' }
+      ],
+      verificacionBasica: [
+        { id: 'asp980vb1', item: 'El equipo enciende y apaga correctamente sin chispa, olor anormal, sobrecalentamiento ni vibración excesiva' },
+        { id: 'asp980vb2', item: 'La bomba genera vacío de forma progresiva al ocluir la línea de prueba y la lectura se mantiene estable' },
+        { id: 'asp980vb3', item: 'El regulador permite variar el nivel de vacío desde bajo hasta alto de manera controlada' },
+        { id: 'asp980vb4', item: 'El sistema de frascos, tapas, filtro y mangueras mantiene cierre hermético durante la prueba de succión' },
+        { id: 'asp980vb5', item: 'El dispositivo de sobreflujo interrumpe o limita el paso hacia la bomba cuando se simula elevación del flotador' },
+        { id: 'asp980vb6', item: 'El pedal o mando de activación responde correctamente, si aplica' }
+      ],
+      pruebasFuncionales: [
+        { id: 'asp980pf1', prueba: 'Encendido y operación inicial sin carga', valorEsperado: 'Arranque normal, ruido uniforme y sin alarmas, olor eléctrico ni vibración anormal', resultado: ['Pasa', 'Falla'] },
+        { id: 'asp980pf2', prueba: 'Vacío mínimo ajustable con vacuómetro patrón', valorEsperado: 'Permite ajustar aproximadamente desde -150 mmHg o 0.02 MPa', resultado: ['Pasa', 'Falla'] },
+        { id: 'asp980pf3', prueba: 'Vacío máximo con línea ocluida y filtro instalado', valorEsperado: 'Alcanza hasta -680 mmHg o 0.09 MPa, según condición del equipo y altitud local', resultado: ['Pasa', 'Falla'] },
+        { id: 'asp980pf4', prueba: 'Estabilidad de vacío a nivel medio durante 30 segundos', valorEsperado: 'Lectura estable, sin caída brusca ni oscilación anormal', resultado: ['Pasa', 'Falla'] },
+        { id: 'asp980pf5', prueba: 'Regulación progresiva de presión/vacío', valorEsperado: 'Variación suave y controlada entre niveles bajo, medio y alto', resultado: ['Pasa', 'Falla'] },
+        { id: 'asp980pf6', prueba: 'Hermeticidad de frascos, tapas y mangueras', valorEsperado: 'Sin fugas audibles, sin pérdida marcada de vacío y con acoples firmes', resultado: ['Pasa', 'Falla'] },
+        { id: 'asp980pf7', prueba: 'Protección contra sobreflujo / flotador', valorEsperado: 'Flotador libre y cierre funcional al simular nivel alto o inversión controlada de la tapa', resultado: ['Pasa', 'Falla'] },
+        { id: 'asp980pf8', prueba: 'Prueba de succión con agua limpia en recipiente de prueba', valorEsperado: 'Aspiración continua hacia el frasco colector sin retorno de líquido, fugas ni ingreso hacia la bomba', resultado: ['Pasa', 'Falla'] },
+        { id: 'asp980pf9', prueba: 'Prueba de pedal o interruptor de mano, si aplica', valorEsperado: 'Activa y desactiva la succión de forma inmediata y segura', resultado: ['Aplica', 'N/A'] },
+        { id: 'asp980pf10', prueba: 'Operación intermitente controlada hasta 30 minutos, si el servicio lo requiere', valorEsperado: 'Funcionamiento estable respetando ciclo de trabajo, sin sobrecalentamiento ni pérdida de desempeño', resultado: ['Pasa', 'Falla'] }
+      ],
+      estadoFinal: ['Apto para uso', 'Apto con observaciones', 'No apto / retirar de servicio'],
+      accionesRealizadas: [
+        'Limpieza externa de carcasa, base y controles',
+        'Desinfección de frascos colectores y tapas según protocolo institucional',
+        'Verificación y limpieza de mangueras y conexiones externas',
+        'Cambio o verificación de filtro bacteriano/hidrofóbico',
+        'Verificación de flotador y protección contra sobreflujo',
+        'Verificación funcional con vacuómetro patrón',
+        'Prueba de hermeticidad del circuito de succión',
+        'Recomendación de retiro de servicio / mantenimiento correctivo'
+      ]
+    },
+
+    'rayos_x_portatil_carestream_motion_mobile': {
       nombre: 'Equipo de Rayos X (Portátil) Carestream Motion Mobile',
       categoria: 'Biomédico',
       codigo: 'SLV-GAT-BIO-RXP',
