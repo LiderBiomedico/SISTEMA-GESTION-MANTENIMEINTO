@@ -1219,6 +1219,77 @@
       ]
     },
 
+
+    'desfibrilador_primedic_xd330ey': {
+      nombre: 'Desfibrilador PRIMEDIC XD330EY',
+      categoria: 'Biomédico',
+      codigo: 'SLV-GAT-BIO-DF-PR-XD330EY',
+      frecuencia: ['Semestral', 'Anual'],
+      condicionesPrevias: [
+        'Verifique que el equipo se encuentre fuera de uso clínico, limpio, seco y ubicado en un área segura para prueba con analizador de desfibriladores.',
+        'Confirme disponibilidad de analizador de desfibriladores calibrado, simulador ECG, carga de prueba de 50 Ω, gel conductor o medio de contacto compatible y elementos de bioseguridad.',
+        'Antes de encender, verifique que las palas/electrodos se encuentren correctamente ubicados en sus soportes y que los cables no presenten daño visible.',
+        'No realice descargas al aire ni hacia personas; toda descarga de prueba debe ejecutarse únicamente sobre analizador/carga de prueba autorizada.',
+        'Evite el uso cerca de gases inflamables, sustancias explosivas o fuentes de interferencia electromagnética que puedan afectar el funcionamiento.',
+        'No supere ciclos repetidos de descarga de alta energía durante el preventivo; permita periodos de enfriamiento si se realizan varias pruebas consecutivas.',
+        'No abra cubiertas, fuente, módulo de alta tensión, batería interna ni tarjetas electrónicas. Toda intervención interna debe ser realizada por servicio técnico autorizado.',
+        'Si se evidencian fallas de carga, error persistente, batería deficiente, cables dañados, palas deterioradas o energía fuera de tolerancia, retire de servicio y reporte mantenimiento correctivo.'
+      ],
+      inspeccion: [
+        { id: 'pxdi1', item: 'Carcasa, asa de transporte, base y cubiertas íntegras, sin golpes, grietas, deformaciones, partes sueltas ni signos de humedad' },
+        { id: 'pxdi2', item: 'Panel frontal, pantalla/indicadores, teclas de selección de energía, carga, sincronía y descarga legibles y funcionales' },
+        { id: 'pxdi3', item: 'Palas externas adulto APEX/STERNUM íntegras, limpias, sin corrosión, carbonización, fisuras ni pérdida de aislamiento' },
+        { id: 'pxdi4', item: 'Electrodos pediátricos integrados o accesorios pediátricos disponibles, limpios y con mecanismo de acople seguro, si aplica' },
+        { id: 'pxdi5', item: 'Cables de palas/electrodos sin cortes, torsión excesiva, aislamiento expuesto, endurecimiento, sulfatación ni falsos contactos' },
+        { id: 'pxdi6', item: 'Conectores, puertos ECG, cable paciente y accesorios sin pines doblados, corrosión ni holgura' },
+        { id: 'pxdi7', item: 'Cable de alimentación, clavija, cargador/base y fusible accesible en buen estado, sin calentamiento ni empalmes' },
+        { id: 'pxdi8', item: 'Batería instalada sin deformación, fuga, sobrecalentamiento, sulfatación o mensajes de agotamiento al encender' },
+        { id: 'pxdi9', item: 'Impresora/registrador, tapa, rodillo y papel térmico disponibles y en buen estado, si aplica al equipo instalado' },
+        { id: 'pxdi10', item: 'Alarmas sonoras, indicadores luminosos y mensajes de advertencia visibles/audibles durante autoprueba' },
+        { id: 'pxdi11', item: 'Etiquetas de identificación, activo fijo, número de serie, advertencias de alto voltaje y marcado de seguridad legibles' },
+        { id: 'pxdi12', item: 'Gel conductor, parches, electrodos ECG y consumibles vigentes, íntegros y almacenados correctamente' },
+        { id: 'pxdi13', item: 'Limpieza externa realizada con paño suave; sin ingreso de líquido al equipo, conectores, palas o compartimentos' },
+        { id: 'pxdi14', item: 'Superficies de contacto de palas limpias y libres de restos de gel seco para evitar alta impedancia o arcos eléctricos' }
+      ],
+      verificacionBasica: [
+        { id: 'pxdvb1', item: 'El equipo enciende correctamente y completa autoverificación sin errores técnicos persistentes' },
+        { id: 'pxdvb2', item: 'El equipo funciona conectado a red eléctrica y mantiene operación en modo batería dentro de la revisión básica' },
+        { id: 'pxdvb3', item: 'Indicadores de carga de batería y estado operativo responden de forma coherente' },
+        { id: 'pxdvb4', item: 'El selector/teclas permiten elegir niveles de energía sin bloqueo ni respuesta errática' },
+        { id: 'pxdvb5', item: 'La función de carga se inicia y el equipo informa energía lista mediante indicador visual/audible' },
+        { id: 'pxdvb6', item: 'El equipo realiza descarga únicamente al accionar simultáneamente los controles requeridos sobre carga de prueba' },
+        { id: 'pxdvb7', item: 'La función de sincronía muestra marcador o indicación sincronizada con señal ECG simulada, si aplica' },
+        { id: 'pxdvb8', item: 'La impresión/registro de ECG o evento funciona correctamente, si aplica al equipo instalado' }
+      ],
+      pruebasFuncionales: [
+        { id: 'pxdpf1', prueba: 'Encendido, autoprueba inicial y estado operativo', valorEsperado: 'Inicio normal, sin mensaje de error crítico y con indicador de equipo listo', resultado: ['Pasa', 'Falla'] },
+        { id: 'pxdpf2', prueba: 'Verificación de señal ECG con simulador a 60 BPM', valorEsperado: 'Visualización estable de ECG y frecuencia 60 BPM ± 5 BPM', resultado: ['Pasa', 'Falla'] },
+        { id: 'pxdpf3', prueba: 'Alarma/indicación de derivación o cable ECG desconectado', valorEsperado: 'Mensaje o alarma técnica visible/audible al desconectar el cable', resultado: ['Pasa', 'Falla'] },
+        { id: 'pxdpf4', prueba: 'Carga y descarga en 50 J sobre analizador/carga 50 Ω', valorEsperado: 'Energía entregada dentro de ± 15% o tolerancia definida por el fabricante/analizador institucional', resultado: ['Pasa', 'Falla'] },
+        { id: 'pxdpf5', prueba: 'Carga y descarga en 100 J sobre analizador/carga 50 Ω', valorEsperado: 'Energía entregada dentro de ± 15% o tolerancia definida por el fabricante/analizador institucional', resultado: ['Pasa', 'Falla'] },
+        { id: 'pxdpf6', prueba: 'Carga y descarga en 200 J sobre analizador/carga 50 Ω', valorEsperado: 'Energía entregada dentro de ± 15% o tolerancia definida por el fabricante/analizador institucional', resultado: ['Pasa', 'Falla'] },
+        { id: 'pxdpf7', prueba: 'Carga máxima seleccionable y tiempo de carga con batería completamente cargada', valorEsperado: 'Alcanza energía máxima sin error; tiempo de carga coherente con especificación del equipo, idealmente ≤ 7 s cuando aplique a 360 J', resultado: ['Pasa', 'Falla'] },
+        { id: 'pxdpf8', prueba: 'Descarga interna/cancelación de energía cargada sin descarga al analizador', valorEsperado: 'El equipo descarga internamente o cancela energía de forma segura sin error persistente', resultado: ['Pasa', 'Falla'] },
+        { id: 'pxdpf9', prueba: 'Cardioversión sincronizada con simulador ECG, si aplica al modelo instalado', valorEsperado: 'Marcador SYNC presente y descarga sincronizada con complejo QRS según lectura del analizador', resultado: ['Aplica', 'N/A'] },
+        { id: 'pxdpf10', prueba: 'Prueba de palas: botones de carga/descarga y contacto sobre analizador', valorEsperado: 'Botones responden, no hay falsos contactos, alta impedancia persistente ni arco eléctrico', resultado: ['Pasa', 'Falla'] },
+        { id: 'pxdpf11', prueba: 'Prueba de batería durante operación breve sin red eléctrica', valorEsperado: 'Mantiene encendido, sin alarma crítica inmediata de batería ni apagado inesperado', resultado: ['Pasa', 'Falla'] },
+        { id: 'pxdpf12', prueba: 'Impresión/registro de prueba o tira ECG, si aplica', valorEsperado: 'Registro legible, avance de papel normal y hora/evento coherente', resultado: ['Aplica', 'N/A'] }
+      ],
+      estadoFinal: ['Apto para uso', 'Apto con observaciones', 'No apto / retirar de servicio'],
+      accionesRealizadas: [
+        'Limpieza externa de carcasa, panel y accesorios',
+        'Limpieza de palas y retiro de residuos de gel conductor',
+        'Verificación de cable de alimentación, clavija y cargador',
+        'Verificación de batería y funcionamiento en modo batería',
+        'Verificación funcional con analizador de desfibriladores',
+        'Verificación de ECG con simulador',
+        'Prueba de carga, descarga y energía entregada',
+        'Verificación de sincronía / cardioversión si aplica',
+        'Verificación de impresión/registrador si aplica',
+        'Recomendación de mantenimiento correctivo / retiro de servicio'
+      ]
+    },
+
     'rayos_x_portatil_carestream_motion_mobile': {
       nombre: 'Equipo de Rayos X (Portátil) Carestream Motion Mobile',
       categoria: 'Biomédico',
