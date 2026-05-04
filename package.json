@@ -1,6 +1,12 @@
 {
-  "name": "vascular-ai-mavi-netlify",
-  "version": "3.3.0",
-  "description": "VASCULAR AI + MAVI para Netlify",
-  "engines": { "node": ">=18.0.0" }
+  "name": "hslv-maintenance",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  },
+  "description": "HSLV Netlify site with serverless functions",
+  "scripts": {
+    "build": "echo \"no build\""
+  }
 }
