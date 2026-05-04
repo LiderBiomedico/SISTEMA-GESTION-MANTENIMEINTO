@@ -1783,6 +1783,92 @@
     },
 
 
+    'doppler_fetal_portatil_edan_sonotrax_basic_a': {
+      nombre: 'Doppler Fetal Portátil EDAN SonoTrax Basic A',
+      categoria: 'Biomédico',
+      codigo: 'SLV-GAT-BIO-DFP-EDAN-STBASICA',
+      frecuencia: ['Semestral', 'Anual'],
+      condicionesPrevias: [
+        'Verifique que el Doppler fetal esté fuera de uso clínico, limpio, seco y sin contacto con paciente antes de iniciar el mantenimiento preventivo.',
+        'Confirme disponibilidad de simulador de frecuencia cardíaca fetal, simulador Doppler fetal, phantom acústico o método institucional equivalente para validar lectura FCF sin uso en paciente.',
+        'Utilice gel conductor compatible, paño suave, desinfectante aprobado por la institución y accesorios originales o compatibles en buen estado.',
+        'Revise estado de batería, compartimiento, contactos, cargador/adaptador si aplica y disponibilidad de batería de reemplazo antes de iniciar las pruebas funcionales.',
+        'No sumerja la unidad principal ni permita ingreso de líquidos por pantalla, altavoz, botones, conectores o compartimiento de batería; limpie la sonda según recomendación del fabricante.',
+        'No abra carcasa, transductor, conectores ni tarjetas internas durante el mantenimiento preventivo rutinario.',
+        'Las reparaciones internas, cambio de transductor, ajuste electrónico o reparación de circuito deben ser realizadas por personal autorizado EDAN o proveedor especializado.',
+        'Si se identifican daños en sonda/cable, lectura inestable, ausencia de audio, batería sulfatada, cargador defectuoso, fallas de pantalla o errores persistentes, retire el equipo de servicio y genere mantenimiento correctivo.'
+      ],
+      inspeccion: [
+        { id: 'stbasici1', item: 'Carcasa de la unidad principal íntegra, sin grietas, golpes, deformaciones, corrosión, partes sueltas ni evidencia de ingreso de líquidos' },
+        { id: 'stbasici2', item: 'Pantalla LCD limpia y legible, sin segmentos apagados, pérdida de contraste, manchas internas ni daño físico visible' },
+        { id: 'stbasici3', item: 'Botón de encendido, selector de modo y controles de volumen/función con respuesta adecuada, sin bloqueo ni falso contacto' },
+        { id: 'stbasici4', item: 'Altavoz sin obstrucciones, suciedad, humedad, vibración anormal o distorsión audible durante la prueba' },
+        { id: 'stbasici5', item: 'Transductor obstétrico de 2 MHz o 3 MHz íntegro, limpio, sin grietas, rayaduras profundas, desprendimiento, humedad interna o daño visible' },
+        { id: 'stbasici6', item: 'Cable del transductor sin cortes, peladuras, dobleces severos, aplastamiento, tracción excesiva, empalmes o blindaje expuesto' },
+        { id: 'stbasici7', item: 'Conector del transductor firme, sin pines doblados, sulfatación, holgura, cuerpos extraños ni humedad' },
+        { id: 'stbasici8', item: 'Puerto de audífonos/salida de audio, conector auxiliar y puerto de carga si aplica limpios, firmes y sin corrosión' },
+        { id: 'stbasici9', item: 'Compartimiento de batería limpio, con tapa segura, contactos sin sulfatación, deformación, humedad ni falso contacto' },
+        { id: 'stbasici10', item: 'Batería sin fuga, sulfatación, deformación, calentamiento, alerta persistente o autonomía evidentemente reducida' },
+        { id: 'stbasici11', item: 'Etiquetas de identificación, número de serie, activo fijo, advertencias, símbolos de seguridad y marcación del fabricante legibles' },
+        { id: 'stbasici12', item: 'Bolsa, soporte, estuche y accesorios limpios, secos, completos y almacenados de forma segura' },
+        { id: 'stbasici13', item: 'Superficie de la sonda libre de residuos de gel, material biológico, fisuras o rugosidades que dificulten limpieza/desinfección' },
+        { id: 'stbasici14', item: 'Limpieza externa realizada con paño suave; sin exceso de líquido en pantalla, altavoz, botones, puertos o compartimiento de batería' },
+        { id: 'stbasici15', item: 'Condiciones ambientales del área adecuadas para prueba: equipo seco, superficie estable y sin fuentes evidentes de interferencia acústica/electromagnética' }
+      ],
+      verificacionBasica: [
+        { id: 'stbasicvb1', item: 'El equipo enciende correctamente y completa la inicialización sin reinicios, bloqueo, pitidos anormales o mensajes de falla persistentes' },
+        { id: 'stbasicvb2', item: 'La pantalla muestra batería, modo de operación, frecuencia cardíaca fetal y demás indicadores de forma legible' },
+        { id: 'stbasicvb3', item: 'El selector de modo permite alternar entre lectura en tiempo real, promedio o cálculo manual según configuración disponible' },
+        { id: 'stbasicvb4', item: 'El control de volumen aumenta/disminuye la señal audible sin distorsión marcada, ruido excesivo o pérdida intermitente de audio' },
+        { id: 'stbasicvb5', item: 'El indicador de batería funciona correctamente; no presenta apagado repentino durante la prueba corta' },
+        { id: 'stbasicvb6', item: 'El equipo opera con batería durante la prueba funcional sin reinicio inesperado ni pérdida de configuración' },
+        { id: 'stbasicvb7', item: 'El transductor es reconocido por el equipo y genera respuesta audible al contacto con simulador/phantom o prueba equivalente' },
+        { id: 'stbasicvb8', item: 'La conexión del transductor permanece estable al mover suavemente el cable y el conector, sin cortes de señal' },
+        { id: 'stbasicvb9', item: 'La salida de audífonos o salida de audio funciona si se utiliza institucionalmente, sin ruido, falso contacto ni pérdida de canal' },
+        { id: 'stbasicvb10', item: 'El apagado automático o ahorro de energía opera correctamente si está configurado y disponible en el equipo' },
+        { id: 'stbasicvb11', item: 'La limpieza/desinfección posterior no deja humedad ni residuos de gel en sonda, cable, botones, pantalla, altavoz o conectores' },
+        { id: 'stbasicvb12', item: 'El equipo queda identificado, seco, con accesorios completos y listo para almacenamiento o devolución al servicio' }
+      ],
+      pruebasFuncionales: [
+        { id: 'stbasicpf1', prueba: 'Encendido y autoverificación — Encender equipo en modo batería', valorEsperado: 'Inicializa correctamente, pantalla legible y sin mensajes de error persistentes', resultado: ['Pasa', 'Falla'] },
+        { id: 'stbasicpf2', prueba: 'Alimentación/batería — Verificar estado de batería y contactos', valorEsperado: 'Indicador de batería coherente, contactos limpios y sin calentamiento, falso contacto u olor anormal', resultado: ['Pasa', 'Falla'] },
+        { id: 'stbasicpf3', prueba: 'Modo batería — Mantener operación durante prueba corta', valorEsperado: 'Equipo continúa funcionando sin apagado súbito, reinicio ni pérdida de lectura/sonido', resultado: ['Pasa', 'Falla'] },
+        { id: 'stbasicpf4', prueba: 'Prueba de audio — Activar señal con simulador/phantom y variar volumen', valorEsperado: 'Audio claro, regulable y sin distorsión excesiva en todo el rango útil', resultado: ['Pasa', 'Falla'] },
+        { id: 'stbasicpf5', prueba: 'Lectura FCF baja — Simular 60 lpm si el patrón lo permite', valorEsperado: 'Lectura aproximada 60 lpm dentro de ±3 lpm o tolerancia institucional', resultado: ['Pasa', 'Falla', 'N/A'] },
+        { id: 'stbasicpf6', prueba: 'Lectura FCF nominal — Simular 120 lpm', valorEsperado: 'Lectura aproximada 120 lpm dentro de ±3 lpm o tolerancia institucional', resultado: ['Pasa', 'Falla'] },
+        { id: 'stbasicpf7', prueba: 'Lectura FCF alta — Simular 180 lpm si el patrón lo permite', valorEsperado: 'Lectura aproximada 180 lpm dentro de ±3 lpm o tolerancia institucional', resultado: ['Pasa', 'Falla', 'N/A'] },
+        { id: 'stbasicpf8', prueba: 'Rango de medición — Verificar respuesta dentro del rango 50 a 210 lpm', valorEsperado: 'Detecta y muestra frecuencia cardíaca fetal dentro del rango especificado sin saltos erráticos', resultado: ['Pasa', 'Falla', 'N/A'] },
+        { id: 'stbasicpf9', prueba: 'Modo tiempo real — Mantener señal estable del simulador durante 30 segundos', valorEsperado: 'La FCF se actualiza de forma continua y coherente con el patrón', resultado: ['Pasa', 'Falla'] },
+        { id: 'stbasicpf10', prueba: 'Modo promedio — Activar modo promedio con señal estable si el equipo lo permite', valorEsperado: 'Muestra valor promedio coherente y estable, sin desviaciones abruptas no justificadas', resultado: ['Pasa', 'Falla', 'N/A'] },
+        { id: 'stbasicpf11', prueba: 'Modo cálculo manual — Ejecutar conteo manual según función disponible', valorEsperado: 'El cálculo manual se inicia/finaliza y muestra resultado sin bloqueo del equipo', resultado: ['Pasa', 'Falla', 'N/A'] },
+        { id: 'stbasicpf12', prueba: 'Retroiluminación — Activar iluminación de pantalla del modelo Basic A', valorEsperado: 'La pantalla ilumina correctamente y permanece legible sin parpadeos anormales', resultado: ['Pasa', 'Falla', 'N/A'] },
+        { id: 'stbasicpf13', prueba: 'Conexión del transductor — Mover suavemente cable y conector durante señal simulada', valorEsperado: 'No se interrumpe el audio ni la lectura; no aparecen cortes por falso contacto', resultado: ['Pasa', 'Falla'] },
+        { id: 'stbasicpf14', prueba: 'Prueba de sensibilidad acústica — Aplicar gel y usar phantom/simulador Doppler', valorEsperado: 'Se obtiene señal audible clara con acoplamiento adecuado, sin ruido dominante', resultado: ['Pasa', 'Falla', 'N/A'] },
+        { id: 'stbasicpf15', prueba: 'Salida de audífonos/audio — Conectar audífonos o cable si el servicio lo usa', valorEsperado: 'La salida reproduce señal clara, sin falso contacto ni desconexión intermitente', resultado: ['Pasa', 'Falla', 'N/A'] },
+        { id: 'stbasicpf16', prueba: 'Apagado automático/ahorro de energía — Mantener equipo sin señal y sin operación', valorEsperado: 'El equipo ejecuta apagado automático aproximadamente a los 60 segundos sin señal/operación, si está habilitado', resultado: ['Pasa', 'Falla', 'N/A'] },
+        { id: 'stbasicpf17', prueba: 'Verificación de sonda impermeable — Inspección posterior a limpieza controlada', valorEsperado: 'Sonda sin ingreso visible de humedad, fisuras, burbujas, empañamiento o falla de señal', resultado: ['Pasa', 'Falla'] },
+        { id: 'stbasicpf18', prueba: 'Prueba de estabilidad — Mantener lectura simulada a 120 lpm durante 1 minuto', valorEsperado: 'Lectura estable dentro de tolerancia, sin congelamiento, pérdida de señal o reinicio', resultado: ['Pasa', 'Falla'] },
+        { id: 'stbasicpf19', prueba: 'Interferencia/ruido — Evaluar señal en ambiente normal de uso', valorEsperado: 'No se incrementa ruido de forma significativa ni se altera lectura por interferencia cercana', resultado: ['Pasa', 'Falla', 'N/A'] },
+        { id: 'stbasicpf20', prueba: 'Seguridad eléctrica externa — Medición con analizador si se dispone de cargador/adaptador', valorEsperado: 'Corrientes de fuga y aislamiento dentro de límites IEC 60601/institucionales para equipo alimentado internamente', resultado: ['Pasa', 'Falla', 'N/A'] }
+      ],
+      estadoFinal: ['Apto para uso', 'Apto con observaciones', 'No apto / retirar de servicio'],
+      accionesRealizadas: [
+        'Limpieza externa de unidad principal, pantalla, botones y superficies de contacto',
+        'Limpieza y desinfección del transductor según recomendación del fabricante e institución',
+        'Retiro de residuos de gel conductor en sonda, cable y carcasa',
+        'Verificación de carcasa, pantalla, botones, altavoz, conectores y etiquetas',
+        'Verificación de transductor obstétrico, cable y conector',
+        'Verificación de batería, compartimiento, contactos, indicador de batería y autonomía funcional',
+        'Prueba funcional con simulador de FCF, phantom acústico o método institucional equivalente',
+        'Verificación de lectura de frecuencia cardíaca fetal en puntos de prueba disponibles',
+        'Verificación de modos de operación, volumen, retroiluminación y salida de audio si aplica',
+        'Verificación de apagado automático, limpieza final, secado, almacenamiento y accesorios',
+        'Recomendación de reposición de batería, cargador, sonda o accesorios por deterioro',
+        'Remisión a servicio técnico autorizado EDAN o proveedor especializado'
+      ]
+    },
+
+
     'rayos_x_portatil_carestream_motion_mobile': {
       nombre: 'Equipo de Rayos X (Portátil) Carestream Motion Mobile',
       categoria: 'Biomédico',
