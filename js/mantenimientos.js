@@ -1153,6 +1153,72 @@
       ]
     },
 
+
+    'bano_serologico_memmert_wmb10': {
+      nombre: 'Baño Serológico MEMMERT WMB-10',
+      categoria: 'Biomédico / Laboratorio',
+      codigo: 'SLV-GAT-BIO-BS-WMB10',
+      frecuencia: ['Semestral', 'Anual'],
+      condicionesPrevias: [
+        'Verifique que el baño serológico se encuentre fuera de uso, desconectado de la red eléctrica y a temperatura segura antes de iniciar la inspección.',
+        'Confirme disponibilidad de termómetro patrón o datalogger de temperatura calibrado, cronómetro, agua destilada/desmineralizada, paños suaves y elementos de protección personal.',
+        'Drene el agua del tanque si se observan residuos, turbidez, biopelícula, precipitados o contaminación; no realice pruebas con muestras biológicas en el interior.',
+        'No opere el equipo en seco; antes del encendido confirme nivel de agua suficiente para cubrir la resistencia o zona de calentamiento según diseño del equipo.',
+        'No utilice materiales inflamables, solventes, sustancias corrosivas ni elementos que puedan dañar el tanque de acero inoxidable.',
+        'No intervenga tarjeta electrónica, resistencia, sensores, termostatos internos ni cableado durante el preventivo rutinario; las reparaciones internas deben ser realizadas por servicio técnico autorizado.',
+        'Si se evidencian fuga de agua, daño eléctrico, sobretemperatura, error persistente, corrosión severa o desviación térmica fuera de tolerancia, retire de servicio y reporte para mantenimiento correctivo.'
+      ],
+      inspeccion: [
+        { id: 'wmb10i1', item: 'Carcasa exterior, panel frontal, tapa y bordes sin golpes, grietas, deformaciones, corrosión ni partes sueltas' },
+        { id: 'wmb10i2', item: 'Tanque/cuba de acero inoxidable íntegro, limpio, sin picaduras, incrustaciones, fisuras ni residuos adheridos' },
+        { id: 'wmb10i3', item: 'Tapa, bisagras o accesorios de cubierta en buen estado, con cierre y apoyo adecuados si aplica' },
+        { id: 'wmb10i4', item: 'Gradillas, soportes o placas internas limpias, firmes, sin corrosión ni deformaciones que afecten el uso' },
+        { id: 'wmb10i5', item: 'Cable de alimentación, clavija, interruptor y fusible accesible en buen estado, sin cortes, calentamiento, sulfatación ni empalmes' },
+        { id: 'wmb10i6', item: 'Pantalla, perillas, teclas o controles de temperatura legibles y funcionales' },
+        { id: 'wmb10i7', item: 'Sensor de temperatura visible o zona de medición sin obstrucciones, golpes ni acumulación de sarro' },
+        { id: 'wmb10i8', item: 'Salida de drenaje, válvula o tapón sin fugas, obstrucciones ni deterioro, si aplica al modelo instalado' },
+        { id: 'wmb10i9', item: 'Base, apoyos y superficie de ubicación nivelados, estables y alejados de bordes o fuentes de salpicadura' },
+        { id: 'wmb10i10', item: 'Etiquetas de identificación, advertencias, activo fijo y número de serie legibles y coincidentes con inventario' },
+        { id: 'wmb10i11', item: 'Limpieza externa realizada con paño suave ligeramente humedecido, evitando ingreso de líquidos al panel eléctrico' },
+        { id: 'wmb10i12', item: 'Limpieza interna realizada con producto compatible con acero inoxidable, sin abrasivos ni elementos cortopunzantes' }
+      ],
+      verificacionBasica: [
+        { id: 'wmb10vb1', item: 'El equipo enciende correctamente, la pantalla/indicador responde y no presenta mensajes de error persistentes' },
+        { id: 'wmb10vb2', item: 'El control permite configurar el punto de temperatura y conserva el valor programado durante la operación' },
+        { id: 'wmb10vb3', item: 'El calentamiento inicia de forma progresiva con nivel de agua adecuado y sin olor eléctrico, chispa o ruido anormal' },
+        { id: 'wmb10vb4', item: 'La indicación de temperatura aumenta de manera coherente frente a la medición del termómetro patrón' },
+        { id: 'wmb10vb5', item: 'El termostato/control corta y regula al aproximarse al punto programado, sin sobrepaso crítico' },
+        { id: 'wmb10vb6', item: 'La cuba mantiene hermeticidad durante la prueba, sin fugas en base, drenaje o uniones visibles' },
+        { id: 'wmb10vb7', item: 'El temporizador, alarma o función de retención responde correctamente, si aplica a la versión instalada' }
+      ],
+      pruebasFuncionales: [
+        { id: 'wmb10pf1', prueba: 'Encendido inicial con nivel de agua operativo', valorEsperado: 'Arranque normal, indicador activo y ausencia de mensajes de error, chispa, olor eléctrico o calentamiento externo anormal', resultado: ['Pasa', 'Falla'] },
+        { id: 'wmb10pf2', prueba: 'Programación de punto de temperatura bajo para verificación', valorEsperado: 'Permite configurar 37 °C y mantener el valor programado sin cambios espontáneos', resultado: ['Pasa', 'Falla'] },
+        { id: 'wmb10pf3', prueba: 'Verificación de temperatura a 37 °C con termómetro patrón estabilizado', valorEsperado: 'Lectura del baño dentro de ± 1 °C respecto al patrón o según criterio metrológico institucional', resultado: ['Pasa', 'Falla'] },
+        { id: 'wmb10pf4', prueba: 'Estabilidad térmica a 37 °C durante 10 minutos', valorEsperado: 'Variación máxima ≤ ± 0,5 °C después de estabilización', resultado: ['Pasa', 'Falla'] },
+        { id: 'wmb10pf5', prueba: 'Uniformidad térmica en tres puntos de la cuba a 37 °C', valorEsperado: 'Diferencia entre puntos ≤ 1 °C con tapa cerrada y nivel de agua adecuado', resultado: ['Pasa', 'Falla'] },
+        { id: 'wmb10pf6', prueba: 'Programación de punto de temperatura medio', valorEsperado: 'Permite configurar 56 °C y alcanzar el punto sin oscilaciones anormales', resultado: ['Pasa', 'Falla'] },
+        { id: 'wmb10pf7', prueba: 'Verificación de temperatura a 56 °C con termómetro patrón estabilizado', valorEsperado: 'Lectura del baño dentro de ± 1 °C respecto al patrón o según criterio metrológico institucional', resultado: ['Pasa', 'Falla'] },
+        { id: 'wmb10pf8', prueba: 'Recuperación térmica después de abrir tapa durante 30 segundos', valorEsperado: 'La temperatura retorna progresivamente al set point sin error ni apagado inesperado', resultado: ['Pasa', 'Falla'] },
+        { id: 'wmb10pf9', prueba: 'Verificación de temporizador/retención de tiempo, si aplica', valorEsperado: 'Conteo funcional y finalización/alarma correcta según configuración del equipo', resultado: ['Aplica', 'N/A'] },
+        { id: 'wmb10pf10', prueba: 'Prueba de fuga con cuba llena al nivel operativo durante 15 minutos', valorEsperado: 'Sin goteo, humedad anormal en base, válvula, drenaje o conexión eléctrica', resultado: ['Pasa', 'Falla'] },
+        { id: 'wmb10pf11', prueba: 'Seguridad por operación sin sobretemperatura visible', valorEsperado: 'No se evidencian ebullición no programada, sobrepaso crítico ni calentamiento excesivo de superficies de contacto', resultado: ['Pasa', 'Falla'] },
+        { id: 'wmb10pf12', prueba: 'Apagado y reinicio controlado', valorEsperado: 'El equipo apaga correctamente y reinicia sin pérdida anormal de funciones básicas ni error persistente', resultado: ['Pasa', 'Falla'] }
+      ],
+      estadoFinal: ['Apto para uso', 'Apto con observaciones', 'No apto / retirar de servicio'],
+      accionesRealizadas: [
+        'Limpieza externa de carcasa, tapa y controles',
+        'Limpieza interna de cuba de acero inoxidable',
+        'Cambio de agua por agua destilada/desmineralizada',
+        'Verificación de cable de alimentación, clavija e interruptor',
+        'Verificación funcional de calentamiento y control de temperatura',
+        'Verificación de temperatura con termómetro patrón',
+        'Prueba de estabilidad y uniformidad térmica',
+        'Verificación de drenaje, válvula o tapón',
+        'Recomendación de mantenimiento correctivo / retiro de servicio'
+      ]
+    },
+
     'rayos_x_portatil_carestream_motion_mobile': {
       nombre: 'Equipo de Rayos X (Portátil) Carestream Motion Mobile',
       categoria: 'Biomédico',
