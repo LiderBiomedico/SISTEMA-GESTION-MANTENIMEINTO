@@ -1,0 +1,1738 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<!-- PWA Core -->
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#15803d">
+
+<!-- iOS PWA -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Vascular AI">
+<link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="152x152" href="/assets/icons/icon-152x152.png">
+<link rel="apple-touch-icon" sizes="192x192" href="/assets/icons/icon-192x192.png">
+
+<!-- Android / Chrome -->
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="application-name" content="Vascular AI">
+
+<!-- Windows / Edge -->
+<meta name="msapplication-TileImage" content="/assets/icons/icon-144x144.png">
+<meta name="msapplication-TileColor" content="#15803d">
+
+<!-- SEO / Share -->
+<meta name="description" content="Modelo Predictivo para Prevención de Flebitis - Hospital Susana López de Valencia E.S.E.">
+<meta property="og:title" content="VASCULAR AI + MAVI">
+<meta property="og:description" content="Análisis vascular inteligente con escalas VIP y Maddox automáticas">
+<meta property="og:image" content="/assets/icons/icon-512x512.png">
+
+<!-- Favicon -->
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/favicon-16.png">
+
+<title>VASCULAR AI + MAVI v5.0</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --g1:#15803d;--g2:#166534;
+  --safe-bg:#f0fdf4;--safe-bd:#22c55e;--safe-tx:#15803d;
+  --warn-bg:#fffbeb;--warn-bd:#f59e0b;--warn-tx:#92400e;
+  --dang-bg:#fef2f2;--dang-bd:#ef4444;--dang-tx:#991b1b;
+  --radius:12px;--card-shadow:0 2px 12px rgba(0,0,0,.08);
+}
+html,body{height:100%;overflow-x:hidden}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f1f5f9;color:#1e293b;font-size:15px;}
+
+/* ── PWA INSTALL BANNER ── */
+#pwa-banner{display:flex!important;align-items:center;gap:10px;background:linear-gradient(90deg,#15803d,#166534);padding:11px 14px;z-index:200;}
+#pwa-banner .pwa-icon{width:36px;height:36px;border-radius:9px;flex-shrink:0;background:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;}
+#pwa-banner .pwa-txt{flex:1;min-width:0}
+#pwa-banner .pwa-txt strong{display:block;font-size:13px;font-weight:700;color:#fff}
+#pwa-banner .pwa-txt span{font-size:11px;color:rgba(255,255,255,.85);display:block}
+#pwa-btn{background:#fff;color:#15803d;border:none;border-radius:16px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;flex-shrink:0;}
+#pwa-close{background:none;border:none;color:rgba(255,255,255,.8);font-size:24px;cursor:pointer;padding:0 4px;flex-shrink:0;line-height:1}
+#pwa-banner[style*="none"]{display:none!important}
+.hdr{background:linear-gradient(135deg,#15803d,#166534);color:#fff;padding:12px 16px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.2);}
+.hdr-inner{display:flex;align-items:center;justify-content:space-between;max-width:520px;margin:0 auto}
+.hdr h1{font-size:16px;font-weight:700;letter-spacing:-.3px}
+.hdr p{font-size:10px;opacity:.85;margin-top:1px}
+.badge-v{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+
+/* ── TABS ── */
+.tabs{display:flex;background:#fff;border-bottom:2px solid #e2e8f0;position:sticky;top:56px;z-index:99;max-width:520px;margin:0 auto;}
+.tab{flex:1;padding:10px 6px;text-align:center;font-size:11px;font-weight:600;color:#64748b;cursor:pointer;border:none;background:none;transition:.2s;border-bottom:3px solid transparent;margin-bottom:-2px;}
+.tab.act{color:var(--g1);border-bottom-color:var(--g1);}
+
+/* ── CONTENT ── */
+.content{max-width:520px;margin:0 auto;padding:10px 10px 80px}
+.panel{display:none}.panel.act{display:block}
+
+/* ── CARDS ── */
+.card{background:#fff;border-radius:var(--radius);box-shadow:var(--card-shadow);margin-bottom:10px;overflow:hidden}
+.card-hdr{padding:10px 14px;border-bottom:1px solid #f1f5f9;font-size:13px;font-weight:700;color:#1e293b;display:flex;align-items:center;gap:7px}
+.card-body{padding:12px}
+
+/* ── VIEWPORT CÁMARA ── */
+.vp{position:relative;background:#0f172a;border-radius:10px;width:100%;aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+#vid,#prev{width:100%;height:100%;object-fit:cover;display:none}
+#cvs{display:none}
+.ph{display:flex;flex-direction:column;align-items:center;gap:10px;color:#64748b;text-align:center;padding:16px}
+.ph svg{width:44px;height:44px;opacity:.3}
+.ph p{font-size:12px;line-height:1.5;color:#94a3b8}
+.scan{position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#22c55e,transparent);animation:sd 1.8s linear infinite;display:none;pointer-events:none}
+@keyframes sd{0%{top:0}100%{top:100%}}
+.crn span{position:absolute;width:20px;height:20px;border:2.5px solid #22c55e;opacity:0;transition:.3s}
+.crn span:nth-child(1){top:10px;left:10px;border-right:none;border-bottom:none}
+.crn span:nth-child(2){top:10px;right:10px;border-left:none;border-bottom:none}
+.crn span:nth-child(3){bottom:10px;left:10px;border-right:none;border-top:none}
+.crn span:nth-child(4){bottom:10px;right:10px;border-left:none;border-top:none}
+.vp.sc .crn span{opacity:1}.vp.sc .scan{display:block}
+.zbadge{position:absolute;top:10px;left:50%;transform:translateX(-50%);padding:4px 13px;border-radius:20px;font-size:12px;font-weight:700;color:#fff;display:none;white-space:nowrap;box-shadow:0 2px 10px rgba(0,0,0,.4);backdrop-filter:blur(4px);}
+.cbar{position:absolute;bottom:10px;left:12px;right:12px;background:rgba(0,0,0,.6);border-radius:8px;padding:7px 10px;display:none}
+.cbar-lbl{font-size:10px;color:#94a3b8;margin-bottom:3px}
+.cbar-tr{height:5px;background:#1e293b;border-radius:3px;overflow:hidden}
+.cbar-fl{height:100%;background:linear-gradient(90deg,#22c55e,#16a34a);border-radius:3px;transition:width .7s ease}
+
+/* ── BOTONES ── */
+.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:10px}
+.btn{display:flex;align-items:center;justify-content:center;gap:7px;border:none;border-radius:10px;padding:12px 10px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;-webkit-appearance:none;min-height:46px;}
+.btn:active{transform:scale(.97)}
+.btn-gal{background:#4f46e5;color:#fff}.btn-gal:active{background:#4338ca}
+.btn-cam{background:var(--g1);color:#fff}.btn-cam:active{background:var(--g2)}
+.btn-cap{width:100%;margin-top:9px;background:#fff;color:var(--g1);border:2px solid var(--g1);display:none}
+.btn-ia{width:100%;margin-top:9px;background:linear-gradient(135deg,#0ea5e9,#0284c7);color:#fff;font-size:14px;padding:13px;}
+.btn-ia:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.spin{width:18px;height:18px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:rot .7s linear infinite;display:none;flex-shrink:0}
+@keyframes rot{to{transform:rotate(360deg)}}
+.stbar{display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:9px;font-size:12px;margin-top:9px}
+.st-idle{background:#f1f5f9;color:#64748b}.st-load{background:#eff6ff;color:#1d4ed8}.st-ok{background:var(--safe-bg);color:var(--safe-tx)}.st-err{background:var(--dang-bg);color:var(--dang-tx)}
+.sdot{width:9px;height:9px;border-radius:50%;flex-shrink:0;background:currentColor;opacity:.7}
+.st-load .sdot{animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:.7}50%{opacity:.2}}
+.ai-box{display:none;margin-top:12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:13px}
+.ai-ttl{font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:9px}
+.ai-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 13px;border-radius:20px;font-size:13px;font-weight:700;color:#fff;margin-bottom:9px}
+.ai-desc{font-size:13px;color:#475569;line-height:1.55}
+.ai-find{margin-top:8px;padding:9px 11px;background:#fff;border-radius:8px;border-left:3px solid var(--g1)}
+.ai-find p{font-size:12px;color:#374151;margin:3px 0;line-height:1.45}
+.ai-rec{margin-top:6px;font-weight:700;color:var(--g1) !important}
+.hist-ttl{font-size:12px;font-weight:600;color:#374151;margin:12px 0 6px}
+.strip{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;-webkit-overflow-scrolling:touch}
+.pt-wrap{position:relative;flex-shrink:0}
+.pt{width:60px;height:60px;border-radius:10px;object-fit:cover;border:2px solid #e2e8f0;cursor:pointer;display:block;transition:.2s}
+.pt.act,.pt:active{border-color:var(--g1);box-shadow:0 0 0 2px rgba(21,128,61,.2)}
+.pt-tag{position:absolute;bottom:0;left:0;right:0;text-align:center;font-size:8px;font-weight:700;color:#fff;background:rgba(0,0,0,.65);padding:2px;border-radius:0 0 8px 8px}
+.empty-h{font-size:12px;color:#94a3b8;font-style:italic}
+input[type=file]{display:none}
+
+/* ══════════════════════════════════════
+   DIAGRAMA ANATÓMICO — NUEVO DISEÑO
+   Imágenes visibles sin scroll, 3 cols
+══════════════════════════════════════ */
+.anat-header{text-align:center;margin-bottom:10px}
+.anat-header h4{font-size:13px;font-weight:700;color:#1e293b;margin-bottom:3px}
+.anat-header p{font-size:11px;color:#64748b}
+
+/* Grid de 3 columnas siempre visible */
+.arm-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%}
+.arm-col{display:flex;flex-direction:column;align-items:center;gap:6px}
+.arm-col-title{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:#475569;text-align:center;line-height:1.3}
+.arm-col-sub{font-size:8px;color:#94a3b8;text-align:center;line-height:1.3;margin-top:-2px}
+
+/* Stage: relativo a imagen SVG interna */
+.arm-stage{
+  position:relative;width:100%;
+  /* Altura fija proporcional en mobile */
+  height:260px;
+  border-radius:12px;
+  background:radial-gradient(circle at top,#fff 0%,#f8fafc 70%,#f1f5f9 100%);
+  border:1px solid #e5e7eb;
+  overflow:hidden;
+  box-shadow:0 3px 10px rgba(0,0,0,.06);
+}
+/* Imagen del brazo, centrada y responsive */
+.arm-img{
+  position:absolute;
+  left:50%;top:8px;
+  transform:translateX(-50%);
+  width:70%;max-width:110px;
+  height:calc(100% - 16px);
+  object-fit:contain;
+  display:block;
+  filter:drop-shadow(0 4px 10px rgba(15,23,42,.12));
+  pointer-events:none;
+}
+/* Fallback SVG cuando no hay imagen real */
+.arm-svg-fallback{
+  position:absolute;left:50%;top:8px;
+  transform:translateX(-50%);
+  width:65%;height:calc(100% - 16px);
+}
+
+/* Botones de zona — flotando sobre la imagen */
+.zone-btn{
+  position:absolute;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;
+  border-radius:999px;
+  padding:5px 8px;
+  cursor:pointer;
+  border:2.5px solid currentColor;
+  background:rgba(255,255,255,.82);
+  backdrop-filter:blur(2px);
+  box-shadow:0 4px 12px rgba(0,0,0,.1);
+  opacity:.45;
+  transition:opacity .25s,transform .25s,box-shadow .25s;
+  font-family:inherit;
+  transform:translate(-50%,-50%);
+  z-index:2;
+  min-width:64px;
+}
+.zone-btn:active{transform:translate(-50%,-50%) scale(.95)}
+.zone-btn.act{
+  opacity:1 !important;
+  box-shadow:0 8px 20px rgba(0,0,0,.18);
+  transform:translate(-50%,-50%) scale(1.04);
+}
+.zone-btn .zl{font-size:8px;font-weight:900;line-height:1.1;pointer-events:none}
+.zone-btn .zm{font-size:7px;font-weight:700;line-height:1.1;margin-top:2px;pointer-events:none}
+
+/* Posiciones de zonas — en % para ser responsivas */
+/* Columna izquierda (supinación) */
+.z-central{left:50%;top:14%;color:#dc2626;background:rgba(254,226,226,.88);width:68px}
+.z-fosa{left:50%;top:40%;color:#4f46e5;background:rgba(237,233,254,.88);width:68px}
+.z-antebrazo{left:50%;top:66%;color:#16a34a;background:rgba(220,252,231,.88);width:72px}
+.z-muneca{left:50%;top:86%;color:#ea580c;background:rgba(255,237,213,.88);width:64px}
+/* Columna derecha (pronación) */
+.z-dorso{left:50%;top:80%;color:#a21caf;background:rgba(250,232,255,.88);width:72px}
+
+/* Etiqueta neutra */
+.z-neutral-lbl{
+  position:absolute;left:50%;top:70%;
+  transform:translate(-50%,-50%);
+  font-size:8px;font-weight:700;color:#0f766e;
+  background:rgba(204,251,241,.9);
+  border:2px solid #0f766e;border-radius:20px;
+  padding:4px 8px;text-align:center;line-height:1.2;
+  pointer-events:none;
+}
+
+/* Leyenda compacta */
+.zone-legend{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:10px}
+.li{display:flex;align-items:center;gap:6px;font-size:11px;color:#374151;padding:6px 9px;border-radius:8px;border:2px solid transparent;cursor:pointer;transition:.2s;min-height:36px}
+.li.act{font-weight:700;border-color:currentColor;background:#f8fafc}
+.ldot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+
+/* ── CVR ── */
+.cvr-card{border:2px solid #e2e8f0;border-radius:10px;padding:14px;text-align:center;transition:.4s;width:100%}
+.cvr-safe{border-color:var(--safe-bd);background:var(--safe-bg)}.cvr-warn{border-color:var(--warn-bd);background:var(--warn-bg)}.cvr-dang{border-color:var(--dang-bd);background:var(--dang-bg)}
+.cvr-lbl{font-size:11px;color:#64748b;margin-bottom:4px}
+.cvr-num{font-size:38px;font-weight:800;line-height:1;letter-spacing:-1px}
+.cvr-safe .cvr-num{color:#16a34a}.cvr-warn .cvr-num{color:#92400e}.cvr-dang .cvr-num{color:#991b1b}
+.cvr-st{font-size:11px;font-weight:600;margin-top:5px;color:#374151;line-height:1.4}
+
+/* Barra de riesgo visual */
+.risk-bar-wrap{margin:12px 0 6px}
+.risk-bar-lbl{font-size:11px;color:#64748b;margin-bottom:5px;display:flex;justify-content:space-between}
+.risk-bar-track{height:8px;border-radius:4px;background:linear-gradient(90deg,#22c55e 0%,#f59e0b 33%,#ef4444 45%,#991b1b 100%);position:relative}
+.risk-bar-cursor{position:absolute;top:-4px;width:4px;height:16px;background:#1e293b;border-radius:2px;transform:translateX(-50%);transition:left .6s ease;box-shadow:0 0 0 2px #fff}
+
+/* ── CATÉTERES ── */
+.sec-lbl{font-size:11px;font-weight:600;color:#64748b;margin:10px 0 5px}
+.cg{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:3px}
+.cb{padding:8px 5px;border-radius:9px;border:2px solid #e2e8f0;background:#fff;text-align:center;cursor:pointer;transition:.2s;font-size:12px;font-weight:600;color:#374151;min-height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.cb:active{transform:scale(.97)}.cb.act{border-color:var(--g1);background:var(--safe-bg);color:var(--g1)}
+.cb small{display:block;font-size:9px;font-weight:400;color:#94a3b8;margin-top:2px}.cb.act small{color:#16a34a}
+
+/* ══ ESCALA VIP ══ */
+.vip-scale{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.vip-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;border:2px solid transparent;transition:.2s}
+.vip-row.act{border-color:currentColor}
+.vip-badge{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:#fff;flex-shrink:0}
+.vip-info{flex:1}
+.vip-grade{font-size:12px;font-weight:700}
+.vip-desc{font-size:10px;color:#64748b;margin-top:1px;line-height:1.3}
+.vip-action{font-size:10px;font-weight:600;margin-top:2px}
+.vip-selected{margin-top:10px;padding:12px;border-radius:10px;font-size:12px;line-height:1.5;border:2px solid}
+
+/* ══ TIMER ROTACIÓN ══ */
+.timer-card{background:linear-gradient(135deg,#1e293b,#334155);border-radius:12px;padding:14px;color:#fff}
+.timer-title{font-size:12px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
+.timer-display{text-align:center;margin:10px 0}
+.timer-clock{font-size:42px;font-weight:800;letter-spacing:-1px;font-variant-numeric:tabular-nums}
+.timer-clock.ok{color:#22c55e}.timer-clock.warn{color:#f59e0b}.timer-clock.over{color:#ef4444}
+.timer-sub{font-size:11px;color:#94a3b8;margin-top:3px}
+.timer-limit{font-size:11px;color:#64748b;text-align:center;margin-bottom:10px}
+.timer-btns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
+.tbtn{padding:10px 5px;border:none;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;transition:.15s}
+.tbtn:active{transform:scale(.97)}
+.tbtn-start{background:#22c55e;color:#fff}.tbtn-pause{background:#f59e0b;color:#fff}.tbtn-reset{background:#475569;color:#fff}
+.rotation-log{margin-top:12px;max-height:120px;overflow-y:auto}
+.rot-entry{font-size:10px;color:#94a3b8;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+
+/* ══ ANÁLISIS EXPANDIDO ══ */
+.risk-summary{border-radius:12px;padding:14px;margin-bottom:10px;border:2px solid}
+.risk-summary h4{font-size:13px;font-weight:700;margin-bottom:8px}
+.risk-item{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(0,0,0,.05);font-size:12px}
+.risk-item:last-child{border-bottom:none}
+.risk-pill{padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;color:#fff}
+.pill-safe{background:#22c55e}.pill-warn{background:#f59e0b}.pill-dang{background:#ef4444}
+
+.recommendations{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;margin-top:10px}
+.rec-title{font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px}
+.rec-item{display:flex;align-items:flex-start;gap:8px;margin-bottom:7px;font-size:12px;color:#374151;line-height:1.4}
+.rec-icon{flex-shrink:0;margin-top:1px}
+
+/* ══ CHECKLIST PRE-PUNCIÓN ══ */
+.checklist{display:flex;flex-direction:column;gap:5px}
+.chk-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;border:1.5px solid #e2e8f0;background:#fff;cursor:pointer;transition:.2s;font-size:12px;color:#374151}
+.chk-item.checked{border-color:#22c55e;background:#f0fdf4;color:#15803d}
+.chk-box{width:20px;height:20px;border-radius:5px;border:2px solid #d1d5db;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;transition:.2s}
+.chk-item.checked .chk-box{background:#22c55e;border-color:#22c55e;color:#fff}
+.chk-score{text-align:center;margin-top:12px;padding:12px;border-radius:10px;font-size:13px;font-weight:700}
+
+/* Animación entrada */
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.panel.act{animation:fadeIn .25s ease}
+
+.info-nota{background:#fffbeb;border:1px solid #fef3c7;border-radius:9px;padding:10px 12px;font-size:11px;color:#92400e;line-height:1.5}
+
+/* ══ ESCALA MADDOX ══ */
+.maddox-tabs{display:flex;background:#f1f5f9;border-radius:10px;padding:3px;gap:3px;margin-bottom:12px}
+.mx-tab{flex:1;padding:7px 4px;border:none;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;background:transparent;color:#64748b;transition:.2s;text-align:center}
+.mx-tab.act{background:#fff;color:var(--g1);box-shadow:0 1px 4px rgba(0,0,0,.1)}
+.mx-panel{display:none}.mx-panel.act{display:block}
+
+.maddox-scale{display:flex;flex-direction:column;gap:5px;margin-top:8px}
+.mx-row{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:9px;cursor:pointer;border:2px solid transparent;transition:.2s}
+.mx-row:active{transform:scale(.99)}
+.mx-row.act{border-color:currentColor;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+.mx-badge{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;color:#fff;flex-shrink:0}
+.mx-info{flex:1}
+.mx-grade{font-size:12px;font-weight:700;line-height:1.2}
+.mx-desc{font-size:10px;color:#64748b;margin-top:2px;line-height:1.3}
+.mx-action{font-size:10px;font-weight:600;margin-top:3px}
+.mx-result{margin-top:10px;padding:12px;border-radius:10px;font-size:12px;line-height:1.5;border:2px solid;display:none}
+
+/* Barra comparativa VIP vs Maddox */
+.scale-compare{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;margin-top:10px}
+.compare-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:12px}
+.compare-badge{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;color:#fff}
+.mx-ai-banner{background:linear-gradient(135deg,#0f172a,#1e293b);color:#fff;border-radius:10px;padding:12px 14px;margin-bottom:10px;font-size:12px;display:none;line-height:1.6;border-left:4px solid #22c55e}
+.mx-ai-banner strong{display:block;font-size:13px;margin-bottom:4px;color:#22c55e}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="hdr">
+  <div class="hdr-inner">
+    <div style="display:flex;align-items:center;gap:10px">
+      <img src="/assets/icons/icon-72x72.png" alt="Vascular AI" style="width:36px;height:36px;border-radius:9px;box-shadow:0 2px 6px rgba(0,0,0,.25)">
+      <div>
+        <h1>VASCULAR AI + MAVI</h1>
+        <p>Análisis Vascular Inteligente · Hospital Susana López de Valencia E.S.E.</p>
+      </div>
+    </div>
+    <span class="badge-v">v5.0</span>
+  </div>
+</div>
+
+<!-- BANNER DE INSTALACIÓN PWA -->
+<div id="pwa-banner">
+  <div class="pwa-icon">🌿</div>
+  <div class="pwa-txt">
+    <strong>Instalar Vascular AI</strong>
+    <span id="pwa-sub">Acceso rápido desde tu pantalla de inicio</span>
+  </div>
+  <button id="pwa-btn" onclick="installPWA()">⬇️ Instalar</button>
+  <button id="pwa-close" onclick="hideInstallBanner()" title="Cerrar">×</button>
+</div>
+
+<!-- TABS DE NAVEGACIÓN -->
+<div class="tabs">
+  <button class="tab act" onclick="showPanel('p-foto',this)">📸 Foto</button>
+  <button class="tab" onclick="showPanel('p-anat',this)">🫀 Anatómico</button>
+  <button class="tab" onclick="showPanel('p-cvr',this)">📊 CVR</button>
+  <button class="tab" onclick="showPanel('p-vip',this)">🔬 VIP</button>
+  <button class="tab" onclick="showPanel('p-timer',this)">⏱️ Timer</button>
+  <button class="tab" onclick="showPanel('p-check',this)">✅ Check</button>
+</div>
+
+<div class="content">
+
+<!-- ══════════════════════════════════════
+     TAB 1: FOTOGRAFÍA + IA
+══════════════════════════════════════ -->
+<div class="panel act" id="p-foto">
+  <div class="card">
+    <div class="card-hdr">📸 Fotografía del sitio de inserción</div>
+    <div class="card-body">
+      <div class="vp" id="vp">
+        <div class="scan"></div>
+        <div class="crn"><span></span><span></span><span></span><span></span></div>
+        <video id="vid" autoplay muted playsinline></video>
+        <canvas id="cvs"></canvas>
+        <img id="prev" alt="Sitio de inserción">
+        <div class="ph" id="phs">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+            <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+            <circle cx="12" cy="13" r="4"/>
+          </svg>
+          <p>Toca los botones para capturar<br>o subir una foto del acceso venoso</p>
+        </div>
+        <div class="zbadge" id="zbadge"></div>
+        <div class="cbar" id="cbar">
+          <div class="cbar-lbl">Confianza del análisis</div>
+          <div class="cbar-tr"><div class="cbar-fl" id="cfl" style="width:0%"></div></div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-gal" onclick="document.getElementById('fg').click()">🖼️ Galería</button>
+        <button class="btn btn-cam" id="bcam" onclick="toggleCam()">📷 Cámara</button>
+      </div>
+      <input type="file" id="fg" accept="image/*" onchange="loadFile(event)">
+      <input type="file" id="fc" accept="image/*" capture="environment" onchange="loadFile(event)">
+      <button class="btn btn-cap" id="bcap" onclick="snap()">🔴 Capturar foto</button>
+      <button class="btn btn-ia" id="bia" onclick="analyze()" disabled>
+        <div class="spin" id="sp"></div>
+        <span id="ialbl">🤖 Analizar zona con IA</span>
+      </button>
+      <div class="stbar st-idle" id="stb">
+        <div class="sdot"></div>
+        <span id="stxt">Esperando imagen...</span>
+      </div>
+      <div class="ai-box" id="aibox">
+        <div class="ai-ttl">🤖 Análisis — Inteligencia Artificial</div>
+        <div class="ai-chip" id="aichip"></div>
+        <div class="ai-desc" id="aidesc"></div>
+        <div class="ai-find" id="aifind"></div>
+      </div>
+      <div class="hist-ttl">🕐 Historial fotográfico del turno</div>
+      <div class="strip" id="strip"><span class="empty-h">Sin fotos registradas</span></div>
+    </div>
+  </div>
+  <div class="info-nota">⚠️ Herramienta de apoyo clínico. Las decisiones finales deben ser tomadas por personal médico calificado.</div>
+</div>
+
+<!-- ══════════════════════════════════════
+     TAB 2: DIAGRAMA ANATÓMICO — SIEMPRE VISIBLE, INTERACTIVO
+══════════════════════════════════════ -->
+<div class="panel" id="p-anat">
+  <div class="card">
+    <div class="card-hdr">🫀 Diagrama anatómico interactivo</div>
+    <div class="card-body">
+      <div class="anat-header">
+        <h4>Toca la zona de punción en el brazo</h4>
+        <p>Zona activa: <strong id="zona-activa-lbl" style="color:var(--g1)">Antebrazo (∅ 3.0 mm)</strong></p>
+      </div>
+
+      <!-- GRID 3 COLUMNAS SIN SCROLL -->
+      <div class="arm-grid">
+
+        <!-- COLUMNA 1: SUPINACIÓN -->
+        <div class="arm-col">
+          <div class="arm-col-title">Vista interna</div>
+          <div class="arm-col-sub">Supinación</div>
+          <div class="arm-stage">
+            <img class="arm-img" src="./assets/arm-supination.png" alt="Brazo en supinación con palma visible">
+
+            <!-- Zona: Central (parte superior del brazo/hombro) -->
+            <button class="zone-btn z-central" id="zc" onclick="selectZone('central')">
+              <span class="zl">Vía Central</span>
+              <span class="zm">Yugular/Subclavia</span>
+            </button>
+            <!-- Zona: Fosa antecubital -->
+            <button class="zone-btn z-fosa" id="zf" onclick="selectZone('fosa')">
+              <span class="zl">Fosa antecubital</span>
+              <span class="zm">∅ 4.5 mm</span>
+            </button>
+            <!-- Zona: Antebrazo -->
+            <button class="zone-btn z-antebrazo" id="za" onclick="selectZone('antebrazo')">
+              <span class="zl">Antebrazo</span>
+              <span class="zm">∅ 3.0 mm</span>
+            </button>
+            <!-- Zona: Muñeca -->
+            <button class="zone-btn z-muneca" id="zm" onclick="selectZone('muneca')">
+              <span class="zl">Muñeca</span>
+              <span class="zm">∅ 2.0 mm</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- COLUMNA 2: NEUTRAL -->
+        <div class="arm-col">
+          <div class="arm-col-title">Posición neutral</div>
+          <div class="arm-col-sub">Referencia</div>
+          <div class="arm-stage">
+            <img class="arm-img" src="./assets/arm-neutral.png" alt="Brazo en posición neutral">
+            <!-- Etiqueta neutra (no clickeable) -->
+            <div class="z-neutral-lbl">Posición neutral<br>Referencia</div>
+          </div>
+        </div>
+
+        <!-- COLUMNA 3: PRONACIÓN -->
+        <div class="arm-col">
+          <div class="arm-col-title">Vista externa</div>
+          <div class="arm-col-sub">Pronación</div>
+          <div class="arm-stage">
+            <img class="arm-img" src="./assets/arm-pronation.png" alt="Brazo en pronación con dorso de la mano visible">
+
+            <!-- Zona: Dorso mano -->
+            <button class="zone-btn z-dorso" id="zd" onclick="selectZone('dorso')">
+              <span class="zl">Dorso mano</span>
+              <span class="zm">∅ 1.8 mm</span>
+            </button>
+          </div>
+        </div>
+
+      </div><!-- /arm-grid -->
+
+      <!-- LEYENDA INTERACTIVA -->
+      <div class="zone-legend" style="margin-top:12px">
+        <div class="li act" id="la" style="color:#16a34a" onclick="selectZone('antebrazo')">
+          <div class="ldot" style="background:#22c55e"></div>Antebrazo
+        </div>
+        <div class="li" id="lf" style="color:#4338ca" onclick="selectZone('fosa')">
+          <div class="ldot" style="background:#818cf8"></div>Fosa antecubital
+        </div>
+        <div class="li" id="lm" style="color:#ea580c" onclick="selectZone('muneca')">
+          <div class="ldot" style="background:#fb923c"></div>Muñeca
+        </div>
+        <div class="li" id="ld" style="color:#a21caf" onclick="selectZone('dorso')">
+          <div class="ldot" style="background:#d946ef"></div>Dorso mano
+        </div>
+        <div class="li" id="lc" style="color:#dc2626" onclick="selectZone('central')">
+          <div class="ldot" style="background:#ef4444"></div>Vía central
+        </div>
+      </div>
+
+      <!-- Panel de info de zona seleccionada -->
+      <div id="zone-info-panel" style="margin-top:12px;padding:12px;border-radius:10px;border:2px solid #22c55e;background:#f0fdf4;font-size:12px;color:#15803d;line-height:1.6">
+        <strong>📍 Antebrazo:</strong> Zona estable de elección para acceso venoso periférico. Venas cefálica y basílica. Menor riesgo de flebitis mecánica por movimiento. Recomendado para: antibióticos, cristaloides, medicación estándar.
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     TAB 3: CVR + ANÁLISIS EXPANDIDO
+══════════════════════════════════════ -->
+<div class="panel" id="p-cvr">
+
+  <!-- Zona activa y catéter -->
+  <div class="card">
+    <div class="card-hdr">📊 CVR — Catheter-to-Vein Ratio</div>
+    <div class="card-body">
+      <div class="cvr-card cvr-safe" id="cc">
+        <div class="cvr-lbl">CVR (Catheter-to-Vein Ratio)</div>
+        <div class="cvr-num" id="cn">30%</div>
+        <div class="cvr-st" id="cs">Óptimo · 22G (0.9mm) en vena 3.0mm · Mínimo riesgo mecánico</div>
+      </div>
+
+      <!-- Barra visual de riesgo -->
+      <div class="risk-bar-wrap">
+        <div class="risk-bar-lbl">
+          <span style="color:#22c55e">Óptimo &lt;33%</span>
+          <span style="color:#f59e0b">Moderado 33–45%</span>
+          <span style="color:#ef4444">Alto &gt;45%</span>
+        </div>
+        <div class="risk-bar-track">
+          <div class="risk-bar-cursor" id="risk-cursor" style="left:30%"></div>
+        </div>
+      </div>
+
+      <div class="sec-lbl">Periféricos cortos</div>
+      <div class="cg">
+        <div class="cb" data-d="0.7" data-l="24G" onclick="pickC(this)">24G<small>0.7mm · Pediatría</small></div>
+        <div class="cb act" data-d="0.9" data-l="22G" onclick="pickC(this)">22G<small>0.9mm · Estándar</small></div>
+        <div class="cb" data-d="1.1" data-l="20G" onclick="pickC(this)">20G<small>1.1mm · Transfusiones</small></div>
+        <div class="cb" data-d="1.3" data-l="18G" onclick="pickC(this)">18G<small>1.3mm · Cirugía</small></div>
+        <div class="cb" data-d="1.7" data-l="16G" onclick="pickC(this)">16G<small>1.7mm · Resucitación</small></div>
+        <div class="cb" data-d="2.1" data-l="14G" onclick="pickC(this)">14G<small>2.1mm · Emergencias</small></div>
+      </div>
+      <div class="sec-lbl">Línea media / Central</div>
+      <div class="cg">
+        <div class="cb" data-d="1.9" data-l="Midline" onclick="pickC(this)">Midline<small>7.5–20cm</small></div>
+        <div class="cb" data-d="1.9" data-l="PICC" onclick="pickC(this)">PICC<small>4–5Fr · &gt;7d</small></div>
+        <div class="cb" data-d="2.3" data-l="CVC" onclick="pickC(this)">CVC<small>7–8Fr · Central</small></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Análisis expandido -->
+  <div class="card">
+    <div class="card-hdr">🔍 Análisis de riesgo multifactorial</div>
+    <div class="card-body">
+      <div id="risk-summary-panel"><!-- dinámico --></div>
+      <div class="recommendations" id="rec-panel"><!-- dinámico --></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════
+     TAB 4: ESCALAS VIP + MADDOX
+══════════════════════════════════════ -->
+<div class="panel" id="p-vip">
+
+  <div class="mx-ai-banner" id="mx-ai-banner">
+    <strong>🤖 Análisis IA completado automáticamente</strong>
+    <span id="mx-ai-banner-txt">La IA ha evaluado el sitio de inserción en ambas escalas.</span>
+  </div>
+
+  <div class="card">
+    <div class="card-hdr">🔬 Escalas de evaluación de flebitis</div>
+    <div class="card-body">
+
+      <div class="maddox-tabs">
+        <button class="mx-tab act" onclick="showMxPanel('vip',this)">📊 VIP</button>
+        <button class="mx-tab" onclick="showMxPanel('maddox',this)">🏥 Maddox</button>
+        <button class="mx-tab" onclick="showMxPanel('compare',this)">⚖️ Comparar</button>
+      </div>
+
+      <!-- ─── PANEL VIP ─── -->
+      <div class="mx-panel act" id="mx-vip">
+        <p style="font-size:11px;color:#64748b;margin-bottom:10px;line-height:1.5">Evalúa signos <strong>visuales</strong> en el sitio de inserción (Jackson, 1998):</p>
+        <div class="vip-scale">
+          <div class="vip-row" style="background:#f0fdf4;color:#15803d" onclick="selectVIP(0,this)">
+            <div class="vip-badge" style="background:#22c55e">0</div>
+            <div class="vip-info">
+              <div class="vip-grade">Sin signos</div>
+              <div class="vip-desc">Sitio de inserción sin síntomas</div>
+              <div class="vip-action" style="color:#15803d">✅ Continuar con el protocolo estándar</div>
+            </div>
+          </div>
+          <div class="vip-row" style="background:#fffbeb;color:#92400e" onclick="selectVIP(1,this)">
+            <div class="vip-badge" style="background:#84cc16">1</div>
+            <div class="vip-info">
+              <div class="vip-grade">Posible 1er signo</div>
+              <div class="vip-desc">Leve eritema y/o dolor cerca del sitio de inserción</div>
+              <div class="vip-action" style="color:#92400e">⚡ Observar el catéter</div>
+            </div>
+          </div>
+          <div class="vip-row" style="background:#fffbeb;color:#92400e" onclick="selectVIP(2,this)">
+            <div class="vip-badge" style="background:#f59e0b">2</div>
+            <div class="vip-info">
+              <div class="vip-grade">2 signos presentes</div>
+              <div class="vip-desc">Eritema y/o dolor y endurecimiento/induración</div>
+              <div class="vip-action" style="color:#b45309">⚠️ Retirar catéter, reinsertar en sitio opuesto</div>
+            </div>
+          </div>
+          <div class="vip-row" style="background:#fef2f2;color:#991b1b" onclick="selectVIP(3,this)">
+            <div class="vip-badge" style="background:#ef4444">3</div>
+            <div class="vip-info">
+              <div class="vip-grade">3 signos o más</div>
+              <div class="vip-desc">Eritema + induración + trayecto venoso palpable</div>
+              <div class="vip-action" style="color:#991b1b">🚨 Retirar catéter INMEDIATAMENTE · Notificar médico</div>
+            </div>
+          </div>
+          <div class="vip-row" style="background:#fef2f2;color:#991b1b" onclick="selectVIP(4,this)">
+            <div class="vip-badge" style="background:#dc2626">4</div>
+            <div class="vip-info">
+              <div class="vip-grade">Estadio avanzado</div>
+              <div class="vip-desc">Trayecto venoso palpable &gt;3cm + exudado purulento</div>
+              <div class="vip-action" style="color:#991b1b">🆘 Retirar catéter · Cultivo de punta · Antibióticos</div>
+            </div>
+          </div>
+        </div>
+        <div id="vip-result" class="vip-selected" style="margin-top:10px;display:none"></div>
+      </div>
+
+      <!-- ─── PANEL MADDOX ─── -->
+      <div class="mx-panel" id="mx-maddox">
+        <p style="font-size:11px;color:#64748b;margin-bottom:10px;line-height:1.5">Evalúa signos <strong>clínicos y de progresión</strong> de la flebitis (Maddox, 1977):</p>
+        <div class="maddox-scale">
+          <div class="mx-row" style="background:#f0fdf4;color:#15803d" onclick="selectMaddox(0,this)">
+            <div class="mx-badge" style="background:#22c55e">0</div>
+            <div class="mx-info">
+              <div class="mx-grade">Sin evidencia de flebitis</div>
+              <div class="mx-desc">Sitio normal, sin síntomas. Piel íntegra, sin dolor.</div>
+              <div class="mx-action" style="color:#15803d">✅ Continuar. Reevaluar en 8 horas.</div>
+            </div>
+          </div>
+          <div class="mx-row" style="background:#f7fee7;color:#3f6212" onclick="selectMaddox(1,this)">
+            <div class="mx-badge" style="background:#84cc16">1</div>
+            <div class="mx-info">
+              <div class="mx-grade">Eritema leve sin dolor</div>
+              <div class="mx-desc">Eritema discreto sin dolor palpable. No hay edema ni induración.</div>
+              <div class="mx-action" style="color:#3f6212">👁️ Observar c/4h. Documentar evolución.</div>
+            </div>
+          </div>
+          <div class="mx-row" style="background:#fffbeb;color:#92400e" onclick="selectMaddox(2,this)">
+            <div class="mx-badge" style="background:#f59e0b">2</div>
+            <div class="mx-info">
+              <div class="mx-grade">Eritema con dolor</div>
+              <div class="mx-desc">Eritema + dolor leve-moderado. Puede haber edema incipiente. Sin induración.</div>
+              <div class="mx-action" style="color:#b45309">⚡ Vigilar estrechamente. Considerar cambio preventivo.</div>
+            </div>
+          </div>
+          <div class="mx-row" style="background:#fff7ed;color:#c2410c" onclick="selectMaddox(3,this)">
+            <div class="mx-badge" style="background:#f97316">3</div>
+            <div class="mx-info">
+              <div class="mx-grade">Flebitis moderada establecida</div>
+              <div class="mx-desc">Eritema + dolor moderado + induración palpable a lo largo del trayecto venoso.</div>
+              <div class="mx-action" style="color:#c2410c">⚠️ RETIRAR catéter. Reinsertar en miembro opuesto.</div>
+            </div>
+          </div>
+          <div class="mx-row" style="background:#fef2f2;color:#991b1b" onclick="selectMaddox(4,this)">
+            <div class="mx-badge" style="background:#ef4444">4</div>
+            <div class="mx-info">
+              <div class="mx-grade">Flebitis severa</div>
+              <div class="mx-desc">Eritema extenso + induración marcada + trayecto &gt;1cm + dolor intenso. Posible cordón venoso.</div>
+              <div class="mx-action" style="color:#991b1b">🚨 RETIRAR INMEDIATAMENTE. Notificar médico. Medidas locales.</div>
+            </div>
+          </div>
+          <div class="mx-row" style="background:#fef2f2;color:#7f1d1d" onclick="selectMaddox(5,this)">
+            <div class="mx-badge" style="background:#b91c1c">5</div>
+            <div class="mx-info">
+              <div class="mx-grade">Tromboflebitis / Estadio avanzado</div>
+              <div class="mx-desc">Eritema + trayecto &gt;3cm + induración dura + fiebre local + posible exudado o necrosis.</div>
+              <div class="mx-action" style="color:#7f1d1d">🆘 EMERGENCIA: Cultivo punta, antibióticos, interconsulta.</div>
+            </div>
+          </div>
+        </div>
+        <div id="mx-result" class="mx-result"></div>
+      </div>
+
+      <!-- ─── PANEL COMPARAR ─── -->
+      <div class="mx-panel" id="mx-compare">
+        <p style="font-size:11px;color:#64748b;margin-bottom:10px;line-height:1.5">Resumen de ambas evaluaciones y concordancia diagnóstica:</p>
+        <div id="compare-panel">
+          <div style="font-size:12px;color:#94a3b8;font-style:italic;text-align:center;padding:20px 0">
+            Selecciona un grado en VIP y en Maddox para ver la comparación.
+          </div>
+        </div>
+        <div id="ia-compare-panel" style="margin-top:10px;display:none"></div>
+      </div>
+
+      <!-- ─── REGISTRO COMÚN ─── -->
+      <div style="margin-top:14px;border-top:1px solid #e2e8f0;padding-top:12px">
+        <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">📋 Registro de evaluaciones</div>
+        <div id="vip-log" style="max-height:150px;overflow-y:auto">
+          <p style="font-size:11px;color:#94a3b8;font-style:italic">Sin evaluaciones registradas</p>
+        </div>
+        <button onclick="registrarEvaluacion()" style="margin-top:8px;width:100%;padding:11px;border:none;border-radius:9px;background:var(--g1);color:#fff;font-size:12px;font-weight:700;cursor:pointer;">💾 Registrar evaluación (VIP + Maddox)</button>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="info-nota" style="margin-top:10px">
+    📖 <strong>VIP</strong> (Jackson, 1998): Evalúa signos visuales 0-4. <strong>Maddox</strong> (1977): Evalúa progresión clínica 0-5. Usadas juntas mejoran la detección temprana de flebitis.
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════
+     TAB 5: TIMER ROTACIÓN
+══════════════════════════════════════ -->
+<div class="panel" id="p-timer">
+  <div class="card">
+    <div class="card-hdr">⏱️ Timer de rotación del catéter</div>
+    <div class="card-body">
+      <div class="timer-card">
+        <div class="timer-title">⚡ Control de permanencia del acceso venoso</div>
+        
+        <!-- Selector de límite -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:12px">
+          <button class="tbtn tbtn-reset" style="font-size:10px" onclick="setLimit(48,'Estándar 48h')">48h<br><small style="font-weight:400;font-size:9px">Estándar</small></button>
+          <button class="tbtn tbtn-reset" style="font-size:10px;background:#4f46e5" onclick="setLimit(72,'Extendido 72h')">72h<br><small style="font-weight:400;font-size:9px">Extendido</small></button>
+          <button class="tbtn tbtn-reset" style="font-size:10px;background:#dc2626" onclick="setLimit(96,'Máximo 96h')">96h<br><small style="font-weight:400;font-size:9px">Máximo</small></button>
+        </div>
+
+        <div class="timer-limit" id="timer-limit-lbl">Límite activo: <strong>Estándar 48h</strong></div>
+        
+        <div class="timer-display">
+          <div class="timer-clock ok" id="timer-display">00:00:00</div>
+          <div class="timer-sub" id="timer-status-lbl">Timer detenido — toca Iniciar para comenzar</div>
+        </div>
+
+        <!-- Barra de progreso -->
+        <div style="background:rgba(255,255,255,.1);border-radius:6px;height:8px;margin:10px 0;overflow:hidden">
+          <div id="timer-prog-bar" style="height:100%;width:0%;background:#22c55e;border-radius:6px;transition:width 1s ease"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:9px;color:#64748b;margin-bottom:12px">
+          <span>0h</span>
+          <span id="half-mark">24h</span>
+          <span id="limit-mark">48h</span>
+        </div>
+
+        <div class="timer-btns">
+          <button class="tbtn tbtn-start" onclick="startTimer()" id="btn-start">▶ Iniciar</button>
+          <button class="tbtn tbtn-pause" onclick="pauseTimer()" id="btn-pause" disabled>⏸ Pausar</button>
+          <button class="tbtn tbtn-reset" onclick="resetTimer()">⟳ Resetear</button>
+        </div>
+
+        <div class="rotation-log" id="rotation-log">
+          <div class="rot-entry" style="color:#64748b">Sin rotaciones registradas</div>
+        </div>
+      </div>
+
+      <!-- Recomendaciones por zona y tiempo -->
+      <div class="card" style="margin-top:10px;box-shadow:none;border:1px solid #e2e8f0">
+        <div class="card-hdr" style="font-size:12px">📋 Guía de rotación por zona anatómica</div>
+        <div class="card-body" style="padding:10px">
+          <div style="font-size:11px;color:#374151;line-height:1.7">
+            <p>🟢 <strong>Antebrazo</strong>: Rotar cada 72–96h (zona estable)</p>
+            <p>🟡 <strong>Fosa antecubital</strong>: Rotar cada 48–72h (zona de movimiento)</p>
+            <p>🟠 <strong>Muñeca</strong>: Rotar cada 48h máximo (zona de alto movimiento)</p>
+            <p>🟣 <strong>Dorso mano</strong>: Rotar cada 48h (venas pequeñas)</p>
+            <p>🔴 <strong>Vía central</strong>: Protocolo institucional (7–14 días)</p>
+          </div>
+          <div style="margin-top:10px;padding:8px;background:#fef2f2;border-radius:8px;border-left:3px solid #ef4444;font-size:11px;color:#991b1b">
+            <strong>⚠️ Retirar inmediatamente si:</strong> Signos VIP ≥ 2, extravasación, oclusión o flebitis.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     TAB 6: CHECKLIST PRE-PUNCIÓN
+══════════════════════════════════════ -->
+<div class="panel" id="p-check">
+  <div class="card">
+    <div class="card-hdr">✅ Checklist pre-punción venosa periférica</div>
+    <div class="card-body">
+      <p style="font-size:12px;color:#64748b;margin-bottom:12px;line-height:1.5">Verifica cada ítem antes de proceder con la inserción del catéter venoso:</p>
+
+      <div class="checklist" id="chk-list">
+        <div class="chk-item" onclick="toggleChk(this)">
+          <div class="chk-box"></div>
+          <span>Higiene de manos completada (5 momentos OMS)</span>
+        </div>
+        <div class="chk-item" onclick="toggleChk(this)">
+          <div class="chk-box"></div>
+          <span>Equipo de protección personal (guantes estériles)</span>
+        </div>
+        <div class="chk-item" onclick="toggleChk(this)">
+          <div class="chk-box"></div>
+          <span>Antisepsia del sitio con clorhexidina 2% (30 seg, secado 30 seg)</span>
+        </div>
+        <div class="chk-item" onclick="toggleChk(this)">
+          <div class="chk-box"></div>
+          <span>CVR calculado y zona óptima seleccionada</span>
+        </div>
+        <div class="chk-item" onclick="toggleChk(this)">
+          <div class="chk-box"></div>
+          <span>Calibre de catéter apropiado para el tratamiento</span>
+        </div>
+        <div class="chk-item" onclick="toggleChk(this)">
+          <div class="chk-box"></div>
+          <span>Osmolaridad y pH del medicamento verificados</span>
+        </div>
+        <div class="chk-item" onclick="toggleChk(this)">
+          <div class="chk-box"></div>
+          <span>Consentimiento informado del paciente</span>
+        </div>
+        <div class="chk-item" onclick="toggleChk(this)">
+          <div class="chk-box"></div>
+          <span>Identificación del paciente (2 identificadores)</span>
+        </div>
+        <div class="chk-item" onclick="toggleChk(this)">
+          <div class="chk-box"></div>
+          <span>Alergias verificadas (medicamento, látex, antiséptico)</span>
+        </div>
+        <div class="chk-item" onclick="toggleChk(this)">
+          <div class="chk-box"></div>
+          <span>Apósito transparente y fecha de inserción marcados</span>
+        </div>
+        <div class="chk-item" onclick="toggleChk(this)">
+          <div class="chk-box"></div>
+          <span>Registro en historia clínica: zona, calibre, hora</span>
+        </div>
+        <div class="chk-item" onclick="toggleChk(this)">
+          <div class="chk-box"></div>
+          <span>Educación al paciente sobre signos de alarma</span>
+        </div>
+      </div>
+
+      <div class="chk-score" id="chk-score" style="background:#f1f5f9;color:#374151">
+        0 / 12 ítems verificados
+      </div>
+
+      <button onclick="resetChecklist()" style="width:100%;margin-top:8px;padding:10px;border:2px solid #e2e8f0;border-radius:9px;background:#fff;color:#64748b;font-size:12px;font-weight:600;cursor:pointer;">🔄 Reiniciar checklist</button>
+    </div>
+  </div>
+</div>
+
+</div><!-- /content -->
+
+<script>
+// ════════════════════════════════════════
+// CONFIG
+// ════════════════════════════════════════
+const API_URL = window.location.origin + '/api/analyze';
+
+const VEIN = {antebrazo:3.0, fosa:4.5, muneca:2.0, dorso:1.8, central:8.0};
+const COL  = {antebrazo:'#22c55e', fosa:'#818cf8', muneca:'#fb923c', dorso:'#d946ef', central:'#ef4444'};
+const NOM  = {antebrazo:'Antebrazo', fosa:'Fosa antecubital', muneca:'Muñeca', dorso:'Dorso mano', central:'Vía central'};
+const ZONES = ['antebrazo','fosa','muneca','dorso','central'];
+
+const ZONE_INFO = {
+  antebrazo: {
+    title:'Antebrazo',
+    desc:'Zona estable de elección. Venas cefálica y basílica. Menor riesgo de flebitis mecánica por movimiento.',
+    recom:'Recomendado para: antibióticos, cristaloides, medicación estándar de duración 48–96h.',
+    color:'#15803d', bg:'#f0fdf4', border:'#22c55e'
+  },
+  fosa:{
+    title:'Fosa Antecubital',
+    desc:'Zona de movimiento (flexión). Vena cubital mediana. Alta tasa de flebitis mecánica si se flexiona el codo.',
+    recom:'Usar solo si otras zonas no son accesibles. Preferir para extracción de sangre. Catéter max 72h.',
+    color:'#4338ca', bg:'#eff6ff', border:'#818cf8'
+  },
+  muneca:{
+    title:'Muñeca',
+    desc:'Zona de alto movimiento. Venas pequeñas y superficiales. Riesgo elevado de infiltración y flebitis.',
+    recom:'Evitar si es posible. Solo catéteres 22G–24G. Monitorear cada 2–4h. Máximo 48h.',
+    color:'#c2410c', bg:'#fff7ed', border:'#fb923c'
+  },
+  dorso:{
+    title:'Dorso de la Mano',
+    desc:'Venas metacarpianas pequeñas (∅ 1.8mm). Riesgo de extravasación elevado. Doloroso en administración.',
+    recom:'Usar solo para medicamentos isotónicos. Evitar soluciones vesicantes. Catéter 22G–24G máximo.',
+    color:'#a21caf', bg:'#fdf4ff', border:'#d946ef'
+  },
+  central:{
+    title:'Vía Central',
+    desc:'Yugular interna o subclavia. Venas de gran calibre (∅ 8mm+). Requiere asepsia rigurosa y técnica especial.',
+    recom:'Indicado para: NPT, quimioterapia, vasoactivos, medicamentos vesicantes, acceso prolongado >7 días.',
+    color:'#dc2626', bg:'#fef2f2', border:'#ef4444'
+  }
+};
+
+let zone = 'antebrazo', cd = 0.9, cl = '22G';
+let b64 = null, mime = 'image/jpeg';
+let str = null, hist = [];
+
+// VIP
+let vipGrade = null;
+let vipLog = [];
+let pendingVIPFromIA = null; // grado sugerido por IA pendiente de confirmar
+
+// Timer
+let timerInterval = null;
+let timerSeconds = 0;
+let timerRunning = false;
+let timerLimitH = 48;
+let timerLimitLabel = 'Estándar 48h';
+let rotLog = [];
+
+// ════════════════════════════════════════
+// TABS
+// ════════════════════════════════════════
+function showPanel(id, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('act'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('act'));
+  document.getElementById(id).classList.add('act');
+  btn.classList.add('act');
+}
+
+// ════════════════════════════════════════
+// STATUS
+// ════════════════════════════════════════
+function setStatus(type, msg) {
+  const b = document.getElementById('stb');
+  b.className = 'stbar st-' + type;
+  document.getElementById('stxt').textContent = msg;
+}
+
+// ════════════════════════════════════════
+// CÁMARA
+// ════════════════════════════════════════
+async function toggleCam() {
+  const vid = document.getElementById('vid');
+  const phs = document.getElementById('phs');
+  const bcap = document.getElementById('bcap');
+  const bcam = document.getElementById('bcam');
+  if (str) {
+    str.getTracks().forEach(t => t.stop()); str = null;
+    vid.style.display = 'none'; phs.style.display = 'flex';
+    bcap.style.display = 'none'; bcam.textContent = '📷 Cámara';
+    document.getElementById('vp').classList.remove('sc'); return;
+  }
+  if (navigator.mediaDevices?.getUserMedia) {
+    try {
+      str = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280},height:{ideal:960}}});
+      vid.srcObject = str; vid.style.display = 'block';
+      phs.style.display = 'none'; document.getElementById('prev').style.display = 'none';
+      bcap.style.display = 'block'; bcam.textContent = '⏹ Detener';
+      document.getElementById('vp').classList.add('sc');
+      setStatus('load','Cámara activa — enfoque la zona vascular');
+    } catch(e) { document.getElementById('fc').click(); }
+  } else { document.getElementById('fc').click(); }
+}
+
+function snap() {
+  const vid = document.getElementById('vid'), cvs = document.getElementById('cvs');
+  cvs.width = vid.videoWidth; cvs.height = vid.videoHeight;
+  cvs.getContext('2d').drawImage(vid, 0, 0);
+  showImg(cvs.toDataURL('image/jpeg', 0.92));
+  if (str) { str.getTracks().forEach(t => t.stop()); str = null; }
+  vid.style.display = 'none';
+  document.getElementById('bcam').textContent = '📷 Cámara';
+  document.getElementById('bcap').style.display = 'none';
+  document.getElementById('vp').classList.remove('sc');
+}
+
+function loadFile(e) {
+  const file = e.target.files[0]; if (!file) return;
+  mime = file.type || 'image/jpeg';
+  const rd = new FileReader();
+  rd.onload = ev => showImg(ev.target.result);
+  rd.readAsDataURL(file); e.target.value = '';
+}
+
+function showImg(dataURL) {
+  const m = dataURL.match(/^data:([^;]+);base64,(.+)$/);
+  if (m) { mime = m[1]; b64 = m[2]; } else { b64 = dataURL.split(',')[1] || dataURL; }
+  const prev = document.getElementById('prev');
+  prev.src = dataURL; prev.style.display = 'block';
+  document.getElementById('phs').style.display = 'none';
+  document.getElementById('bia').disabled = false;
+  document.getElementById('vp').classList.remove('sc');
+  document.getElementById('zbadge').style.display = 'none';
+  document.getElementById('cbar').style.display = 'none';
+  document.getElementById('aibox').style.display = 'none';
+  setStatus('idle','Imagen lista — toca Analizar zona con IA');
+}
+
+// ════════════════════════════════════════
+// IA
+// ════════════════════════════════════════
+async function analyze() {
+  if (!b64) return;
+  const valid = ['image/jpeg','image/png','image/gif','image/webp'];
+  const useMime = valid.includes(mime) ? mime : 'image/jpeg';
+  const bia = document.getElementById('bia'), sp = document.getElementById('sp'), lbl = document.getElementById('ialbl');
+  bia.disabled = true; sp.style.display = 'block'; lbl.textContent = 'Analizando...';
+  document.getElementById('vp').classList.add('sc');
+  const steps = ['Detectando zona anatómica...','Evaluando escala VIP...','Calculando escala Maddox...','Generando recomendaciones...'];
+  let si = 0;
+  setStatus('load', steps[si++]);
+  const stepTimer = setInterval(() => { if (si < steps.length) setStatus('load', steps[si++]); }, 1000);
+  try {
+    const res = await fetch(API_URL, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({imageBase64:b64,mimeType:useMime})});
+    if (!res.ok) { const errJson = await res.json().catch(() => ({})); throw new Error(errJson.error || 'Error: ' + res.status); }
+    const result = await res.json();
+    clearInterval(stepTimer);
+    applyResult(result);
+    if (result.vip_grado !== null && result.vip_grado !== undefined) {
+      setTimeout(() => {
+        irAVIP();
+        showToast('Escalas VIP + Maddox completadas automáticamente');
+      }, 1800);
+    }
+  } catch(err) {
+    clearInterval(stepTimer);
+    setStatus('err','Error: ' + err.message.slice(0,100));
+    document.getElementById('vp').classList.remove('sc');
+  } finally {
+    bia.disabled = false; sp.style.display = 'none'; lbl.textContent = '🤖 Analizar zona con IA';
+  }
+}
+
+function applyResult(r) {
+  const z = ZONES.includes(r.zona) ? r.zona : 'antebrazo';
+  const conf = Math.max(0, Math.min(100, r.confianza || 50));
+  selectZone(z);
+  const zb = document.getElementById('zbadge');
+  zb.textContent = NOM[z] + ' · ' + conf + '%';
+  zb.style.background = COL[z]; zb.style.display = 'block';
+  document.getElementById('cbar').style.display = 'block';
+  setTimeout(() => document.getElementById('cfl').style.width = conf + '%', 80);
+  const ab = document.getElementById('aibox'); ab.style.display = 'block';
+  const ch = document.getElementById('aichip');
+  ch.textContent = '📍 ' + NOM[z]; ch.style.background = COL[z];
+  document.getElementById('aidesc').textContent = r.descripcion || '';
+  let fh = (r.hallazgos || []).map(h => '<p>• ' + h + '</p>').join('');
+  if (r.recomendacion) fh += '<p class="ai-rec">💡 ' + r.recomendacion + '</p>';
+
+  // ── VIP + MADDOX desde IA ──────────────────────────────────
+  if (r.vip_grado !== null && r.vip_grado !== undefined) {
+    applyVIPFromIA(r);
+    const vipConf = r.vip_confianza || 0;
+    const mxLabel = r.maddox_grado !== null && r.maddox_grado !== undefined ? ` · Maddox G${r.maddox_grado}` : '';
+    fh += `<div style="margin-top:10px;padding:8px 10px;background:#fff;border-radius:8px;border-left:3px solid ${VIP_DATA[r.vip_grado].color};cursor:pointer;" onclick="irAVIP()">
+      <p style="font-size:11px;font-weight:700;color:${VIP_DATA[r.vip_grado].color};margin:0 0 3px 0">
+        🔬 VIP Grado ${r.vip_grado} — ${VIP_DATA[r.vip_grado].label}${mxLabel} · ${vipConf}% confianza
+      </p>
+      <p style="font-size:10px;color:#374151;margin:0">${r.vip_accion || ''}</p>
+      <p style="font-size:10px;color:#94a3b8;margin:3px 0 0 0">Toca para ver escalas VIP + Maddox →</p>
+    </div>`;
+  }
+
+  document.getElementById('aifind').innerHTML = fh;
+  addHist(b64, mime, z);
+  document.getElementById('vp').classList.remove('sc');
+
+  const vipTxt = r.vip_grado !== null && r.vip_grado !== undefined
+    ? ` · VIP G${r.vip_grado}` + (r.maddox_grado !== null && r.maddox_grado !== undefined ? ` · Maddox G${r.maddox_grado}` : '')
+    : '';
+  setStatus('ok', 'Zona: ' + NOM[z] + ' · Confianza: ' + conf + '%' + vipTxt);
+}
+
+function irAVIP() {
+  const tab = document.querySelectorAll('.tab')[3];
+  showPanel('p-vip', tab);
+  document.getElementById('p-vip').scrollIntoView({behavior:'smooth'});
+}
+
+// ════════════════════════════════════════
+// ZONA / DIAGRAMA
+// ════════════════════════════════════════
+function selectZone(z) {
+  zone = z;
+  const svgMap = {antebrazo:'za', fosa:'zf', muneca:'zm', dorso:'zd', central:'zc'};
+  const legMap = {antebrazo:'la', fosa:'lf', muneca:'lm', dorso:'ld', central:'lc'};
+
+  ZONES.forEach(k => {
+    const el = document.getElementById(svgMap[k]);
+    if (el) { el.style.opacity = k===z ? '1':'0.35'; el.classList.toggle('act', k===z); }
+    const ll = document.getElementById(legMap[k]);
+    if (ll) ll.classList.toggle('act', k===z);
+  });
+
+  // Actualizar label en tab anatómico
+  const vd = VEIN[z];
+  const lbl = document.getElementById('zona-activa-lbl');
+  if (lbl) lbl.textContent = NOM[z] + (vd < 5 ? ` (∅ ${vd} mm)` : ' (Vena central)');
+  lbl.style.color = COL[z];
+
+  // Actualizar panel info zona
+  const inf = ZONE_INFO[z];
+  const panel = document.getElementById('zone-info-panel');
+  if (panel && inf) {
+    panel.style.borderColor = inf.border;
+    panel.style.background = inf.bg;
+    panel.style.color = inf.color;
+    panel.innerHTML = `<strong>📍 ${inf.title}:</strong> ${inf.desc}<br><br><span style="opacity:.85">${inf.recom}</span>`;
+  }
+
+  calcCVR();
+}
+
+function pickC(btn) {
+  document.querySelectorAll('.cb').forEach(b => b.classList.remove('act'));
+  btn.classList.add('act');
+  cd = parseFloat(btn.dataset.d);
+  cl = btn.dataset.l;
+  calcCVR();
+}
+
+function calcCVR() {
+  const vd  = VEIN[zone] || 3.0;
+  const cvr = Math.round((cd / vd) * 100);
+  const mov = zone === 'fosa' || zone === 'muneca';
+  const cc  = document.getElementById('cc');
+  const cn  = document.getElementById('cn');
+  const cs  = document.getElementById('cs');
+  if (cn) cn.textContent = cvr + '%';
+
+  // Cursor de la barra de riesgo
+  const cursor = document.getElementById('risk-cursor');
+  if (cursor) {
+    const pct = Math.min(cvr, 100);
+    cursor.style.left = pct + '%';
+  }
+
+  if (cvr > 45 || (cvr > 33 && mov)) {
+    if (cc) cc.className = 'cvr-card cvr-dang';
+    if (cs) cs.textContent = '⚠️ Riesgo alto · ' + cl + ' (' + cd + 'mm) en vena ' + vd + 'mm · Cambiar catéter o zona';
+  } else if (cvr > 33 || mov) {
+    if (cc) cc.className = 'cvr-card cvr-warn';
+    if (cs) cs.textContent = '⚡ Riesgo moderado · ' + cl + ' (' + cd + 'mm) en vena ' + vd + 'mm · Monitorear c/4h';
+  } else {
+    if (cc) cc.className = 'cvr-card cvr-safe';
+    if (cs) cs.textContent = '✅ Óptimo · ' + cl + ' (' + cd + 'mm) en vena ' + vd + 'mm · Mínimo riesgo mecánico';
+  }
+
+  // Actualizar análisis expandido
+  updateRiskAnalysis(cvr, mov, vd);
+}
+
+function updateRiskAnalysis(cvr, mov, vd) {
+  // Panel de riesgo multifactorial
+  const rPanel = document.getElementById('risk-summary-panel');
+  if (!rPanel) return;
+
+  // Niveles
+  const cvrLevel = cvr > 45 ? 'dang' : cvr > 33 ? 'warn' : 'safe';
+  const movLevel = mov ? 'warn' : 'safe';
+  const vdLevel  = vd < 2 ? 'warn' : 'safe';
+
+  const colors = {safe:'#15803d', warn:'#92400e', dang:'#991b1b'};
+  const bgs    = {safe:'#f0fdf4', warn:'#fffbeb', dang:'#fef2f2'};
+  const bds    = {safe:'#22c55e', warn:'#f59e0b', dang:'#ef4444'};
+
+  const overallLevel = (cvrLevel === 'dang' || vdLevel === 'warn' && movLevel === 'warn') ? 'dang' : (cvrLevel === 'warn' || movLevel === 'warn' || vdLevel === 'warn') ? 'warn' : 'safe';
+
+  rPanel.innerHTML = `
+    <div class="risk-summary" style="color:${colors[overallLevel]};background:${bgs[overallLevel]};border-color:${bds[overallLevel]}">
+      <h4>Nivel de riesgo: ${overallLevel==='safe'?'🟢 Bajo':overallLevel==='warn'?'🟡 Moderado':'🔴 Alto'}</h4>
+      <div class="risk-item">
+        <span>CVR (Ratio catéter/vena)</span>
+        <span class="risk-pill ${cvrLevel==='safe'?'pill-safe':cvrLevel==='warn'?'pill-warn':'pill-dang'}">${cvr}%</span>
+      </div>
+      <div class="risk-item">
+        <span>Zona anatómica</span>
+        <span class="risk-pill ${movLevel==='safe'?'pill-safe':'pill-warn'}">${NOM[zone]}</span>
+      </div>
+      <div class="risk-item">
+        <span>Diámetro venoso</span>
+        <span class="risk-pill ${vdLevel==='safe'?'pill-safe':'pill-warn'}">∅ ${vd} mm</span>
+      </div>
+      <div class="risk-item">
+        <span>Movilidad de zona</span>
+        <span class="risk-pill ${movLevel==='safe'?'pill-safe':'pill-warn'}">${mov?'Alta':'Baja'}</span>
+      </div>
+    </div>`;
+
+  // Recomendaciones
+  const recPanel = document.getElementById('rec-panel');
+  if (!recPanel) return;
+  let recs = [];
+
+  if (cvr > 45) recs.push('🔴 CVR crítico: Usa un catéter de menor calibre o cambia a una vena de mayor diámetro.');
+  else if (cvr > 33) recs.push('🟡 CVR límite: Monitorea signos de flebitis cada 4 horas.');
+  else recs.push('🟢 CVR óptimo: El flujo sanguíneo lateral garantiza hemodilución adecuada.');
+
+  if (zone === 'fosa') recs.push('⚡ Fosa antecubital: Inmoviliza el codo si es posible. Evita extensión/flexión repetida.');
+  if (zone === 'muneca') recs.push('⚠️ Muñeca: Zona de alto riesgo mecánico. Limita tiempo a 48h máximo. Evalúa cambio de sitio.');
+  if (zone === 'dorso') recs.push('⚠️ Dorso mano: Solo medicamentos isotónicos. Vigila extravasación activamente.');
+  if (zone === 'central') recs.push('🔴 Vía central: Verificar posición radiológica. Asepsia máxima en cada manipulación.');
+  if (vd < 2) recs.push('🔬 Vena pequeña: Considera 24G o 22G. El llenado lateral del vaso es crítico.');
+  if (cd > 1.5 && zone !== 'central') recs.push('💡 Catéter grueso en zona periférica: Evalúa colocación de PICC o CVC si el tratamiento es prolongado.');
+
+  recPanel.innerHTML = `
+    <div class="rec-title">💡 Recomendaciones específicas</div>
+    ${recs.map(r => `<div class="rec-item"><span class="rec-icon">•</span><span>${r}</span></div>`).join('')}`;
+}
+
+// ════════════════════════════════════════
+// HISTORIAL FOTOGRÁFICO
+// ════════════════════════════════════════
+function addHist(b, m, z) {
+  hist.push({b, m, z});
+  const s = document.getElementById('strip');
+  s.innerHTML = hist.map((p,i) => `
+    <div class="pt-wrap" onclick="loadHist(${i})">
+      <img class="pt ${i===hist.length-1?'act':''}" src="data:${p.m};base64,${p.b}" alt="Foto ${i+1}">
+      <div class="pt-tag" style="background:${COL[p.z]}bb">${NOM[p.z]}</div>
+    </div>`).join('');
+}
+
+function loadHist(i) {
+  const p = hist[i];
+  b64 = p.b; mime = p.m;
+  const prev = document.getElementById('prev');
+  prev.src = 'data:' + p.m + ';base64,' + p.b; prev.style.display = 'block';
+  document.getElementById('phs').style.display = 'none';
+  document.getElementById('bia').disabled = false;
+  selectZone(p.z);
+  document.querySelectorAll('.pt').forEach((el,idx) => el.classList.toggle('act', idx===i));
+}
+
+// ════════════════════════════════════════
+// ESCALAS VIP + MADDOX
+// ════════════════════════════════════════
+const VIP_DATA = [
+  {grade:0, label:'Sin signos', action:'Continuar con protocolo estándar. Siguiente evaluación en 8h.', color:'#22c55e', bg:'#f0fdf4', border:'#22c55e'},
+  {grade:1, label:'Posible 1er signo', action:'Observar catéter. Evaluar en 1h. Si persiste, retirar y reinsertar.', color:'#84cc16', bg:'#f7fee7', border:'#84cc16'},
+  {grade:2, label:'2 signos presentes', action:'⚠️ RETIRAR catéter. Reinsertar en sitio opuesto. Documentar en historia.', color:'#f59e0b', bg:'#fffbeb', border:'#f59e0b'},
+  {grade:3, label:'3+ signos · Flebitis', action:'🚨 RETIRAR INMEDIATAMENTE. Notificar médico. Aplicar medidas locales (calor, elevación).', color:'#ef4444', bg:'#fef2f2', border:'#ef4444'},
+  {grade:4, label:'Estadio avanzado · Tromboflebitis', action:'🆘 EMERGENCIA: Retirar catéter. Cultivo de punta. Iniciar antibióticos. Interconsulta infecciología.', color:'#991b1b', bg:'#fef2f2', border:'#dc2626'}
+];
+
+const MADDOX_DATA = [
+  {grade:0, label:'Sin evidencia de flebitis', action:'Continuar. Reevaluar en 8 horas.', color:'#22c55e', bg:'#f0fdf4', border:'#22c55e'},
+  {grade:1, label:'Eritema leve sin dolor', action:'Observar cada 4h. Documentar evolución.', color:'#84cc16', bg:'#f7fee7', border:'#84cc16'},
+  {grade:2, label:'Eritema con dolor', action:'Vigilar estrechamente. Considerar cambio preventivo de acceso.', color:'#f59e0b', bg:'#fffbeb', border:'#f59e0b'},
+  {grade:3, label:'Flebitis moderada establecida', action:'⚠️ RETIRAR catéter. Reinsertar en miembro opuesto. Medidas locales.', color:'#f97316', bg:'#fff7ed', border:'#f97316'},
+  {grade:4, label:'Flebitis severa', action:'🚨 RETIRAR INMEDIATAMENTE. Notificar médico. Calor local + elevación miembro.', color:'#ef4444', bg:'#fef2f2', border:'#ef4444'},
+  {grade:5, label:'Tromboflebitis / Estadio avanzado', action:'🆘 EMERGENCIA: Retirar catéter. Cultivo punta. Antibióticos IV. Interconsulta infecciología/cirugía vascular.', color:'#b91c1c', bg:'#fef2f2', border:'#b91c1c'}
+];
+
+// Estado actual
+let maddoxGrade = null;
+
+// Panel tabs de escalas
+function showMxPanel(id, btn) {
+  document.querySelectorAll('.mx-panel').forEach(p => p.classList.remove('act'));
+  document.querySelectorAll('.mx-tab').forEach(t => t.classList.remove('act'));
+  document.getElementById('mx-' + id).classList.add('act');
+  btn.classList.add('act');
+  if (id === 'compare') updateComparePanel();
+}
+
+function selectVIP(grade, row) {
+  document.querySelectorAll('.vip-row').forEach(r => r.classList.remove('act'));
+  row.classList.add('act');
+  vipGrade = grade;
+  const d = VIP_DATA[grade];
+  const res = document.getElementById('vip-result');
+  res.style.display = 'block';
+  res.style.color = d.color;
+  res.style.background = d.bg;
+  res.style.borderColor = d.border;
+  res.innerHTML = `<strong>VIP Grado ${grade} — ${d.label}</strong><br><br>${d.action}`;
+  updateComparePanel();
+}
+
+function selectMaddox(grade, row) {
+  document.querySelectorAll('.mx-row').forEach(r => r.classList.remove('act'));
+  row.classList.add('act');
+  maddoxGrade = grade;
+  const d = MADDOX_DATA[grade];
+  const res = document.getElementById('mx-result');
+  res.style.display = 'block';
+  res.style.color = d.color;
+  res.style.background = d.bg;
+  res.style.borderColor = d.border;
+  res.innerHTML = `<strong>Maddox Grado ${grade} — ${d.label}</strong><br><br>${d.action}`;
+  updateComparePanel();
+}
+
+function updateComparePanel() {
+  const panel = document.getElementById('compare-panel');
+  if (!panel) return;
+  if (vipGrade === null && maddoxGrade === null) {
+    panel.innerHTML = '<div style="font-size:12px;color:#94a3b8;font-style:italic;text-align:center;padding:20px 0">Selecciona un grado en VIP y en Maddox para ver la comparación.</div>';
+    return;
+  }
+
+  // Determinar urgencia combinada
+  const vipSev = vipGrade !== null ? vipGrade : 0;
+  const mxSev  = maddoxGrade !== null ? maddoxGrade : 0;
+  // Normalizar Maddox (0-5) a escala de 0-4 para comparar
+  const mxNorm = Math.min(Math.round(mxSev * 4 / 5), 4);
+  const combined = Math.max(vipSev, mxNorm);
+
+  const urgencia = combined >= 3 ? {label:'🔴 URGENCIA ALTA', bg:'#fef2f2', bd:'#ef4444', col:'#991b1b'} :
+                   combined >= 2 ? {label:'🟡 URGENCIA MODERADA', bg:'#fffbeb', bd:'#f59e0b', col:'#92400e'} :
+                   combined >= 1 ? {label:'🟡 OBSERVACIÓN', bg:'#f7fee7', bd:'#84cc16', col:'#3f6212'} :
+                                   {label:'🟢 SIN URGENCIA', bg:'#f0fdf4', bd:'#22c55e', col:'#15803d'};
+
+  const vipInfo = vipGrade !== null ? `VIP G${vipGrade} — ${VIP_DATA[vipGrade].label}` : 'No evaluado';
+  const mxInfo  = maddoxGrade !== null ? `Maddox G${maddoxGrade} — ${MADDOX_DATA[maddoxGrade].label}` : 'No evaluado';
+
+  // Concordancia
+  let concordancia = '';
+  if (vipGrade !== null && maddoxGrade !== null) {
+    const diff = Math.abs(vipSev - mxNorm);
+    if (diff === 0) concordancia = '✅ <strong>Concordancia total</strong> entre ambas escalas.';
+    else if (diff === 1) concordancia = '⚡ <strong>Concordancia parcial</strong> — diferencia de 1 nivel.';
+    else concordancia = '⚠️ <strong>Discordancia</strong> — evaluar clínicamente qué escala refleja mejor el estado actual.';
+  }
+
+  panel.innerHTML = `
+    <div class="scale-compare" style="border-color:${urgencia.bd};background:${urgencia.bg}">
+      <div style="font-size:13px;font-weight:700;color:${urgencia.col};margin-bottom:10px">${urgencia.label}</div>
+      <div class="compare-row">
+        <span style="color:#374151;font-weight:600">Escala VIP</span>
+        <span class="compare-badge" style="background:${vipGrade !== null ? VIP_DATA[vipGrade].color : '#94a3b8'}">${vipInfo}</span>
+      </div>
+      <div class="compare-row">
+        <span style="color:#374151;font-weight:600">Escala Maddox</span>
+        <span class="compare-badge" style="background:${maddoxGrade !== null ? MADDOX_DATA[maddoxGrade].color : '#94a3b8'}">${mxInfo}</span>
+      </div>
+      ${concordancia ? `<div style="font-size:11px;color:#374151;margin-top:8px;padding-top:8px;border-top:1px solid rgba(0,0,0,.06)">${concordancia}</div>` : ''}
+    </div>
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px;margin-top:8px;font-size:11px;color:#374151;line-height:1.6">
+      <strong>Acción recomendada (nivel más crítico):</strong><br>
+      ${combined >= 3 ? '🚨 RETIRAR catéter INMEDIATAMENTE y notificar al médico tratante.' :
+        combined >= 2 ? '⚠️ RETIRAR catéter y reinsertar en sitio alterno. Documentar en historia.' :
+        combined >= 1 ? '⚡ Continuar observando c/2h. Estar preparado para retiro si progresa.' :
+                        '✅ Continuar protocolo estándar. Reevaluar en próximo turno.'}
+    </div>`;
+}
+
+// ── Toast de notificación ────────────────────────────────
+function showToast(msg) {
+  let t = document.getElementById('ai-toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'ai-toast';
+    t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;padding:10px 18px;border-radius:30px;font-size:12px;font-weight:600;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.3)';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1';
+  setTimeout(() => { t.style.opacity = '0'; }, 3000);
+}
+
+// ── Aplica VIP + Maddox desde IA ─────────────────────────
+function applyVIPFromIA(r) {
+  const grade = r.vip_grado;
+  if (grade === null || grade === undefined) return;
+
+  // ─ 1. Marcar fila VIP ─
+  const rows = document.querySelectorAll('.vip-row');
+  rows.forEach((row, i) => { row.classList.toggle('act', i === grade); });
+  vipGrade = grade;
+
+  const d = VIP_DATA[grade];
+  const res = document.getElementById('vip-result');
+  res.style.display = 'block';
+  res.style.color = d.color;
+  res.style.background = d.bg;
+  res.style.borderColor = d.border;
+
+  const vipSignos = (r.vip_signos || []).map(s => `<li style="margin:3px 0">${s}</li>`).join('');
+  res.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <strong style="font-size:13px">Grado ${grade} — ${d.label}</strong>
+      <span style="font-size:10px;padding:3px 9px;border-radius:20px;background:rgba(0,0,0,.08);font-weight:700">🤖 IA · ${r.vip_confianza || '?'}%</span>
+    </div>
+    ${vipSignos ? `<ul style="font-size:11px;padding-left:16px;margin-bottom:8px;line-height:1.6">${vipSignos}</ul>` : ''}
+    <p style="font-size:12px;font-weight:700;margin-bottom:4px">${r.vip_accion || d.action}</p>
+    <p style="font-size:10px;color:#94a3b8">⚠️ Sugerencia automática — confirme con evaluación clínica antes de actuar.</p>`;
+
+  // ─ 2. Marcar fila Maddox ─
+  const mxGrade = r.maddox_grado;
+  if (mxGrade !== null && mxGrade !== undefined) {
+    const mxRows = document.querySelectorAll('.mx-row');
+    mxRows.forEach((row, i) => { row.classList.toggle('act', i === mxGrade); });
+    maddoxGrade = mxGrade;
+
+    const md = MADDOX_DATA[mxGrade];
+    const mxRes = document.getElementById('mx-result');
+    mxRes.style.display = 'block';
+    mxRes.style.color = md.color;
+    mxRes.style.background = md.bg;
+    mxRes.style.borderColor = md.border;
+
+    const mxSignos = (r.maddox_signos || []).map(s => `<li style="margin:3px 0">${s}</li>`).join('');
+    mxRes.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <strong style="font-size:13px">Grado ${mxGrade} — ${md.label}</strong>
+        <span style="font-size:10px;padding:3px 9px;border-radius:20px;background:rgba(0,0,0,.08);font-weight:700">🤖 IA · ${r.maddox_confianza || '?'}%</span>
+      </div>
+      ${mxSignos ? `<ul style="font-size:11px;padding-left:16px;margin-bottom:8px;line-height:1.6">${mxSignos}</ul>` : ''}
+      <p style="font-size:12px;font-weight:700;margin-bottom:4px">${r.maddox_accion || md.action}</p>
+      <p style="font-size:10px;color:#94a3b8">⚠️ Sugerencia automática — confirme con evaluación clínica antes de actuar.</p>`;
+  }
+
+  // ─ 3. Banner superior ─
+  const banner = document.getElementById('mx-ai-banner');
+  if (banner) {
+    banner.style.display = 'block';
+    const mxLabelTxt = (mxGrade !== null && mxGrade !== undefined) ? `Maddox G${mxGrade} — ${MADDOX_DATA[mxGrade].label}` : 'Maddox no determinado';
+    document.getElementById('mx-ai-banner-txt').innerHTML =
+      `<strong>VIP G${grade}</strong> — ${d.label} &nbsp;|&nbsp; <strong>${mxLabelTxt}</strong> &nbsp;·&nbsp; Confianza ${r.vip_confianza || '?'}%`;
+  }
+
+  // ─ 4. Actualizar panel Comparar ─
+  updateComparePanel();
+
+  // ─ 5. Bloque IA en panel Comparar ─
+  const iaPanel = document.getElementById('ia-compare-panel');
+  if (iaPanel) {
+    const urgColor = grade >= 3 ? '#dc2626' : grade >= 2 ? '#f59e0b' : '#15803d';
+    iaPanel.style.display = 'block';
+    iaPanel.innerHTML = `
+      <div style="background:#1e293b;color:#e2e8f0;border-radius:10px;padding:12px 14px;font-size:12px;line-height:1.7;border-left:4px solid ${urgColor}">
+        <strong style="display:block;font-size:13px;margin-bottom:6px;color:#fff">🤖 Análisis conjunto IA</strong>
+        <div style="margin-bottom:6px"><span style="color:#94a3b8">VIP:</span> G${grade} · ${d.label} — ${r.vip_accion || d.action}</div>
+        ${mxGrade !== null && mxGrade !== undefined ? `<div><span style="color:#94a3b8">Maddox:</span> G${mxGrade} · ${MADDOX_DATA[mxGrade].label} — ${r.maddox_accion || MADDOX_DATA[mxGrade].action}</div>` : ''}
+      </div>`;
+  }
+
+  // ─ 6. Auto-abrir pestaña Comparar para ver resultado integrado ─
+  setTimeout(() => {
+    const mxTab = document.querySelector('.mx-tab:nth-child(3)');
+    if (mxTab) showMxPanel('compare', mxTab);
+  }, 200);
+
+  pendingVIPFromIA = { grade, r };
+}
+
+function registrarEvaluacion() {
+  if (vipGrade === null && maddoxGrade === null) {
+    alert('Selecciona al menos un grado (VIP o Maddox) antes de registrar.');
+    return;
+  }
+  const now = new Date().toLocaleTimeString('es-CO', {hour:'2-digit', minute:'2-digit'});
+  const origen = pendingVIPFromIA ? '🤖 IA+confirmado' : '👤 Manual';
+  const vipInfo  = vipGrade !== null ? `VIP G${vipGrade}` : 'VIP n/a';
+  const mxInfo   = maddoxGrade !== null ? `Maddox G${maddoxGrade}` : 'Maddox n/a';
+  const vipColor = vipGrade !== null ? VIP_DATA[vipGrade].color : '#94a3b8';
+  const mxColor  = maddoxGrade !== null ? MADDOX_DATA[maddoxGrade].color : '#94a3b8';
+
+  vipLog.unshift({ time: now, vipGrade, maddoxGrade, vipColor, mxColor, origen });
+  pendingVIPFromIA = null;
+
+  const log = document.getElementById('vip-log');
+  log.style.background = '#1e293b'; log.style.padding = '8px'; log.style.borderRadius = '8px'; log.style.marginTop = '4px';
+  log.innerHTML = vipLog.map(e => `
+    <div class="rot-entry" style="color:#e2e8f0;border-bottom:1px solid rgba(255,255,255,.06);padding:5px 0;font-size:11px">
+      ${e.time} —
+      <span style="color:${e.vipColor};font-weight:700">${e.vipGrade !== null ? 'VIP G' + e.vipGrade : ''}</span>
+      ${e.vipGrade !== null && e.maddoxGrade !== null ? ' · ' : ''}
+      <span style="color:${e.mxColor};font-weight:700">${e.maddoxGrade !== null ? 'Maddox G' + e.maddoxGrade : ''}</span>
+      <span style="font-size:9px;opacity:.6;margin-left:5px">${e.origen}</span>
+    </div>`).join('') || '<p style="font-size:11px;color:#94a3b8;font-style:italic">Sin evaluaciones</p>';
+
+  alert(`✓ Evaluación registrada a las ${now}\n${vipInfo} · ${mxInfo}`);
+}
+
+// Compatibilidad: mantener registrarVIP como alias
+function registrarVIP() { registrarEvaluacion(); }
+
+// ════════════════════════════════════════
+// TIMER
+// ════════════════════════════════════════
+function setLimit(hours, label) {
+  timerLimitH = hours;
+  timerLimitLabel = label;
+  document.getElementById('timer-limit-lbl').innerHTML = `Límite activo: <strong>${label}</strong>`;
+  document.getElementById('half-mark').textContent = (hours/2) + 'h';
+  document.getElementById('limit-mark').textContent = hours + 'h';
+  updateTimerDisplay();
+}
+
+function startTimer() {
+  if (timerRunning) return;
+  timerRunning = true;
+  document.getElementById('btn-start').disabled = true;
+  document.getElementById('btn-pause').disabled = false;
+  timerInterval = setInterval(() => {
+    timerSeconds++;
+    updateTimerDisplay();
+  }, 1000);
+}
+
+function pauseTimer() {
+  if (!timerRunning) return;
+  timerRunning = false;
+  clearInterval(timerInterval);
+  document.getElementById('btn-start').disabled = false;
+  document.getElementById('btn-pause').disabled = true;
+  const now = new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
+  addRotLog('⏸ Pausado a las ' + now);
+}
+
+function resetTimer() {
+  clearInterval(timerInterval);
+  timerRunning = false; timerSeconds = 0;
+  document.getElementById('btn-start').disabled = false;
+  document.getElementById('btn-pause').disabled = true;
+  updateTimerDisplay();
+  const now = new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
+  addRotLog('⟳ Timer reseteado a las ' + now + ' — Catéter rotado/retirado');
+}
+
+function updateTimerDisplay() {
+  const h = Math.floor(timerSeconds / 3600);
+  const m = Math.floor((timerSeconds % 3600) / 60);
+  const s = timerSeconds % 60;
+  const display = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  const el = document.getElementById('timer-display');
+  const lbl = document.getElementById('timer-status-lbl');
+  const bar = document.getElementById('timer-prog-bar');
+  if (!el) return;
+
+  el.textContent = display;
+
+  const limitSecs = timerLimitH * 3600;
+  const pct = Math.min((timerSeconds / limitSecs) * 100, 100);
+  if (bar) {
+    bar.style.width = pct + '%';
+    bar.style.background = pct < 60 ? '#22c55e' : pct < 85 ? '#f59e0b' : '#ef4444';
+  }
+
+  if (timerSeconds > limitSecs) {
+    el.className = 'timer-clock over';
+    if (lbl) lbl.textContent = '🚨 ¡TIEMPO EXCEDIDO! Rotar o retirar catéter INMEDIATAMENTE';
+  } else if (timerSeconds > limitSecs * 0.85) {
+    el.className = 'timer-clock warn';
+    const rem = Math.ceil((limitSecs - timerSeconds) / 3600 * 60);
+    if (lbl) lbl.textContent = `⚠️ ${rem} minutos para el límite — Preparar rotación`;
+  } else {
+    el.className = 'timer-clock ok';
+    if (lbl && !timerRunning && timerSeconds === 0) lbl.textContent = 'Timer detenido — toca Iniciar para comenzar';
+    else if (lbl && timerRunning) {
+      const remH = Math.floor((limitSecs - timerSeconds) / 3600);
+      const remM = Math.floor(((limitSecs - timerSeconds) % 3600) / 60);
+      lbl.textContent = `⏱️ Tiempo restante: ${remH}h ${remM}m`;
+    }
+  }
+}
+
+function addRotLog(msg) {
+  rotLog.unshift(msg);
+  const rl = document.getElementById('rotation-log');
+  if (rl) rl.innerHTML = rotLog.slice(0,6).map(e => `<div class="rot-entry">${e}</div>`).join('');
+}
+
+// ════════════════════════════════════════
+// CHECKLIST
+// ════════════════════════════════════════
+function toggleChk(item) {
+  item.classList.toggle('checked');
+  const box = item.querySelector('.chk-box');
+  if (item.classList.contains('checked')) box.textContent = '✓';
+  else box.textContent = '';
+  updateChkScore();
+}
+
+function updateChkScore() {
+  const total = document.querySelectorAll('.chk-item').length;
+  const done  = document.querySelectorAll('.chk-item.checked').length;
+  const score = document.getElementById('chk-score');
+  score.textContent = `${done} / ${total} ítems verificados`;
+  if (done === total) {
+    score.style.background = '#f0fdf4';
+    score.style.color = '#15803d';
+  } else if (done >= total * 0.75) {
+    score.style.background = '#fffbeb';
+    score.style.color = '#92400e';
+  } else {
+    score.style.background = '#f1f5f9';
+    score.style.color = '#374151';
+  }
+}
+
+function resetChecklist() {
+  document.querySelectorAll('.chk-item').forEach(i => {
+    i.classList.remove('checked');
+    i.querySelector('.chk-box').textContent = '';
+  });
+  updateChkScore();
+}
+
+// ════════════════════════════════════════
+// PWA — Instalación inteligente
+// ════════════════════════════════════════
+// PWA — Instalación
+// ════════════════════════════════════════
+let deferredPrompt = null;
+const isIOS     = /iphone|ipad|ipod/i.test(navigator.userAgent);
+const isAndroid = /android/i.test(navigator.userAgent);
+const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+
+// Service Worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(()=>{});
+}
+
+// Capturar prompt nativo Android/Chrome
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+});
+
+// Al instalar, ocultar banner
+window.addEventListener('appinstalled', () => {
+  document.getElementById('pwa-banner').style.display = 'none';
+  showToast('✅ Vascular AI instalada. Búscala en tu pantalla de inicio.');
+});
+
+// Ocultar banner si ya está instalada como PWA
+if (isStandalone) {
+  document.getElementById('pwa-banner').style.display = 'none';
+}
+
+// Botón instalar
+async function installPWA() {
+  if (deferredPrompt) {
+    // Android Chrome: prompt nativo
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    if (outcome === 'accepted') {
+      document.getElementById('pwa-banner').style.display = 'none';
+      showToast('✅ Instalando Vascular AI...');
+    }
+    return;
+  }
+  if (isIOS) {
+    // iOS: modal con instrucciones
+    showIOSModal();
+    return;
+  }
+  // Otros: instrucciones genéricas
+  showAndroidModal();
+}
+
+function hideInstallBanner() {
+  document.getElementById('pwa-banner').style.display = 'none';
+}
+
+function showAndroidModal() {
+  const m = document.createElement('div');
+  m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9999;display:flex;align-items:flex-end;justify-content:center;padding:16px';
+  m.innerHTML = `
+    <div style="background:#fff;border-radius:20px;padding:24px 20px;width:100%;max-width:420px;box-shadow:0 -4px 30px rgba(0,0,0,.25)">
+      <div style="text-align:center;margin-bottom:18px">
+        <div style="font-size:48px;margin-bottom:8px">📲</div>
+        <h3 style="font-size:17px;font-weight:700;color:#1e293b">Instalar Vascular AI</h3>
+        <p style="font-size:12px;color:#64748b;margin-top:4px">En Chrome para Android</p>
+      </div>
+      <div style="background:#f1f5f9;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="background:#15803d;color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0">1</span>
+          <span style="font-size:13px;color:#374151">Toca el menú <strong>⋮</strong> (tres puntos) arriba a la derecha</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="background:#15803d;color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0">2</span>
+          <span style="font-size:13px;color:#374151">Selecciona <strong>"Instalar aplicación"</strong> o <strong>"Agregar a pantalla de inicio"</strong></span>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="background:#15803d;color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0">3</span>
+          <span style="font-size:13px;color:#374151">Toca <strong>"Instalar"</strong> — el icono aparecerá en tu pantalla</span>
+        </div>
+      </div>
+      <button onclick="this.closest('div[style]').remove()" style="margin-top:16px;width:100%;padding:14px;background:#15803d;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">Entendido ✓</button>
+    </div>`;
+  m.addEventListener('click', e => { if(e.target===m) m.remove(); });
+  document.body.appendChild(m);
+}
+
+function showIOSModal() {
+  const m = document.createElement('div');
+  m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9999;display:flex;align-items:flex-end;justify-content:center;padding:16px';
+  m.innerHTML = `
+    <div style="background:#fff;border-radius:20px;padding:24px 20px;width:100%;max-width:420px;box-shadow:0 -4px 30px rgba(0,0,0,.25)">
+      <div style="text-align:center;margin-bottom:18px">
+        <div style="font-size:48px;margin-bottom:8px">🍎</div>
+        <h3 style="font-size:17px;font-weight:700;color:#1e293b">Instalar en iPhone/iPad</h3>
+        <p style="font-size:12px;color:#64748b;margin-top:4px">Abre esta página en Safari</p>
+      </div>
+      <div style="background:#f1f5f9;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="background:#15803d;color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0">1</span>
+          <span style="font-size:13px;color:#374151">Toca el botón <strong>Compartir</strong> ⎙ en la barra inferior de Safari</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="background:#15803d;color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0">2</span>
+          <span style="font-size:13px;color:#374151">Desplázate y toca <strong>"Agregar a pantalla de inicio"</strong></span>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="background:#15803d;color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0">3</span>
+          <span style="font-size:13px;color:#374151">Toca <strong>"Agregar"</strong> — el icono quedará en tu pantalla</span>
+        </div>
+      </div>
+      <button onclick="this.closest('div[style]').remove()" style="margin-top:16px;width:100%;padding:14px;background:#15803d;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">Entendido ✓</button>
+    </div>`;
+  m.addEventListener('click', e => { if(e.target===m) m.remove(); });
+  document.body.appendChild(m);
+}
+
+// ════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════
+selectZone('antebrazo');
+calcCVR();
+</script>
+</body>
+</html>
